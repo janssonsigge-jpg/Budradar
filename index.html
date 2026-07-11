@@ -141,9 +141,12 @@ function RankTab() {
       </nav>
 
       <header style={{ position: "relative", padding: "36px 22px 26px", overflow: "hidden" }}>
-        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Offentliga signaler, samlade</div>
-        <h1 style={s.h1}>Var rör sig <span style={{ fontStyle: "italic", color: C.accent }}>insiders?</span></h1>
-        <p style={s.sub}>Vi samlar insynshandel, flaggningar och blankning från offentliga register och rankar bolagen efter hur mycket som händer. Ett spaningsverktyg — inte en förutsägelse om bud.</p>
+        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Signaler före budet</div>
+        <h1 style={s.h1}>Vilka bolag kan bli <span style={{ fontStyle: "italic", color: C.accent }}>uppköpta?</span></h1>
+        <p style={s.sub}>BudRadar bevakar de offentliga spåren ett uppköp lämnar — insynsköp, flaggningar, blankning — och rankar var det rör på sig. Ett spaningsverktyg, inte en garanti.</p>
+        <div style={s.bidcoHint}>
+          <span style={{ fontWeight: 700, color: C.ink }}>Ett tydligt spår:</span> budgivaren registrerar ofta ett nytt skalbolag först. Sleep Cycle köptes via <span style={{ color: C.accent, fontWeight: 600 }}>Snark Bidco</span>, Viva Wine via <span style={{ color: C.accent, fontWeight: 600 }}>Riesling Ventures</span>. Se fliken <span style={{ fontWeight: 600 }}>Bidco-spår</span>.
+        </div>
         <div style={{ display: "flex", gap: 26, marginTop: 24 }}>
           <HeroStat n={data.length} l="bevakade bolag" />
           <HeroStat n={high} l="hög aktivitet" />
@@ -512,6 +515,7 @@ const s = {
   fill: { height: "100%", borderRadius: 999, transition: "width .9s cubic-bezier(.2,.8,.2,1)" },
   sparkL: { fontSize: 9, color: C.muted, marginTop: 5, letterSpacing: ".04em", textAlign: "center" },
   infoBox: { background: C.accentSoft, border: `1px solid #d9ddff`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
+  bidcoHint: { marginTop: 18, background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "13px 15px", fontSize: 12.5, lineHeight: 1.55, color: C.muted, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
   linkBtn: { background: "none", border: "none", color: C.accent, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 13, padding: 0 },
   chipOffer: { background: C.accent, color: "#fff", borderRadius: 999, padding: "2px 9px", fontSize: 9, letterSpacing: ".12em", fontWeight: 700, flexShrink: 0 },
   overlay: { position: "fixed", inset: 0, background: "rgba(13,18,32,.35)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" },
