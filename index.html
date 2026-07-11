@@ -92,6 +92,7 @@ function BudRadar() {
       <style>{CSS}</style>
       <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 92, position: "relative", minHeight: "100vh" }}>
         {tab === "rank" && <RankTab />}
+        {tab === "bidco" && <BidcoTab />}
         {tab === "historik" && <HistorikTab />}
         {tab === "lar" && <LarDigTab />}
         <BottomNav tab={tab} setTab={setTab} />
@@ -140,13 +141,13 @@ function RankTab() {
       </nav>
 
       <header style={{ position: "relative", padding: "36px 22px 26px", overflow: "hidden" }}>
-        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Signaler före budet</div>
-        <h1 style={s.h1}>Vem blir uppköpt <span style={{ fontStyle: "italic", color: C.accent }}>härnäst?</span></h1>
-        <p style={s.sub}>Vi läser insynshandel, flaggningar, blankning och nyregistreringar från offentliga register — och rankar bolagen där signalerna hopar sig.</p>
+        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Offentliga signaler, samlade</div>
+        <h1 style={s.h1}>Var rör sig <span style={{ fontStyle: "italic", color: C.accent }}>insiders?</span></h1>
+        <p style={s.sub}>Vi samlar insynshandel, flaggningar och blankning från offentliga register och rankar bolagen efter hur mycket som händer. Ett spaningsverktyg — inte en förutsägelse om bud.</p>
         <div style={{ display: "flex", gap: 26, marginTop: 24 }}>
           <HeroStat n={data.length} l="bevakade bolag" />
-          <HeroStat n={high} l="hög signal" />
-          <HeroStat n={top} l="topscore" accent />
+          <HeroStat n={high} l="hög aktivitet" />
+          <HeroStat n={top} l="högsta index" accent />
         </div>
         <div style={s.radar} aria-hidden><div style={s.ring} /><div style={s.ring2} /><div style={s.sweep} /><div style={s.blip} /></div>
       </header>
@@ -166,7 +167,7 @@ function RankTab() {
               <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
-                <div style={s.meta}>{c.ticker} · {c.list} · {c.priceSEK} kr</div>
+                <div style={s.meta}>{[c.ticker, c.list, c.priceSEK != null ? c.priceSEK + " kr" : null].filter(Boolean).join(" · ")}</div>
               </div>
               <Gauge v={c.score.composite} tier={c.score.tier} />
             </div>
@@ -184,7 +185,7 @@ function RankTab() {
       </div>
 
       {selCo && <Sheet co={selCo} onClose={() => setSel(null)} />}
-      <footer style={s.foot}>Endast offentlig data · ej investeringsrådgivning · scoren är en viktad signal, inte en backtestad sannolikhet.</footer>
+      <footer style={s.foot}>Endast offentlig data · ej investeringsrådgivning · indexet mäter aktivitet, inte sannolikhet för bud.</footer>
     </>
   );
 }
@@ -198,17 +199,17 @@ function Sheet({ co, onClose }) {
         <div style={s.sheetHead}>
           <div>
             <div style={{ fontFamily: SERIF, fontSize: 26, letterSpacing: "-.02em", color: C.ink }}>{co.name}</div>
-            <div style={s.meta}>{co.ticker} · {co.list} · {co.mcapMSEK} MSEK</div>
+            <div style={s.meta}>{[co.ticker, co.list, co.mcapMSEK != null ? co.mcapMSEK + " MSEK" : null].filter(Boolean).join(" · ")}</div>
           </div>
           <Gauge v={co.score.composite} tier={co.score.tier} />
         </div>
         <Sec title="Insynshandel · senaste">
           {!d.insider.length ? <Empty /> : d.insider.slice(0, 6).map((x, i) => (
-            <Ev key={i} a={`${x.person} · ${x.tx_type}`} b={`${(x.amount_sek / 1e6).toFixed(1)} MSEK · ${x.tx_date}`} />))}
+            <Ev key={i} a={`${x.person} · ${x.tx_type}`} b={`${x.amount_sek ? (x.amount_sek / 1e6).toFixed(1) + " MSEK · " : ""}${x.tx_date || ""}`} />))}
         </Sec>
         <Sec title="Flaggningar">
           {!d.flags.length ? <Empty /> : d.flags.map((f, i) => (
-            <Ev key={i} a={f.holder} b={`${f.direction === "ner" ? "▼" : "▲"} ${f.threshold} · ${f.flag_date}`} />))}
+            <Ev key={i} a={f.holder || f.label || "Flaggning"} b={`${f.direction === "ner" ? "▼ " : "▲ "}${f.threshold ? f.threshold + " · " : ""}${f.flag_date || ""}`} />))}
         </Sec>
         <Sec title="Korta nettopositioner">
           {!d.shorts.length ? <Empty /> : <Grid items={[["Senaste", `${d.shorts[0].position_pct}%`], ["Datapunkter", d.shorts.length]]} />}
@@ -217,7 +218,10 @@ function Sheet({ co, onClose }) {
           {!d.bolagsverket.length ? <Empty /> : d.bolagsverket.map((e, i) => (
             <Ev key={i} a={e.event_type} b={`${e.note} · ${e.event_date}`} />))}
         </Sec>
-        <Sec title="Så räknas scoren">
+        <Sec title="Så räknas indexet">
+          <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginTop: -2, marginBottom: 12 }}>
+            Ett vägt mått på hur mycket offentlig aktivitet som finns i bolaget just nu. Högt index = mycket händer — inte att ett bud är på väg.
+          </p>
           {[["Insyn", co.score.parts.insider, "30%"], ["Flaggning", co.score.parts.flags, "30%"], ["Blankning", co.score.parts.shortSig, "20%"], ["Bolagsverket", co.score.parts.bv, "20%"]].map(([l, v, w]) => (
             <div key={l} style={{ display: "flex", alignItems: "center", gap: 11, padding: "5px 0" }}>
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink }}>{l} <span style={{ color: C.muted, fontSize: 11, fontWeight: 400 }}>{w}</span></span>
@@ -324,10 +328,60 @@ function LarDigTab() {
   );
 }
 
+/* ---------------- BIDCO-SPÅR ---------------- */
+function BidcoTab() {
+  const [items, setItems] = useState([]);
+  const [status, setStatus] = useState("loading"); // loading | live | empty | error
+  const load = useCallback(async () => {
+    setStatus("loading");
+    try {
+      const r = await fetch("/api/bidco");
+      if (!r.ok) throw 0;
+      const j = await r.json();
+      setItems(j.items || []);
+      setStatus((j.items && j.items.length) ? "live" : "empty");
+    } catch { setStatus("error"); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <>
+      <SimpleHeader eyebrow="Nya bolagsskal" title={<>Vem bygger ett <span style={{ fontStyle: "italic", color: C.accent }}>bidco?</span></>}
+        sub="Ett bidco (eller lagerbolaget 'Goldcup NNNN AB') är skalet ett uppköp genomförs genom. Dyker det upp i pressflödet kan ett bud vara nära." />
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
+        {status === "loading" && <div style={{ ...s.co, cursor: "default" }}><div style={{ height: 15, background: "#eceef4", borderRadius: 8, width: "60%" }} /></div>}
+        {status === "error" && <div style={{ ...s.infoBox }}>Kunde inte hämta pressflödet just nu. <button onClick={load} style={s.linkBtn}>Försök igen</button></div>}
+        {status === "empty" && <div style={{ ...s.infoBox }}>Inga bidco-omnämnanden i det senaste flödet. Det är normalt — bud är sällsynta. Kolla igen om några dagar.</div>}
+        {status === "live" && items.map((it, i) => (
+          <a key={i} href={it.url || "#"} target="_blank" rel="noreferrer" className="card"
+            style={{ ...s.co, textDecoration: "none", display: "block" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{it.bidco}</div>
+                {it.issuer && <div style={s.meta}>Kopplat till: {it.issuer}</div>}
+                <div style={{ ...s.meta, marginTop: 4 }}>{it.date || ""}</div>
+              </div>
+              {it.isOffer && <span style={{ ...s.chipOffer }}>BUD</span>}
+            </div>
+            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 10 }}>{it.title}</p>
+          </a>
+        ))}
+      </div>
+      <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
+        <b style={{ color: C.ink }}>Så funkar spåret:</b> vi skannar färska marknadsmeddelanden efter bolagsnamn som slutar på
+        <i> bidco/holdco</i> eller heter <i>Goldcup NNNN AB</i> — mönstret budgivare använder. Ett omnämnande betyder inte att
+        ett bud är säkert, men det är ofta första spåret. (Cint-budet gick genom "Goldcup 39518 AB".)
+      </div>
+      <footer style={s.foot}>Skannar offentliga pressmeddelanden · ej investeringsrådgivning.</footer>
+    </>
+  );
+}
+
 /* ---------------- delade komponenter ---------------- */
 function BottomNav({ tab, setTab }) {
   const items = [
     { id: "rank", label: "Rank", icon: IconRadar },
+    { id: "bidco", label: "Bidco-spår", icon: IconTarget },
     { id: "historik", label: "Historik", icon: IconClock },
     { id: "lar", label: "Lär dig", icon: IconBook },
   ];
@@ -350,8 +404,7 @@ function BottomNav({ tab, setTab }) {
     </div>
   );
 }
-const IconRadar = ({ color }) => (
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+const IconRadar = ({ color }) => (  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
     <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 12 L19 7" /></svg>
 );
 const IconClock = ({ color }) => (
@@ -361,6 +414,10 @@ const IconClock = ({ color }) => (
 const IconBook = ({ color }) => (
   <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 5 a2 2 0 0 1 2-2 h5 v16 h-5 a2 2 0 0 0-2 2 z" /><path d="M20 5 a2 2 0 0 0-2-2 h-5 v16 h5 a2 2 0 0 1 2 2 z" /></svg>
+);
+const IconTarget = ({ color }) => (
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /><path d="M12 2 v3 M12 19 v3 M2 12 h3 M19 12 h3" /></svg>
 );
 
 function SimpleHeader({ eyebrow, title, sub }) {
@@ -455,6 +512,8 @@ const s = {
   fill: { height: "100%", borderRadius: 999, transition: "width .9s cubic-bezier(.2,.8,.2,1)" },
   sparkL: { fontSize: 9, color: C.muted, marginTop: 5, letterSpacing: ".04em", textAlign: "center" },
   infoBox: { background: C.accentSoft, border: `1px solid #d9ddff`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
+  linkBtn: { background: "none", border: "none", color: C.accent, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 13, padding: 0 },
+  chipOffer: { background: C.accent, color: "#fff", borderRadius: 999, padding: "2px 9px", fontSize: 9, letterSpacing: ".12em", fontWeight: 700, flexShrink: 0 },
   overlay: { position: "fixed", inset: 0, background: "rgba(13,18,32,.35)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" },
   sheet: { background: C.card, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "24px 24px 0 0", padding: "10px 20px 26px", animation: "slideUp .32s cubic-bezier(.2,.8,.2,1)", boxShadow: "0 -10px 50px rgba(13,18,32,.2)" },
   grip: { width: 42, height: 5, background: C.line, borderRadius: 3, margin: "6px auto 16px" },
