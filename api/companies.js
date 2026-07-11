@@ -200,33 +200,60 @@ function mergeFlags(map, items) {
     const title = (it.content && it.content.title) || it.title || it.header || "";
     if (!/flaggning|major shareholding/i.test(title)) continue;
     const im = title.match(/[Ff]laggningsmeddelande i\s+(.+?)\s*$/);
-    const issuer = im ? im[1] : ((it.author && it.author.name) || "");
+    let issuer = im ? im[1] : ((it.author && it.author.name) || "");
     if (!issuer || /finansinspektion/i.test(issuer)) continue;
+    const html = (it.content && it.content.html) || (it.content && it.content.preamble) || "";
+    const f = parseFlagHtml(html);
+    // Emittent från HTML är mer exakt (utan "Finansinspektionen: i ...")
+    if (f.issuer) issuer = f.issuer;
     const co = getCo(map, issuer); if (!co) continue;
-    const body = `${title} ${(it.content && it.content.preamble) || (it.content && it.content.html) || ""}`;
-    const p = parseFlag(body);
-    const isCorr = /korrigering/i.test(title);
     co._flags.push({
-      holder: p.holder,                 // ofta null från FI-titel
-      threshold: p.threshold,           // kan vara null om ej i texten
-      direction: p.direction,
-      flag_date: dateIn(it.publish_date || it.date),
+      holder: f.holder,
+      threshold: f.threshold,
+      sharePct: f.sharePct,
+      reason: f.reason,
+      direction: f.direction,
+      flag_date: f.date || dateIn(it.publish_date || it.date),
       url: it.url,
-      label: isCorr ? "Korrigering" : "Flaggning",
+      label: /korrigering/i.test(title) ? "Korrigering" : "Flaggning",
     });
   }
 }
-function parseFlag(text) {
-  const t = (text || "").toLowerCase();
-  const pcts = [...t.matchAll(/(\d{1,2})(?:[.,]\d+)?\s*(?:procent|%)/g)].map(m => Number(m[1]));
+
+// FI:s flaggningar kommer som en HTML-tabell. Vi drar ut de rena fälten.
+function parseFlagHtml(html) {
+  // Bygg upp "etikett → värde" ur <td>Etikett</td><td>Värde</td>
+  const cellRe = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+  const cells = [];
+  let m;
+  while ((m = cellRe.exec(html))) cells.push(m[1].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim());
+
+  const findAfter = (labelRe) => {
+    for (let i = 0; i < cells.length - 1; i++) if (labelRe.test(cells[i])) return cells[i + 1];
+    return null;
+  };
+  const issuerRaw = findAfter(/^Emittent$/i);              // "556767-0541 Episurf Medical AB"
+  const issuer = issuerRaw ? issuerRaw.replace(/^\s*\d{6}-\d{4}\s*/, "").trim() : null;
+  const holder = findAfter(/^Innehavare$/i);
+  const reason = findAfter(/Skäl för flaggning/i);         // t.ex. "Nyemission", "Förvärv"
+  const date = (findAfter(/^Datum$/i) || "").match(/\d{4}-\d{2}-\d{2}/)?.[0] || null;
+
+  // Andel efter transaktionen (aktier) — leta procent nära "Andel"/"aktier"
+  const pctVals = cells.map(c => {
+    const mm = c.match(/^(\d{1,3}(?:[.,]\d+)?)\s*%$/);
+    return mm ? Number(mm[1].replace(",", ".")) : null;
+  }).filter(v => v != null);
+  const sharePct = pctVals.length ? Math.max(...pctVals) : null; // störst = totalt innehav efter
+
+  // Tröskel: gränsvärdet som passerades (5/10/15/20/25/30...)
+  const thWord = findAfter(/Gränsvärde för antal aktier/i) || "";
+  const thNum = Number((thWord.match(/(\d{1,2})/) || [])[1]);
   const ths = [5, 10, 15, 20, 25, 30, 50, 66, 90];
   let threshold = null;
-  for (const p of pcts) { const n = ths.find(x => Math.abs(x - p) <= 1); if (n) { threshold = n + "%"; break; } }
-  const direction = /(överstig|ökat|nått|överskrid|passerat upp)/.test(t) ? "upp"
-    : /(understig|minskat|sålt|sjunkit|underskrid)/.test(t) ? "ner" : "upp";
-  const hm = (text || "").match(/^(.*?)\s+(?:har|genom|via)\b/i);
-  const holder = hm ? hm[1].replace(/flaggningsmeddelande[:\-]?/i, "").trim() : null;
-  return { holder, threshold, direction };
+  if (thNum) { const n = ths.find(x => Math.abs(x - thNum) <= 1); if (n) threshold = n + "%"; }
+
+  const direction = /avyttr|minskn|sålt|överlåt/i.test(reason || "") ? "ner" : "upp";
+  return { issuer, holder, reason, date, sharePct, threshold, direction };
 }
 
 // ---------- CSV-parser (semikolon, citattecken) ----------
