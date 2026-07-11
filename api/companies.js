@@ -96,10 +96,16 @@ function mergeInsider(map, rows) {
     if (!issuer) continue;
     const co = getCo(map, issuer); if (!co) continue;
     if (row["ISIN"] && !co._isin) co._isin = row["ISIN"];
+    const vol = toNum(row["Volym"]);
+    const price = toNum(row["Pris"]);
+    let amount = vol * price;
+    // Filtrera bort orimliga rader (felskrivna pris/volym i FI-datan).
+    // En enskild insynstransaktion på > 1 miljard SEK är nästan alltid ett datafel.
+    if (!isFinite(amount) || amount > 1e9) amount = 0;
     co._insider.push({
       person: row["Person i ledande ställning"] || row["Anmälningsskyldig"] || "—",
       tx_type: row["Karaktär"] || "",
-      amount_sek: toNum(row["Volym"]) * toNum(row["Pris"]),
+      amount_sek: amount,
       tx_date: dateIn(row["Transaktionsdatum"]),
     });
   }
@@ -192,13 +198,22 @@ async function fetchFlags() {
 function mergeFlags(map, items) {
   for (const it of items) {
     const title = (it.content && it.content.title) || it.title || it.header || "";
-    // FI-titlar ser ut som: "Finansinspektionen: Flaggningsmeddelande i BOLAG AB"
+    if (!/flaggning|major shareholding/i.test(title)) continue;
     const im = title.match(/[Ff]laggningsmeddelande i\s+(.+?)\s*$/);
     const issuer = im ? im[1] : ((it.author && it.author.name) || "");
     if (!issuer || /finansinspektion/i.test(issuer)) continue;
     const co = getCo(map, issuer); if (!co) continue;
-    const txt = `${title} ${(it.content && it.content.preamble) || ""}`;
-    co._flags.push({ ...parseFlag(txt), flag_date: dateIn(it.publish_date || it.date), url: it.url });
+    const body = `${title} ${(it.content && it.content.preamble) || (it.content && it.content.html) || ""}`;
+    const p = parseFlag(body);
+    const isCorr = /korrigering/i.test(title);
+    co._flags.push({
+      holder: p.holder,                 // ofta null från FI-titel
+      threshold: p.threshold,           // kan vara null om ej i texten
+      direction: p.direction,
+      flag_date: dateIn(it.publish_date || it.date),
+      url: it.url,
+      label: isCorr ? "Korrigering" : "Flaggning",
+    });
   }
 }
 function parseFlag(text) {
