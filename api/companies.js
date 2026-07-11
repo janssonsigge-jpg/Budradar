@@ -1,3 +1,8 @@
+import zlib from "node:zlib";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+const __dir = dirname(fileURLToPath(import.meta.url));
 // ============================================================
 // /api/companies  — Vercel serverless-funktion
 // Hämtar offentlig data LIVE, slår ihop per bolag, räknar score.
@@ -17,7 +22,7 @@ const INSIDER_CSV =
   "https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search" +
   "?SearchFunctionType=Insyn&button=export&Page=1";
 const SHORT_URL = "https://www.fi.se/sv/vara-register/blankningsregistret/GetAktuellaPositioner/";
-const MFN_FEED = "https://mfn.se/all/a.json?filter=type:ext.se.fi.major-shareholding&limit=200";
+const MFN_FEED = "https://mfn.se/all/a/fi-se.json?limit=200";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -100,29 +105,81 @@ function mergeInsider(map, rows) {
   }
 }
 
-// ---------- FI Blankning ----------
+// ---------- FI Blankning (läses från medföljande ODS-fil) ----------
+// FI serverar filen som en tillfällig "blob" i webbläsaren — ingen fast URL att
+// hämta från. Därför läser vi api/blankning.ods som ligger i projektet.
+// Uppdatera genom att ladda upp en ny fil till GitHub (räcker sällan).
 async function fetchShort() {
-  const r = await fetch(SHORT_URL, { headers: { "user-agent": UA, accept: "text/csv,*/*" } });
-  if (!r.ok) throw new Error("short HTTP " + r.status);
-  const buf = await r.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let enc = "utf-8";
-  if (bytes[0] === 0xFF && bytes[1] === 0xFE) enc = "utf-16le";
-  else if (bytes[0] === 0xFE && bytes[1] === 0xFF) enc = "utf-16be";
-  const text = new TextDecoder(enc).decode(bytes);
-  return parseCsv(text);
+  const buf = readFileSync(join(__dir, "blankning.ods"));
+  return parseOds(buf);
 }
 function mergeShort(map, rows) {
   for (const row of rows) {
-    const issuer = row["Namn på emittent"] || row["Emittent"] || row["Issuer"] || "";
+    const issuer = row["Namn på emittent"] || "";
     if (!issuer) continue;
     const co = getCo(map, issuer); if (!co) continue;
     co._shorts.push({
-      holder: row["Innehavare av positionen"] || row["Innehavare"] || row["Position holder"] || "—",
-      position_pct: toNum(row["Position i procent"] || row["Position"] || row["Net short position"]),
-      position_date: dateIn(row["Datum för positionen"] || row["Datum"] || row["Position date"]),
+      holder: row["Innehavare av positionen"] || "—",
+      position_pct: toNum(row["Position i procent"]),
+      position_date: dateIn(row["Datum för positionen"]),
     });
   }
+}
+
+// Läser en fil ur en ODS (zip) och returnerar rad-objekt nycklade på rubrik.
+function readZipEntry(buf, targetName) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let i = 0;
+  while (i + 4 <= buf.length) {
+    if (dv.getUint32(i, true) === 0x04034b50) {
+      const method = dv.getUint16(i + 8, true);
+      const compSize = dv.getUint32(i + 18, true);
+      const nameLen = dv.getUint16(i + 26, true);
+      const extraLen = dv.getUint16(i + 28, true);
+      const nameStart = i + 30;
+      const name = Buffer.from(buf.subarray(nameStart, nameStart + nameLen)).toString("utf8");
+      const dataStart = nameStart + nameLen + extraLen;
+      const data = buf.subarray(dataStart, dataStart + compSize);
+      if (name === targetName) {
+        if (method === 0) return Buffer.from(data);
+        if (method === 8) return zlib.inflateRawSync(data);
+        throw new Error("okänd komprimering " + method);
+      }
+      i = dataStart + compSize;
+    } else i++;
+  }
+  throw new Error(targetName + " saknas i ODS");
+}
+function parseOds(buf) {
+  const xml = readZipEntry(buf, "content.xml").toString("utf8");
+  const rawRows = xml.match(/<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/g) || [];
+  const grid = [];
+  for (const r of rawRows) {
+    const cells = [];
+    const cellRe = /<table:table-cell([^>]*)(?:\/>|>([\s\S]*?)<\/table:table-cell>)/g;
+    let m;
+    while ((m = cellRe.exec(r))) {
+      const attrs = m[1] || "", inner = m[2] || "";
+      const rep = /number-columns-repeated="(\d+)"/.exec(attrs);
+      const valAttr = /office:value="([^"]*)"/.exec(attrs);
+      let text = inner.replace(/<[^>]+>/g, "").trim();
+      if (!text && valAttr) text = valAttr[1];
+      const times = rep ? Math.min(Number(rep[1]), 50) : 1;
+      for (let k = 0; k < times; k++) cells.push(text);
+    }
+    grid.push(cells);
+  }
+  const hi = grid.findIndex(c => c.some(x => x.includes("emittent") || x.includes("Innehavare")));
+  if (hi < 0) return [];
+  const headers = grid[hi].map(h => h.replace(/\(.*?\)/g, "").trim());
+  const out = [];
+  for (const cells of grid.slice(hi + 1)) {
+    if (!cells[0] || !cells[1]) continue;
+    const row = {};
+    headers.forEach((h, idx) => { if (h) row[h] = (cells[idx] || "").trim(); });
+    out.push(row);
+  }
+  return out;
 }
 
 // ---------- MFN flaggningar ----------
@@ -130,15 +187,18 @@ async function fetchFlags() {
   const r = await fetch(MFN_FEED, { headers: { "user-agent": UA, accept: "application/json" } });
   if (!r.ok) throw new Error("mfn HTTP " + r.status);
   const j = await r.json();
-  return j.items || [];
+  return j.items || j.news || [];
 }
 function mergeFlags(map, items) {
   for (const it of items) {
-    const issuer = (it.author && it.author.name) || "";
-    if (!issuer) continue;
+    const title = (it.content && it.content.title) || it.title || it.header || "";
+    // FI-titlar ser ut som: "Finansinspektionen: Flaggningsmeddelande i BOLAG AB"
+    const im = title.match(/[Ff]laggningsmeddelande i\s+(.+?)\s*$/);
+    const issuer = im ? im[1] : ((it.author && it.author.name) || "");
+    if (!issuer || /finansinspektion/i.test(issuer)) continue;
     const co = getCo(map, issuer); if (!co) continue;
-    const txt = `${(it.content && it.content.title) || it.title || ""} ${(it.content && it.content.preamble) || ""}`;
-    co._flags.push({ ...parseFlag(txt), flag_date: dateIn(it.publish_date), url: it.url });
+    const txt = `${title} ${(it.content && it.content.preamble) || ""}`;
+    co._flags.push({ ...parseFlag(txt), flag_date: dateIn(it.publish_date || it.date), url: it.url });
   }
 }
 function parseFlag(text) {
