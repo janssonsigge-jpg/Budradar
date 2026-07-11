@@ -1,24 +1,18 @@
 // ============================================================
 // /api/companies  — Vercel serverless-funktion
-// Hämtar offentlig data LIVE vid anrop, slår ihop per bolag,
-// räknar score och returnerar JSON. Ingen databas behövs.
-// Cachar resultatet i minnet i 30 min så det går snabbt och
-// så vi inte spammar källorna (FI begränsar antal sökningar).
+// Hämtar offentlig data LIVE, slår ihop per bolag, räknar score.
+// Cachar 30 min. Lägg till ?fresh=1 i URL:en för att hoppa över cachen.
 //
 // Källor:
-//   • FI Insynsregistret (CSV) — insiders köp/sälj
-//   • FI Blankningsregistret  — korta nettopositioner
-//   • MFN flaggningar          — >5/10/15% ägande
-//
-// ⚠ VERIFIERA URL:erna nedan mot källorna i din webbläsare första
-//   gången — de kan behöva justeras. Varje källa är feltolerant:
-//   om en fallerar fortsätter de andra.
+//   • FI Insynsregistret (CSV, UTF-16) — insiders köp/sälj  [FUNGERAR]
+//   • FI Blankningsregistret            — korta positioner   (kan behöva justeras)
+//   • MFN flaggningar                   — >5/10/15% ägande   (kan behöva justeras)
+// Varje källa är feltolerant: om en fallerar fortsätter de andra.
 // ============================================================
 
 const TTL_MS = 30 * 60 * 1000;
 let CACHE = { ts: 0, data: null };
 
-// --- Endpoints (verifiera vid behov) ---
 const INSIDER_CSV =
   "https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search" +
   "?SearchFunctionType=Insyn&button=export&Page=1";
@@ -28,29 +22,32 @@ const MFN_FEED = "https://mfn.se/all/a.json?filter=type:ext.se.fi.major-sharehol
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   try {
-    if (CACHE.data && Date.now() - CACHE.ts < TTL_MS) {
+    const fresh = req.query && (req.query.fresh === "1" || req.query.fresh === "true");
+    if (!fresh && CACHE.data && Date.now() - CACHE.ts < TTL_MS) {
       return res.status(200).json({ source: "cache", companies: CACHE.data });
     }
-    const map = new Map(); // nyckel: normaliserat bolagsnamn
+    const map = new Map();
 
     const [insider, shorts, flags] = await Promise.allSettled([
       fetchInsider(), fetchShort(), fetchFlags(),
     ]);
 
-    if (insider.status === "fulfilled") mergeInsider(map, insider.value);
-    if (shorts.status === "fulfilled") mergeShort(map, shorts.value);
-    if (flags.status === "fulfilled") mergeFlags(map, flags.value);
+    const fetched = {};
+    if (insider.status === "fulfilled") { mergeInsider(map, insider.value); fetched.insider = `ok (${insider.value.length} rader)`; }
+    else fetched.insider = "FEL: " + String(insider.reason).slice(0, 120);
+    if (shorts.status === "fulfilled") { mergeShort(map, shorts.value); fetched.shorts = `ok (${shorts.value.length} rader)`; }
+    else fetched.shorts = "FEL: " + String(shorts.reason).slice(0, 120);
+    if (flags.status === "fulfilled") { mergeFlags(map, flags.value); fetched.flags = `ok (${flags.value.length} rader)`; }
+    else fetched.flags = "FEL: " + String(flags.reason).slice(0, 120);
 
-    const companies = [...map.values()].map(scoreCompany).sort((a, b) => b.score.composite - a.score.composite);
+    const companies = [...map.values()].map(scoreCompany)
+      .filter(c => c.score.composite > 0 || c.detail.insider.length || c.detail.flags.length)
+      .sort((a, b) => b.score.composite - a.score.composite);
 
     CACHE = { ts: Date.now(), data: companies };
-    res.status(200).json({
-      source: "live",
-      fetched: { insider: insider.status, shorts: shorts.status, flags: flags.status },
-      companies,
-    });
+    res.status(200).json({ source: fresh ? "fresh" : "live", fetched, count: companies.length, companies });
   } catch (e) {
-    res.status(500).json({ error: String(e?.message || e) });
+    res.status(500).json({ error: String(e && e.message || e) });
   }
 }
 
@@ -65,34 +62,39 @@ function getCo(map, name) {
   const key = norm(name);
   if (!key) return null;
   if (!map.has(key)) {
-    map.set(key, {
-      name, ticker: key.toUpperCase().slice(0, 8), list: null, priceSEK: null, mcapMSEK: null,
-      _insider: [], _flags: [], _shorts: [], _bv: [],
-    });
+    map.set(key, { name, ticker: key.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8),
+      list: null, priceSEK: null, mcapMSEK: null, _insider: [], _flags: [], _shorts: [], _bv: [] });
   }
   return map.get(key);
 }
-function toNum(s) { return Number(String(s ?? "").replace(/\s/g, "").replace(",", ".")) || 0; }
-function dateIn(s) { const m = String(s ?? "").match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : null; }
+function toNum(s) { return Number(String(s == null ? "" : s).replace(/\s/g, "").replace(/\u00a0/g, "").replace(",", ".")) || 0; }
+function dateIn(s) { const m = String(s == null ? "" : s).match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : null; }
 
-// ---------- FI Insynsregistret ----------
+// ---------- FI Insynsregistret (UTF-16!) ----------
 async function fetchInsider() {
   const r = await fetch(INSIDER_CSV, { headers: { "user-agent": UA, accept: "text/csv,*/*" } });
-  if (!r.ok) throw new Error("insider " + r.status);
-  const text = await r.text();
+  if (!r.ok) throw new Error("insider HTTP " + r.status);
+  // Filen är UTF-16 med BOM. Läs som bytes och avkoda med TextDecoder.
+  const buf = await r.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  // Upptäck UTF-16 LE/BE via BOM; fall tillbaka på LE.
+  let enc = "utf-16le";
+  if (bytes[0] === 0xFE && bytes[1] === 0xFF) enc = "utf-16be";
+  else if (bytes[0] === 0xFF && bytes[1] === 0xFE) enc = "utf-16le";
+  else if (bytes[0] === 0xEF && bytes[1] === 0xBB) enc = "utf-8";
+  const text = new TextDecoder(enc).decode(bytes);
   return parseCsv(text);
 }
 function mergeInsider(map, rows) {
   for (const row of rows) {
-    const issuer = row["Utgivare"] || row["Emittent"] || "";
+    const issuer = row["Emittent"] || "";
     if (!issuer) continue;
     const co = getCo(map, issuer); if (!co) continue;
-    const vol = toNum(row["Volym"]);
-    const price = toNum(row["Pris"]);
+    if (row["ISIN"] && !co._isin) co._isin = row["ISIN"];
     co._insider.push({
-      person: row["Person i ledande ställning"] || row["Namn"] || "—",
-      tx_type: row["Karaktär"] || row["Karaktar"] || "",
-      amount_sek: vol * price,
+      person: row["Person i ledande ställning"] || row["Anmälningsskyldig"] || "—",
+      tx_type: row["Karaktär"] || "",
+      amount_sek: toNum(row["Volym"]) * toNum(row["Pris"]),
       tx_date: dateIn(row["Transaktionsdatum"]),
     });
   }
@@ -101,19 +103,24 @@ function mergeInsider(map, rows) {
 // ---------- FI Blankning ----------
 async function fetchShort() {
   const r = await fetch(SHORT_URL, { headers: { "user-agent": UA, accept: "text/csv,*/*" } });
-  if (!r.ok) throw new Error("short " + r.status);
-  const text = await r.text();
+  if (!r.ok) throw new Error("short HTTP " + r.status);
+  const buf = await r.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let enc = "utf-8";
+  if (bytes[0] === 0xFF && bytes[1] === 0xFE) enc = "utf-16le";
+  else if (bytes[0] === 0xFE && bytes[1] === 0xFF) enc = "utf-16be";
+  const text = new TextDecoder(enc).decode(bytes);
   return parseCsv(text);
 }
 function mergeShort(map, rows) {
   for (const row of rows) {
-    const issuer = row["Namn på emittent"] || row["Emittent"] || "";
+    const issuer = row["Namn på emittent"] || row["Emittent"] || row["Issuer"] || "";
     if (!issuer) continue;
     const co = getCo(map, issuer); if (!co) continue;
     co._shorts.push({
-      holder: row["Innehavare av positionen"] || row["Innehavare"] || "—",
-      position_pct: toNum(row["Position i procent"] || row["Position"]),
-      position_date: dateIn(row["Datum för positionen"] || row["Datum"]),
+      holder: row["Innehavare av positionen"] || row["Innehavare"] || row["Position holder"] || "—",
+      position_pct: toNum(row["Position i procent"] || row["Position"] || row["Net short position"]),
+      position_date: dateIn(row["Datum för positionen"] || row["Datum"] || row["Position date"]),
     });
   }
 }
@@ -121,16 +128,16 @@ function mergeShort(map, rows) {
 // ---------- MFN flaggningar ----------
 async function fetchFlags() {
   const r = await fetch(MFN_FEED, { headers: { "user-agent": UA, accept: "application/json" } });
-  if (!r.ok) throw new Error("mfn " + r.status);
+  if (!r.ok) throw new Error("mfn HTTP " + r.status);
   const j = await r.json();
   return j.items || [];
 }
 function mergeFlags(map, items) {
   for (const it of items) {
-    const issuer = it.author?.name || "";
+    const issuer = (it.author && it.author.name) || "";
     if (!issuer) continue;
     const co = getCo(map, issuer); if (!co) continue;
-    const txt = `${it.content?.title || it.title || ""} ${it.content?.preamble || ""}`;
+    const txt = `${(it.content && it.content.title) || it.title || ""} ${(it.content && it.content.preamble) || ""}`;
     co._flags.push({ ...parseFlag(txt), flag_date: dateIn(it.publish_date), url: it.url });
   }
 }
@@ -147,18 +154,18 @@ function parseFlag(text) {
   return { holder, threshold, direction };
 }
 
-// ---------- enkel CSV-parser (semikolon, ev. citattecken) ----------
+// ---------- CSV-parser (semikolon, citattecken) ----------
 function parseCsv(text) {
   const clean = text.replace(/^\uFEFF/, "");
   const lines = clean.split(/\r?\n/).filter(l => l.trim().length);
   if (!lines.length) return [];
-  const delim = lines[0].includes(";") ? ";" : ",";
-  const headers = splitLine(lines[0], delim);
+  const delim = (lines[0].split(";").length > lines[0].split(",").length) ? ";" : ",";
+  const headers = splitLine(lines[0], delim).map(h => h.trim());
   const out = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = splitLine(lines[i], delim);
     const row = {};
-    headers.forEach((h, idx) => { row[h.trim()] = (cells[idx] ?? "").trim(); });
+    headers.forEach((h, idx) => { row[h] = (cells[idx] == null ? "" : cells[idx]).trim(); });
     out.push(row);
   }
   return out;
@@ -183,8 +190,8 @@ function scoreCompany(co) {
   const recentIns = co._insider.filter(x => x.tx_date && now - Date.parse(x.tx_date) < d90);
   let netMSEK = 0; const buyers = new Set(), sellers = new Set();
   for (const x of recentIns) {
-    if (/förvärv|forvarv|köp/i.test(x.tx_type)) { netMSEK += x.amount_sek / 1e6; buyers.add(x.person); }
-    else if (/avyttr|sälj|salj/i.test(x.tx_type)) { netMSEK -= x.amount_sek / 1e6; sellers.add(x.person); }
+    if (/förvärv|forvarv|köp|teckn/i.test(x.tx_type)) { netMSEK += x.amount_sek / 1e6; buyers.add(x.person); }
+    else if (/avyttr|sälj|salj|avytt/i.test(x.tx_type)) { netMSEK -= x.amount_sek / 1e6; sellers.add(x.person); }
   }
   const insider = clamp(Math.max(0, netMSEK) * 4 + buyers.size * 6 - sellers.size * 5, 0, 100);
 
@@ -196,7 +203,7 @@ function scoreCompany(co) {
 
   let shortSig = 0;
   const sorted = [...co._shorts].filter(s => s.position_date).sort((a, b) => a.position_date.localeCompare(b.position_date));
-  if (sorted.length >= 2) shortSig = clamp(-(sorted.at(-1).position_pct - sorted[0].position_pct) * 18, 0, 100);
+  if (sorted.length >= 2) shortSig = clamp(-(sorted[sorted.length - 1].position_pct - sorted[0].position_pct) * 18, 0, 100);
 
   const bv = clamp(co._bv.reduce((s, e) => s + (/bidco|spv|newco/i.test(e.note || "") ? 50 : 15), 0), 0, 100);
 
