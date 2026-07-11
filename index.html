@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>BudRadar</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+// Live-datakälla: samma adress som appen. Rank-fliken hämtar härifrån,
+// faller tillbaka på DEMO om API:t inte svarar.
+const API = "/api/companies";
+
+
+// ---------- data ----------
+const DEMO = [
+  { ticker: "NETEL", name: "Netel Holding", list: "Nasdaq Sthlm", priceSEK: 22.1, mcapMSEK: 1100,
+    score: { composite: 78, tier: "HÖG", parts: { insider: 88, flags: 90, shortSig: 32, bv: 50 } },
+    detail: { insider: [{ person: "VD", tx_type: "Förvärv", amount_sek: 4200000, tx_date: "2026-05-26" },
+                        { person: "Styrelseledamot", tx_type: "Förvärv", amount_sek: 1800000, tx_date: "2026-05-20" }],
+      flags: [{ holder: "Aktivistfond X", threshold: "10%", direction: "upp", flag_date: "2026-05-27" },
+              { holder: "Aktivistfond X", threshold: "5%", direction: "upp", flag_date: "2026-05-21" }],
+      shorts: [{ holder: "Fond A", position_pct: 1.2, position_date: "2026-05-27" }],
+      bolagsverket: [{ event_type: "Nytt bolag", note: "★ NewCo, samma c/o-adress som rådgivare", event_date: "2026-05-19" }] } },
+  { ticker: "CINT", name: "Cint Group", list: "Nasdaq Sthlm", priceSEK: 9.7, mcapMSEK: 980,
+    score: { composite: 64, tier: "MEDEL", parts: { insider: 50, flags: 20, shortSig: 43, bv: 50 } },
+    detail: { insider: [{ person: "CFO", tx_type: "Förvärv", amount_sek: 900000, tx_date: "2026-05-24" }],
+      flags: [{ holder: "PE-fond (via SPV)", threshold: "5%", direction: "upp", flag_date: "2026-05-20" }],
+      shorts: [{ holder: "Fond B", position_pct: 0.6, position_date: "2026-05-24" }],
+      bolagsverket: [{ event_type: "Nytt bolag", note: "★ Bidco-liknande SPV registrerad", event_date: "2026-05-23" }] } },
+  { ticker: "VNV", name: "VNV Global", list: "Nasdaq Sthlm", priceSEK: 31.2, mcapMSEK: 2400,
+    score: { composite: 61, tier: "MEDEL", parts: { insider: 72, flags: 35, shortSig: 63, bv: 15 } },
+    detail: { insider: [{ person: "VD", tx_type: "Förvärv", amount_sek: 3100000, tx_date: "2026-05-28" }],
+      flags: [{ holder: "Familjekontor Y", threshold: "10%", direction: "upp", flag_date: "2026-05-25" }],
+      shorts: [{ holder: "Fond C", position_pct: 3.1, position_date: "2026-05-28" }], bolagsverket: [] } },
+  { ticker: "APRTEC", name: "APR Technologies", list: "Spotlight", priceSEK: 15.5, mcapMSEK: 320,
+    score: { composite: 41, tier: "MEDEL", parts: { insider: 47, flags: 35, shortSig: 0, bv: 15 } },
+    detail: { insider: [{ person: "Grundare", tx_type: "Förvärv", amount_sek: 4200000, tx_date: "2026-05-22" }],
+      flags: [{ holder: "Johan Claesson (bolag)", threshold: "10%", direction: "upp", flag_date: "2026-05-18" }],
+      shorts: [], bolagsverket: [] } },
+  { ticker: "SHOT", name: "Scandinavian Health", list: "First North", priceSEK: 44, mcapMSEK: 540,
+    score: { composite: 8, tier: "LÅG", parts: { insider: 7, flags: 0, shortSig: 0, bv: 0 } },
+    detail: { insider: [], flags: [], shorts: [], bolagsverket: [] } },
+  { ticker: "BICO", name: "BICO Group", list: "Nasdaq Sthlm", priceSEK: 18.4, mcapMSEK: 1850,
+    score: { composite: 6, tier: "LÅG", parts: { insider: 1, flags: 0, shortSig: 0, bv: 0 } },
+    detail: { insider: [], flags: [], shorts: [], bolagsverket: [] } },
+];
+
+// Historik — riktiga svenska bud 2026 med verifierade siffror (premie mot senaste
+// stängningskurs före offentliggörandet). Bidco = det nyregistrerade bolaget budet gick genom.
+const HISTORIK = [
+  { name: "Sleep Cycle", ticker: "SLEEP", year: 2026, bidder: "Altor", bidco: "Snark Bidco",
+    priceSEK: 24.5, premiumPct: 47, outcome: "Genomfört",
+    note: "Altor bjöd 24,50 kr via Snark Bidco — 47 % över fredagens kurs. Grundaren och näst största ägaren (ihop ~63 %) tackade ja direkt. Aktien rusade ~46 % samma dag." },
+  { name: "Biotage", ticker: "BIOT", year: 2026, bidder: "KKR", bidco: "—",
+    priceSEK: null, premiumPct: 60, outcome: "Genomfört",
+    note: "Amerikanska KKR lade bud med ~60 % premie. Aktien steg över 55 % på veckan och blev Stockholmsbörsens klart bästa." },
+  { name: "Cint Group", ticker: "CINT", year: 2026, bidder: "Triton + Bolero", bidco: "TriCarbs BidCo",
+    priceSEK: 6.0, premiumPct: 33, outcome: "Höjt bud",
+    note: "TriCarbs BidCo (Triton) bjöd först 5,60 kr, 33 % premie. Efter invändning från Aktiemarknadsnämnden stöptes konsortiet om och budet höjdes till 6,00 kr. Mot 90-dagarssnittet var premien över 70 %." },
+  { name: "Viva Wine Group", ticker: "VIVA", year: 2026, bidder: "Grundarna", bidco: "Riesling Ventures",
+    priceSEK: 38.5, premiumPct: 38, outcome: "Genomfört",
+    note: "Grundarna köpte ut vinbolaget via Riesling Ventures för 38,50 kr, 38 % premie. Aktien hoppade ~36 %. Notera: budet låg ändå under noteringskursen 49 kr — premie mäts mot kursen före budet, inte mot toppen." },
+  { name: "Humana", ticker: "HUM", year: 2026, bidder: "Ambea", bidco: "—",
+    priceSEK: null, premiumPct: 27, outcome: "Genomfört",
+    note: "Omsorgsbolaget Ambea lade ett kombinerat kontant- och aktiebud på konkurrenten Humana, ~27 % premie. Humana steg nästan 25 %." },
+];
+
+// ---------- app ----------
+
+const C = { ink: "#0d1220", paper: "#f6f7fb", card: "#ffffff", line: "#e7e9f0",
+  muted: "#6b7180", accent: "#3b4cff", accentSoft: "#eef0ff", green: "#1faa6c", red: "#d64545" };
+const SERIF = "'Times New Roman', Times, Georgia, serif";
+const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+function BudRadar() {
+  const [tab, setTab] = useState("rank");
+  return (
+    <div style={{ background: C.paper, minHeight: "100vh", fontFamily: SANS,
+      backgroundImage: `linear-gradient(${C.line} 1px, transparent 1px), linear-gradient(90deg, ${C.line} 1px, transparent 1px)`,
+      backgroundSize: "46px 46px" }}>
+      <style>{CSS}</style>
+      <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 92, position: "relative", minHeight: "100vh" }}>
+        {tab === "rank" && <RankTab />}
+        {tab === "historik" && <HistorikTab />}
+        {tab === "lar" && <LarDigTab />}
+        <BottomNav tab={tab} setTab={setTab} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- RANK ---------------- */
+function RankTab() {
+  const [filter, setFilter] = useState("ALLA");
+  const [sel, setSel] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const [data, setData] = useState(DEMO);
+  const [status, setStatus] = useState("loading"); // loading | live | demo
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
+  const load = useCallback(async () => {
+    setStatus("loading");
+    try {
+      const r = await fetch(API); if (!r.ok) throw 0;
+      const j = await r.json();
+      if (!j.companies || !j.companies.length) throw 0;
+      // API-bolagen saknar detail-fältet i samma form → normalisera lätt
+      setData(j.companies.map(c => ({ ...c, detail: c.detail || { insider: [], flags: [], shorts: [], bolagsverket: [] } })));
+      setStatus("live");
+    } catch { setData(DEMO); setStatus("demo"); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const rows = useMemo(() => {
+    let d = [...data];
+    if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
+    return d.sort((a, b) => b.score.composite - a.score.composite);
+  }, [filter, data]);
+  const selCo = sel ? data.find((c) => c.ticker === sel) : null;
+  const top = rows.length ? rows[0].score.composite : 0;
+  const high = data.filter((c) => c.score.tier === "HÖG").length;
+
+  return (
+    <>
+      <nav style={s.nav}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span style={s.brandDot} /><span style={{ fontWeight: 700, fontSize: 17, color: C.ink }}>BudRadar</span>
+        </div>
+        <div style={{ fontSize: 11, color: status==="live"?C.accent:C.muted, fontWeight: 700, letterSpacing: ".04em" }}>{status==="live"?"● live":status==="demo"?"demo":"…"}</div>
+      </nav>
+
+      <header style={{ position: "relative", padding: "36px 22px 26px", overflow: "hidden" }}>
+        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Signaler före budet</div>
+        <h1 style={s.h1}>Vem blir uppköpt <span style={{ fontStyle: "italic", color: C.accent }}>härnäst?</span></h1>
+        <p style={s.sub}>Vi läser insynshandel, flaggningar, blankning och nyregistreringar från offentliga register — och rankar bolagen där signalerna hopar sig.</p>
+        <div style={{ display: "flex", gap: 26, marginTop: 24 }}>
+          <HeroStat n={data.length} l="bevakade bolag" />
+          <HeroStat n={high} l="hög signal" />
+          <HeroStat n={top} l="topscore" accent />
+        </div>
+        <div style={s.radar} aria-hidden><div style={s.ring} /><div style={s.ring2} /><div style={s.sweep} /><div style={s.blip} /></div>
+      </header>
+
+      <div style={s.filterRow}>
+        {["ALLA", "HÖG", "MEDEL", "LÅG"].map((f) => (
+          <button key={f} className="pill" onClick={() => setFilter(f)} style={pill(filter === f)}>{f}</button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
+        {rows.map((c, i) => (
+          <button key={c.ticker} className="card" onClick={() => setSel(c.ticker)}
+            style={{ ...s.co, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(14px)",
+              transition: "transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s, box-shadow .2s", transitionDelay: `${i * 55}ms` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+              <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
+                <div style={s.meta}>{c.ticker} · {c.list} · {c.priceSEK} kr</div>
+              </div>
+              <Gauge v={c.score.composite} tier={c.score.tier} />
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
+              {[["Insyn", c.score.parts.insider], ["Flagg", c.score.parts.flags], ["Short", c.score.parts.shortSig], ["Bolv", c.score.parts.bv]].map(([l, v]) => (
+                <div key={l} style={{ flex: 1 }}>
+                  <div style={s.track}><div style={{ ...s.fill, width: mounted ? `${v}%` : "0%", background: v >= 60 ? C.accent : C.ink }} /></div>
+                  <div style={s.sparkL}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </button>
+        ))}
+        {!rows.length && <div style={{ textAlign: "center", padding: 40, color: C.muted, fontSize: 13 }}>Inga bolag i den här kategorin.</div>}
+      </div>
+
+      {selCo && <Sheet co={selCo} onClose={() => setSel(null)} />}
+      <footer style={s.foot}>Endast offentlig data · ej investeringsrådgivning · scoren är en viktad signal, inte en backtestad sannolikhet.</footer>
+    </>
+  );
+}
+
+function Sheet({ co, onClose }) {
+  const d = co.detail;
+  return (
+    <div style={s.overlay} onClick={onClose}>
+      <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
+        <div style={s.grip} />
+        <div style={s.sheetHead}>
+          <div>
+            <div style={{ fontFamily: SERIF, fontSize: 26, letterSpacing: "-.02em", color: C.ink }}>{co.name}</div>
+            <div style={s.meta}>{co.ticker} · {co.list} · {co.mcapMSEK} MSEK</div>
+          </div>
+          <Gauge v={co.score.composite} tier={co.score.tier} />
+        </div>
+        <Sec title="Insynshandel · senaste">
+          {!d.insider.length ? <Empty /> : d.insider.slice(0, 6).map((x, i) => (
+            <Ev key={i} a={`${x.person} · ${x.tx_type}`} b={`${(x.amount_sek / 1e6).toFixed(1)} MSEK · ${x.tx_date}`} />))}
+        </Sec>
+        <Sec title="Flaggningar">
+          {!d.flags.length ? <Empty /> : d.flags.map((f, i) => (
+            <Ev key={i} a={f.holder} b={`${f.direction === "ner" ? "▼" : "▲"} ${f.threshold} · ${f.flag_date}`} />))}
+        </Sec>
+        <Sec title="Korta nettopositioner">
+          {!d.shorts.length ? <Empty /> : <Grid items={[["Senaste", `${d.shorts[0].position_pct}%`], ["Datapunkter", d.shorts.length]]} />}
+        </Sec>
+        <Sec title="Bolagsverket">
+          {!d.bolagsverket.length ? <Empty /> : d.bolagsverket.map((e, i) => (
+            <Ev key={i} a={e.event_type} b={`${e.note} · ${e.event_date}`} />))}
+        </Sec>
+        <Sec title="Så räknas scoren">
+          {[["Insyn", co.score.parts.insider, "30%"], ["Flaggning", co.score.parts.flags, "30%"], ["Blankning", co.score.parts.shortSig, "20%"], ["Bolagsverket", co.score.parts.bv, "20%"]].map(([l, v, w]) => (
+            <div key={l} style={{ display: "flex", alignItems: "center", gap: 11, padding: "5px 0" }}>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink }}>{l} <span style={{ color: C.muted, fontSize: 11, fontWeight: 400 }}>{w}</span></span>
+              <div style={{ flex: 1.4, height: 6, borderRadius: 999, background: "#eceef4", overflow: "hidden" }}>
+                <div style={{ ...s.fill, width: `${v}%`, background: v >= 60 ? C.accent : C.ink }} /></div>
+              <span style={{ width: 26, textAlign: "right", fontWeight: 700, fontSize: 14, color: C.ink }}>{v}</span>
+            </div>))}
+        </Sec>
+        <button className="book" style={s.closeBtn} onClick={onClose}>Stäng</button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- HISTORIK ---------------- */
+function HistorikTab() {
+  const done = HISTORIK.filter(h => h.premiumPct > 0);
+  const avg = Math.round(done.reduce((s, h) => s + h.premiumPct, 0) / done.length);
+  return (
+    <>
+      <SimpleHeader eyebrow="Avslutade bud" title={<>Vad hände <span style={{ fontStyle: "italic", color: C.accent }}>sen?</span></>}
+        sub="Tidigare uppköp och premien de gav. Det här visar varför signalerna är värda att fånga innan alla andra." />
+      <div style={{ display: "flex", gap: 26, padding: "0 22px 18px" }}>
+        <HeroStat n={`+${avg}%`} l="snittpremie (genomförda)" accent />
+        <HeroStat n={HISTORIK.length} l="exempel" />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
+        {HISTORIK.map((h, i) => {
+          const drog = h.outcome === "Drogs tillbaka";
+          return (
+            <div key={i} style={s.co}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 13 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{h.name} <span style={{ color: C.muted, fontWeight: 400, fontSize: 12 }}>{h.ticker}</span></div>
+                  <div style={s.meta}>{h.year} · {h.bidder}{h.priceSEK ? ` · ${h.priceSEK} kr` : ""}</div>
+                  {h.bidco !== "—" && <div style={{ ...s.meta, marginTop: 3, color: C.accent, fontWeight: 600 }}>via {h.bidco}</div>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+                  <div style={{ fontFamily: SERIF, fontSize: 28, lineHeight: .85, color: drog ? C.muted : C.green }}>
+                    {h.premiumPct > 0 ? `+${h.premiumPct}%` : "—"}
+                  </div>
+                  <span style={outcomeTag(h.outcome)}>{h.outcome}</span>
+                </div>
+              </div>
+              <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 11 }}>{h.note}</p>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ ...s.infoBox, margin: "12px 18px 0" }}>
+        <b style={{ color: C.ink }}>Premie</b> = hur mycket budet ligger över aktiekursen innan budet blev känt. Äger du aktien
+        <i> före</i> budet får du den skillnaden nästan direkt. Det är hela poängen med att fånga signalen tidigt.
+      </div>
+      <footer style={s.foot}>Riktiga svenska bud 2026 · premie mot senaste kurs före offentliggörandet · ej investeringsrådgivning.</footer>
+    </>
+  );
+}
+
+/* ---------------- LÄR DIG ---------------- */
+const LEKTIONER = [
+  { q: "Vad är BudRadar?",
+    a: "BudRadar bevakar svenska börsbolag och letar efter tecken på att ett uppköp kan vara på väg. Appen läser bara offentlig information — sånt som vem som köper aktier, vem som passerar ägargränser och vilka nya bolag som registreras — och rankar bolagen efter hur många signaler som pekar åt samma håll. Ju högre score, desto fler samtidiga tecken." },
+  { q: "Vad är ett uppköp (bud)?",
+    a: "Ett uppköp är när någon — ett annat företag, en riskkapitalfond eller en storägare — vill köpa alla aktier i ett börsbolag. De lägger ett offentligt bud: 'vi betalar X kronor per aktie'. Om tillräckligt många ägare säger ja, tas bolaget över och försvinner ofta från börsen." },
+  { q: "Så går det till, steg för steg",
+    a: "1. Budgivaren bygger i tysthet en position och förbereder. 2. Ofta registreras ett nytt bolag (en 'bidco') som ska äga aktierna. 3. Budet offentliggörs — nästan alltid över gällande aktiekurs. 4. Ägarna accepterar eller inte. 5. Når budgivaren tillräcklig andel går affären igenom. Flera av de här stegen lämnar spår i offentliga register — och det är precis dem BudRadar fångar." },
+  { q: "Varför tjänar man pengar på det?",
+    a: "Ett bud läggs nästan alltid med en premie — ett pris klart över aktiekursen, ofta 20–40 % högre. Den som redan äger aktien när budet kommer ser kursen hoppa upp mot budnivån mer eller mindre direkt. Äger du för 100 kr och budet är 130 kr, är det +30 % i handen. Poängen med BudRadar är att hjälpa dig titta på bolag där tecknen hopar sig — innan budet blir allmänt känt." },
+  { q: "Vad betyder signalerna?",
+    a: "Insyn: bolagets egna chefer och styrelse köper aktier — de känner bolaget bäst. Flaggning: någon passerar en ägargräns (5/10/15 %), ofta ett tecken på att en köpare bygger position. Blankning: minskande blankning kan betyda att de som spekulerat i nedgång backar. Bolagsverket: en ny 'bidco' eller SPV kan vara skalet som ska genomföra ett köp." },
+  { q: "Hur ska jag INTE använda den?",
+    a: "BudRadar är inget facit och ingen investeringsrådgivning. En hög score betyder inte att ett bud kommer — bud är sällsynta och de flesta högt rankade bolag blir aldrig uppköpta. Scoren är en viktad signal, inte en sannolikhet, och den bygger på öppen data som redan är publik. Använd den som en uppslagslista för egen research, inte som en köpknapp." },
+];
+
+function LarDigTab() {
+  const [open, setOpen] = useState(0);
+  return (
+    <>
+      <SimpleHeader eyebrow="Lär dig" title={<>Så funkar det <span style={{ fontStyle: "italic", color: C.accent }}>egentligen</span></>}
+        sub="Kort om uppköp, varför de gör dig pengar, och vad varje signal i appen faktiskt betyder." />
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "4px 18px" }}>
+        {LEKTIONER.map((l, i) => {
+          const isOpen = open === i;
+          return (
+            <div key={i} style={{ ...s.co, padding: 0, overflow: "hidden" }}>
+              <button className="acc" onClick={() => setOpen(isOpen ? -1 : i)}
+                style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer",
+                  padding: "16px 16px", display: "flex", alignItems: "center", gap: 12, fontFamily: SANS }}>
+                <span style={{ fontFamily: SERIF, fontSize: 15, color: C.accent, width: 22 }}>{String(i + 1).padStart(2, "0")}</span>
+                <span style={{ flex: 1, fontWeight: 700, fontSize: 15.5, color: C.ink }}>{l.q}</span>
+                <span style={{ fontSize: 20, color: C.muted, transform: isOpen ? "rotate(45deg)" : "none", transition: "transform .2s" }}>+</span>
+              </button>
+              {isOpen && <p style={{ fontSize: 13.5, lineHeight: 1.6, color: C.muted, padding: "0 16px 18px 50px", margin: 0 }}>{l.a}</p>}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
+        <b style={{ color: C.ink }}>Kom ihåg:</b> allt bygger på redan offentlig information. Det är lagligt att läsa och sammanställa
+        publika register — det olagliga är att handla på information som <i>inte</i> är offentlig. BudRadar rör bara det förstnämnda.
+      </div>
+      <footer style={s.foot}>Utbildande material, ej investeringsrådgivning.</footer>
+    </>
+  );
+}
+
+/* ---------------- delade komponenter ---------------- */
+function BottomNav({ tab, setTab }) {
+  const items = [
+    { id: "rank", label: "Rank", icon: IconRadar },
+    { id: "historik", label: "Historik", icon: IconClock },
+    { id: "lar", label: "Lär dig", icon: IconBook },
+  ];
+  return (
+    <div style={s.bottomWrap}>
+      <div style={s.bottomNav}>
+        {items.map((it) => {
+          const active = tab === it.id;
+          const Icon = it.icon;
+          return (
+            <button key={it.id} onClick={() => setTab(it.id)} className="pill"
+              style={{ flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: SANS,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "4px 0" }}>
+              <Icon color={active ? C.accent : C.muted} />
+              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? C.ink : C.muted, letterSpacing: ".02em" }}>{it.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+const IconRadar = ({ color }) => (
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 12 L19 7" /></svg>
+);
+const IconClock = ({ color }) => (
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9" /><path d="M12 7 v5 l3 2" /></svg>
+);
+const IconBook = ({ color }) => (
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 5 a2 2 0 0 1 2-2 h5 v16 h-5 a2 2 0 0 0-2 2 z" /><path d="M20 5 a2 2 0 0 0-2-2 h-5 v16 h5 a2 2 0 0 1 2 2 z" /></svg>
+);
+
+function SimpleHeader({ eyebrow, title, sub }) {
+  return (
+    <>
+      <nav style={s.nav}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span style={s.brandDot} /><span style={{ fontWeight: 700, fontSize: 17, color: C.ink }}>BudRadar</span>
+        </div>
+      </nav>
+      <header style={{ padding: "34px 22px 18px" }}>
+        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> {eyebrow}</div>
+        <h1 style={{ ...s.h1, fontSize: 40, marginTop: 18 }}>{title}</h1>
+        <p style={s.sub}>{sub}</p>
+      </header>
+    </>
+  );
+}
+function Gauge({ v, tier }) {
+  const hot = tier === "HÖG";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+      <div style={{ fontFamily: SERIF, fontSize: 34, lineHeight: .85, letterSpacing: "-.02em", color: hot ? C.accent : C.ink }}>{v}</div>
+      <span style={tag(tier)}>{tier}</span>
+    </div>
+  );
+}
+const HeroStat = ({ n, l, accent }) => (
+  <div style={{ display: "flex", flexDirection: "column" }}>
+    <div style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 1, color: accent ? C.accent : C.ink }}>{n}</div>
+    <div style={{ fontSize: 11, color: C.muted, marginTop: 5, letterSpacing: ".02em" }}>{l}</div>
+  </div>
+);
+const Sec = ({ title, children }) => (
+  <div style={{ borderBottom: `1px solid ${C.line}`, padding: "15px 0" }}>
+    <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 700, color: C.muted, marginBottom: 11 }}>{title}</div>
+    {children}
+  </div>
+);
+const Grid = ({ items }) => (
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+    {items.map(([l, v]) => (
+      <div key={l} style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 3 }}>
+        <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em" }}>{l}</span>
+        <span style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1, color: C.ink }}>{v}</span>
+      </div>
+    ))}
+  </div>
+);
+const Ev = ({ a, b }) => (
+  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", fontSize: 13 }}>
+    <span style={{ fontWeight: 600, color: C.ink }}>{a}</span>
+    <span style={{ fontSize: 11, color: C.muted, textAlign: "right" }}>{b}</span>
+  </div>
+);
+const Empty = () => <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>Inga registrerade händelser</div>;
+
+function pill(a) {
+  return { padding: "8px 18px", borderRadius: 999, border: `1px solid ${a ? C.ink : C.line}`,
+    background: a ? C.ink : C.card, color: a ? "#fff" : C.ink, fontSize: 12.5, fontWeight: 600,
+    cursor: "pointer", fontFamily: SANS, letterSpacing: ".03em", transition: "all .15s" };
+}
+function tag(t) {
+  const hot = t === "HÖG";
+  return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".1em", fontWeight: 700,
+    background: hot ? C.accentSoft : "#f0f1f5", color: hot ? C.accent : C.muted, border: `1px solid ${hot ? "#d9ddff" : C.line}` };
+}
+function outcomeTag(o) {
+  const map = { "Genomfört": [C.accentSoft, C.accent, "#d9ddff"], "Höjt bud": ["#e8f6ef", C.green, "#c9ead9"], "Drogs tillbaka": ["#fbeaea", C.red, "#f2cccc"] };
+  const [bg, col, br] = map[o] || ["#f0f1f5", C.muted, C.line];
+  return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".08em", fontWeight: 700, background: bg, color: col, border: `1px solid ${br}` };
+}
+
+const s = {
+  nav: { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "14px 14px 0", padding: "12px 16px",
+    background: C.card, border: `1px solid ${C.line}`, borderRadius: 999, boxShadow: "0 6px 24px rgba(13,18,32,.05)" },
+  brandDot: { width: 16, height: 16, borderRadius: "50%", background: C.accent, boxShadow: `0 0 0 4px ${C.accentSoft}` },
+  eyebrow: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 13px", background: C.card,
+    border: `1px solid ${C.line}`, borderRadius: 999, fontSize: 12, color: C.muted, fontWeight: 600, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
+  h1: { fontFamily: SERIF, fontSize: 52, lineHeight: .98, fontWeight: 400, letterSpacing: "-.02em", margin: "20px 0 0", maxWidth: 360, color: C.ink },
+  sub: { fontSize: 15, lineHeight: 1.5, color: C.muted, marginTop: 16, maxWidth: 340 },
+  radar: { position: "absolute", top: -30, right: -46, width: 150, height: 150, opacity: .9 },
+  ring: { position: "absolute", inset: 0, border: `1px solid ${C.line}`, borderRadius: "50%" },
+  ring2: { position: "absolute", inset: 34, border: `1px solid ${C.line}`, borderRadius: "50%" },
+  sweep: { position: "absolute", inset: 0, borderRadius: "50%", background: "conic-gradient(from 0deg, rgba(59,76,255,.16), transparent 65%)", animation: "sweep 3.4s linear infinite" },
+  blip: { position: "absolute", top: 44, left: 96, width: 7, height: 7, borderRadius: "50%", background: C.accent, boxShadow: `0 0 0 4px ${C.accentSoft}`, animation: "blink 1.7s infinite" },
+  filterRow: { display: "flex", gap: 8, padding: "6px 20px 12px" },
+  co: { textAlign: "left", background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 16px 14px", cursor: "pointer", fontFamily: SANS, boxShadow: "0 8px 30px rgba(13,18,32,.05)" },
+  rank: { fontSize: 12, fontWeight: 700, color: C.muted, fontVariantNumeric: "tabular-nums", width: 22 },
+  meta: { fontSize: 11.5, color: C.muted, marginTop: 2 },
+  track: { height: 5, borderRadius: 999, background: "#eceef4", overflow: "hidden" },
+  fill: { height: "100%", borderRadius: 999, transition: "width .9s cubic-bezier(.2,.8,.2,1)" },
+  sparkL: { fontSize: 9, color: C.muted, marginTop: 5, letterSpacing: ".04em", textAlign: "center" },
+  infoBox: { background: C.accentSoft, border: `1px solid #d9ddff`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
+  overlay: { position: "fixed", inset: 0, background: "rgba(13,18,32,.35)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" },
+  sheet: { background: C.card, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "24px 24px 0 0", padding: "10px 20px 26px", animation: "slideUp .32s cubic-bezier(.2,.8,.2,1)", boxShadow: "0 -10px 50px rgba(13,18,32,.2)" },
+  grip: { width: 42, height: 5, background: C.line, borderRadius: 3, margin: "6px auto 16px" },
+  sheetHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 16, borderBottom: `1px solid ${C.line}`, marginBottom: 4 },
+  closeBtn: { width: "100%", marginTop: 18, padding: "14px", background: C.ink, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: SANS, transition: "transform .15s" },
+  foot: { fontSize: 10.5, color: C.muted, padding: "22px 24px 0", lineHeight: 1.6, textAlign: "center" },
+  bottomWrap: { position: "fixed", bottom: 0, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "0 14px 14px", pointerEvents: "none" },
+  bottomNav: { pointerEvents: "auto", width: "100%", maxWidth: 452, display: "flex", background: C.card, border: `1px solid ${C.line}`,
+    borderRadius: 22, padding: "8px 8px", boxShadow: "0 10px 40px rgba(13,18,32,.14)" },
+};
+
+const CSS = `
+  @keyframes sweep { to { transform: rotate(360deg); } }
+  @keyframes blink { 0%,100% { opacity:1;} 50% { opacity:.25;} }
+  @keyframes slideUp { from { transform: translateY(100%);} to { transform: translateY(0);} }
+  .card:active { transform: translateY(1px) scale(.995) !important; }
+  .pill:active { transform: scale(.96); }
+  .book:hover { transform: translateY(-1px); }
+  .acc:active { opacity:.7; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+`;
+
+ReactDOM.createRoot(document.getElementById("root")).render(<BudRadar />);
+</script>
+</body>
+</html>
