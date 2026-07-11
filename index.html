@@ -212,7 +212,14 @@ function Sheet({ co, onClose }) {
         </Sec>
         <Sec title="Flaggningar">
           {!d.flags.length ? <Empty /> : d.flags.map((f, i) => (
-            <Ev key={i} a={f.holder || f.label || "Flaggning"} b={`${f.direction === "ner" ? "▼ " : "▲ "}${f.threshold ? f.threshold + " · " : ""}${f.flag_date || ""}`} />))}
+            <Ev key={i}
+              a={f.holder || f.label || "Flaggning"}
+              b={[
+                f.reason,
+                f.threshold ? `passerade ${f.threshold}` : null,
+                f.sharePct != null ? `→ ${f.sharePct}%` : null,
+                f.flag_date,
+              ].filter(Boolean).join(" · ")} />))}
         </Sec>
         <Sec title="Korta nettopositioner">
           {!d.shorts.length ? <Empty /> : <Grid items={[["Senaste", `${d.shorts[0].position_pct}%`], ["Datapunkter", d.shorts.length]]} />}
