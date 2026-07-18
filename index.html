@@ -83,6 +83,13 @@ const C = { ink: "#0d1220", paper: "#f6f7fb", card: "#ffffff", line: "#e7e9f0",
 const SERIF = "'Times New Roman', Times, Georgia, serif";
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
+// Formatera börsvärde läsbart: 850 mkr / 12,4 mdkr
+function fmtMcap(m) {
+  if (m == null) return null;
+  if (m >= 1000) return (m / 1000).toFixed(1).replace(".", ",") + " mdkr";
+  return Math.round(m) + " mkr";
+}
+
 function BudRadar() {
   const [tab, setTab] = useState("rank");
   return (
@@ -104,6 +111,7 @@ function BudRadar() {
 /* ---------------- RANK ---------------- */
 function RankTab() {
   const [filter, setFilter] = useState("ALLA");
+  const [size, setSize] = useState("SMÅ"); // SMÅ = default; stora bolag blir sällan uppköpta
   const [sel, setSel] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState(DEMO);
@@ -124,9 +132,12 @@ function RankTab() {
 
   const rows = useMemo(() => {
     let d = [...data];
+    // Storleksfilter: bud sker nästan alltid i small/mid cap.
+    // Bolag utan känt börsvärde behålls (hellre med än att tappa dem).
+    if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= 15000);
     if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
     return d.sort((a, b) => b.score.composite - a.score.composite);
-  }, [filter, data]);
+  }, [filter, size, data]);
   const selCo = sel ? data.find((c) => c.ticker === sel) : null;
   const top = rows.length ? rows[0].score.composite : 0;
   const high = data.filter((c) => c.score.tier === "HÖG").length;
@@ -155,6 +166,11 @@ function RankTab() {
         <div style={s.radar} aria-hidden><div style={s.ring} /><div style={s.ring2} /><div style={s.sweep} /><div style={s.blip} /></div>
       </header>
 
+      <div style={{ ...s.filterRow, paddingBottom: 4 }}>
+        {[["SMÅ", "Små & medel"], ["ALLA", "Alla storlekar"]].map(([id, label]) => (
+          <button key={id} className="pill" onClick={() => setSize(id)} style={pill(size === id)}>{label}</button>
+        ))}
+      </div>
       <div style={s.filterRow}>
         {["ALLA", "HÖG", "MEDEL", "LÅG"].map((f) => (
           <button key={f} className="pill" onClick={() => setFilter(f)} style={pill(filter === f)}>{f}</button>
@@ -170,7 +186,7 @@ function RankTab() {
               <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
-                <div style={s.meta}>{[c.ticker, c.list, c.priceSEK != null ? c.priceSEK + " kr" : null].filter(Boolean).join(" · ")}</div>
+                <div style={s.meta}>{[c.ticker, c.priceSEK != null ? c.priceSEK + " kr" : null, fmtMcap(c.mcapMSEK)].filter(Boolean).join(" · ")}</div>
               </div>
               <Gauge v={c.score.composite} tier={c.score.tier} />
             </div>
