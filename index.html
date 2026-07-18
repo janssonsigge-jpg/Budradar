@@ -288,10 +288,24 @@ function Sheet({ co, onClose }) {
 
 /* ---------------- HISTORIK ---------------- */
 function HistorikTab() {
+  const [view, setView] = useState("bud"); // bud | analys
   const done = HISTORIK.filter(h => h.premiumPct > 0);
   const avg = Math.round(done.reduce((s, h) => s + h.premiumPct, 0) / done.length);
   const withMcap = HISTORIK.filter(h => h.mcapMSEK);
   const medMcap = withMcap.length ? Math.round(withMcap.reduce((s,h)=>s+h.mcapMSEK,0)/withMcap.length) : null;
+
+  // Registerdata från API:t (samma data som /api/registry)
+  const [stats, setStats] = useState(null);
+  const [statsStatus, setStatsStatus] = useState("idle");
+  useEffect(() => {
+    if (view !== "analys" || stats) return;
+    setStatsStatus("loading");
+    fetch("/api/registry?stats=1")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => { setStats(j); setStatsStatus("ok"); })
+      .catch(() => setStatsStatus("error"));
+  }, [view, stats]);
+
   return (
     <>
       <SimpleHeader eyebrow="Avslutade bud" title={<>Vad hände <span style={{ fontStyle: "italic", color: C.accent }}>sen?</span></>}
@@ -301,6 +315,14 @@ function HistorikTab() {
         <HeroStat n={HISTORIK.length} l="bud i registret" />
         {medMcap && <HeroStat n={fmtMcap(medMcap)} l="snitt börsvärde" />}
       </div>
+
+      <div style={{ ...s.filterRow, paddingBottom: 12 }}>
+        {[["bud", "Buden"], ["analys", "Analys"]].map(([id, label]) => (
+          <button key={id} className="pill" onClick={() => setView(id)} style={pill(view === id)}>{label}</button>
+        ))}
+      </div>
+
+      {view === "analys" ? <RegistryAnalys stats={stats} status={statsStatus} /> : <>
 
       {/* MÖNSTERANALYS */}
       <div style={{ ...s.infoBox, margin: "0 18px 16px" }}>
@@ -348,6 +370,7 @@ function HistorikTab() {
         <b style={{ color: C.ink }}>Premie</b> = hur mycket budet ligger över kursen innan budet blev känt. Äger du aktien
         <i> före</i> budet får du skillnaden nästan direkt. Historiskt snitt på svenska börsen ligger kring 33 %.
       </div>
+      </>}
       <footer style={s.foot}>Verifierade bud · premie mot senaste kurs före offentliggörandet · ej investeringsrådgivning.</footer>
     </>
   );
@@ -398,6 +421,101 @@ function LarDigTab() {
       </div>
       <footer style={s.foot}>Utbildande material, ej investeringsrådgivning.</footer>
     </>
+  );
+}
+
+/* ---------------- REGISTER-ANALYS ---------------- */
+// Visar aggregerad statistik från /api/registry?stats=1 — alltså budregistret.
+// Det här är den delen som är intressant för proffs: vilka premier betalas,
+// av vem, och hur ägarbindningen såg ut före budet.
+function RegistryAnalys({ stats, status }) {
+  if (status === "loading") return <div style={{ padding: "0 20px", color: C.muted, fontSize: 13 }}>Hämtar registret…</div>;
+  if (status === "error" || !stats) return (
+    <div style={{ ...s.infoBox, margin: "0 18px" }}>
+      Kunde inte hämta registret. Kontrollera att <code>/api/registry</code> är uppladdad.
+    </div>
+  );
+
+  const p = stats.premie || {};
+  const types = Object.entries(stats.perBudgivartyp || {}).sort((a, b) => (b[1].snittPremie ?? 0) - (a[1].snittPremie ?? 0));
+  const sectors = Object.entries(stats.perBransch || {}).sort((a, b) => (b[1].snittPremie ?? 0) - (a[1].snittPremie ?? 0));
+  const maxPrem = Math.max(...types.map(([, v]) => v.snittPremie ?? 0), 1);
+
+  return (
+    <div style={{ padding: "0 18px" }}>
+      {/* Premiespann */}
+      <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
+        <div style={s.secT}>Premie · alla bud i registret</div>
+        <div style={{ display: "flex", gap: 22, marginTop: 4 }}>
+          <div><div style={{ fontFamily: SERIF, fontSize: 30, color: C.accent, lineHeight: 1 }}>{p.snitt ?? "—"}%</div>
+            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>snitt</div></div>
+          <div><div style={{ fontFamily: SERIF, fontSize: 30, color: C.ink, lineHeight: 1 }}>{p.median ?? "—"}%</div>
+            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>median</div></div>
+          <div><div style={{ fontFamily: SERIF, fontSize: 30, color: C.ink, lineHeight: 1 }}>{p.lägsta ?? "—"}–{p.högsta ?? "—"}%</div>
+            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>spann</div></div>
+        </div>
+      </div>
+
+      {/* Premie per budgivartyp — den mest säljbara insikten */}
+      <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
+        <div style={s.secT}>Snittpremie per budgivartyp</div>
+        {types.map(([type, v]) => (
+          <div key={type} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink }}>{type}
+              <span style={{ color: C.muted, fontWeight: 400, fontSize: 11 }}> · {v.antal} st</span></span>
+            <div style={{ flex: 1.2, height: 7, borderRadius: 999, background: "#eceef4", overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 999, background: C.accent, width: `${((v.snittPremie ?? 0) / maxPrem) * 100}%` }} />
+            </div>
+            <span style={{ width: 44, textAlign: "right", fontWeight: 700, fontSize: 14, color: C.ink }}>{v.snittPremie ?? "—"}%</span>
+          </div>
+        ))}
+        <p style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 8 }}>
+          Riskkapital betalar systematiskt högre premie än industriella köpare — de räknar på
+          en exit, inte på synergier.
+        </p>
+      </div>
+
+      {/* Bransch */}
+      <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
+        <div style={s.secT}>Per bransch</div>
+        {sectors.slice(0, 8).map(([sec, v]) => (
+          <div key={sec} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13 }}>
+            <span style={{ color: C.ink }}>{sec}</span>
+            <span style={{ color: C.muted }}>{v.antal} st · <b style={{ color: C.ink }}>{v.snittPremie ?? "—"}%</b></span>
+          </div>
+        ))}
+      </div>
+
+      {/* Bidco */}
+      {stats.bidco && (
+        <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
+          <div style={s.secT}>Bidco-strukturer</div>
+          <div style={{ fontSize: 13, color: C.ink, marginBottom: 8 }}>
+            <b style={{ fontFamily: SERIF, fontSize: 24, color: C.accent }}>{stats.bidco.andelMedKändBidco}%</b>
+            <span style={{ color: C.muted, fontSize: 12 }}> av affärerna har känd bidco-kedja</span>
+          </div>
+          {(stats.bidco.exempel || []).map((b, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12.5 }}>
+              <span style={{ color: C.muted }}>{b.target}</span>
+              <span style={{ color: C.accent, fontWeight: 600 }}>{b.bidco}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Ägarbindning */}
+      {stats.ägarbindning && stats.ägarbindning.antalMedData > 0 && (
+        <div style={{ ...s.infoBox, marginBottom: 12 }}>
+          <b style={{ color: C.ink }}>Ägarbindning före budet.</b> I snitt hade{" "}
+          <b style={{ color: C.accent }}>{stats.ägarbindning.snittBundenRöstandel}%</b> av rösterna
+          bundit sig innan budet offentliggjordes. {stats.ägarbindning.kommentar}
+        </div>
+      )}
+
+      <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "4px 0 0", lineHeight: 1.5 }}>
+        Bygger på {stats.n} bud i registret. Fyll på <code>_registry-data.js</code> för starkare underlag.
+      </div>
+    </div>
   );
 }
 
