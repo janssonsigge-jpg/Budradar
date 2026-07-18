@@ -36,12 +36,27 @@ export default async function handler(req, res) {
     await ensureSchema(sql);
     const forceAll = req.query && (req.query.all === "1");
 
-    // Vilka bolag behöver uppdateras? Hämta namn+isin från senaste snapshot.
-    const companies = await sql`
-      SELECT DISTINCT ON (s.ticker) s.ticker, s.name
-      FROM signal_history s
-      WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM signal_history)
-      ORDER BY s.ticker`;
+    // Hämta bolagen (med ISIN) från vårt eget API — ISIN är en exakt nyckel
+    // och ger mycket bättre träffsäkerhet än namnsökning.
+    const proto = req.headers["x-forwarded-proto"] || "https";
+    const host = req.headers["x-forwarded-host"] || req.headers.host;
+    let companies = [];
+    try {
+      const r = await fetch(`${proto}://${host}/api/companies`);
+      if (r.ok) {
+        const j = await r.json();
+        companies = (j.companies || []).map(c => ({ ticker: c.ticker, name: c.name, isin: c.isin || null }));
+      }
+    } catch { /* faller tillbaka nedan */ }
+
+    // Fallback: senaste snapshot om API:t inte svarade
+    if (!companies.length) {
+      companies = await sql`
+        SELECT DISTINCT ON (s.ticker) s.ticker, s.name, NULL::text AS isin
+        FROM signal_history s
+        WHERE s.snapshot_date = (SELECT MAX(snapshot_date) FROM signal_history)
+        ORDER BY s.ticker`;
+    }
 
     const existing = await sql`SELECT ticker, updated_at FROM fundamentals`;
     const seen = new Map(existing.map(r => [r.ticker, r.updated_at]));
@@ -58,7 +73,7 @@ export default async function handler(req, res) {
 
     for (const c of todo) {
       try {
-        const y = await lookupYahoo(c.name);
+        const y = await lookupYahoo(c.name, c.isin);
         if (!y) { failed++; results.push({ ticker: c.ticker, name: c.name, status: "hittades ej" }); continue; }
         await sql`
           INSERT INTO fundamentals (ticker, name, yahoo_symbol, market_cap_msek, price_sek, currency, updated_at)
@@ -105,26 +120,24 @@ async function ensureSchema(sql) {
     )`;
 }
 
-/** Slå upp bolaget på Yahoo och hämta börsvärde + kurs. */
-async function lookupYahoo(name) {
-  // 1) Sök fram rätt symbol (svenska bolag har .ST)
-  const q = encodeURIComponent(cleanName(name));
-  const sres = await fetch(
-    `https://query2.finance.yahoo.com/v1/finance/search?q=${q}&quotesCount=8&newsCount=0`,
-    { headers: { "user-agent": UA, accept: "application/json" } }
-  );
-  if (!sres.ok) throw new Error("search HTTP " + sres.status);
-  const sjson = await sres.json();
-  const quotes = (sjson.quotes || []).filter(x => x.symbol);
+/** Slå upp bolaget på Yahoo. Provar ISIN först (exakt), sen namn. */
+async function lookupYahoo(name, isin) {
+  let pick = null;
 
-  // Föredra svensk notering
-  const pick =
-    quotes.find(x => String(x.symbol).endsWith(".ST")) ||
-    quotes.find(x => x.exchange === "STO") ||
-    null;
+  // 1) ISIN är en exakt nyckel — Yahoo söker på den.
+  if (isin) pick = await searchYahoo(isin);
+
+  // 2) Fallback: namn, i några varianter (utan "AB", utan serie-suffix osv.)
+  if (!pick) {
+    for (const variant of nameVariants(name)) {
+      pick = await searchYahoo(variant);
+      if (pick) break;
+      await sleep(150);
+    }
+  }
   if (!pick) return null;
 
-  // 2) Hämta kursdata + börsvärde
+  // Hämta kurs
   const cres = await fetch(
     `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(pick.symbol)}?range=1d&interval=1d`,
     { headers: { "user-agent": UA, accept: "application/json" } }
@@ -134,7 +147,7 @@ async function lookupYahoo(name) {
   const meta = cjson?.chart?.result?.[0]?.meta || {};
   const price = meta.regularMarketPrice ?? null;
 
-  // marketCap finns inte alltid i chart-meta → använd quoteSummary som backup
+  // Börsvärde
   let mcap = null;
   try {
     const qres = await fetch(
@@ -145,7 +158,7 @@ async function lookupYahoo(name) {
       const qjson = await qres.json();
       mcap = qjson?.quoteSummary?.result?.[0]?.price?.marketCap?.raw ?? null;
     }
-  } catch { /* ignorera, kursen räcker */ }
+  } catch { /* kursen räcker */ }
 
   return {
     symbol: pick.symbol,
@@ -155,10 +168,29 @@ async function lookupYahoo(name) {
   };
 }
 
-function cleanName(n) {
-  return String(n || "")
+/** Sök på Yahoo och returnera bästa svenska träffen. */
+async function searchYahoo(q) {
+  const res = await fetch(
+    `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=10&newsCount=0`,
+    { headers: { "user-agent": UA, accept: "application/json" } }
+  );
+  if (!res.ok) return null;
+  const json = await res.json();
+  const quotes = (json.quotes || []).filter(x => x.symbol);
+  return (
+    quotes.find(x => String(x.symbol).endsWith(".ST")) ||
+    quotes.find(x => x.exchange === "STO") ||
+    null
+  );
+}
+
+/** Namnvarianter att prova, från mest till minst specifik. */
+function nameVariants(name) {
+  const base = String(name || "")
     .replace(/\s*\(publ\)\s*/gi, " ")
-    .replace(/\bser(ie)?\.?\s*[AB]\b/gi, " ")
     .replace(/\s+/g, " ").trim();
+  const noSeries = base.replace(/\s+(ser(ie)?\.?\s*)?[AB]$/i, "").trim();
+  const noAB = noSeries.replace(/\s+AB$/i, "").trim();
+  return [...new Set([base, noSeries, noAB].filter(v => v && v.length > 1))];
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
