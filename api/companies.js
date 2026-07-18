@@ -364,24 +364,41 @@ function scoreCompany(co) {
 async function enrichWithFundamentals(companies) {
   const conn = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
   if (conn) {
+    const { neon } = await import("@neondatabase/serverless");
+    const sql = neon(conn);
+
+    // 1) BÖRSDATA först — bäst täckning, matchar på ISIN (exakt nyckel).
     try {
-      const { neon } = await import("@neondatabase/serverless");
-      const sql = neon(conn);
+      const bd = await sql`
+        SELECT isin, lower(name) AS lname, price_sek, market_cap_msek
+        FROM borsdata_instruments WHERE market_cap_msek IS NOT NULL OR price_sek IS NOT NULL`;
+      const byIsin = new Map(), byName = new Map();
+      for (const r of bd) {
+        if (r.isin) byIsin.set(r.isin, r);
+        if (r.lname) byName.set(r.lname, r);
+      }
+      for (const c of companies) {
+        const hit = (c.isin && byIsin.get(c.isin)) || byName.get((c.name || "").toLowerCase());
+        if (!hit) continue;
+        if (hit.market_cap_msek != null) c.mcapMSEK = Number(hit.market_cap_msek);
+        if (hit.price_sek != null) c.priceSEK = Number(hit.price_sek);
+      }
+    } catch { /* tabellen finns kanske inte än */ }
+
+    // 2) Yahoo-tabellen som komplement för det Börsdata missar
+    try {
       const rows = await sql`SELECT ticker, market_cap_msek, price_sek FROM fundamentals`;
       const map = new Map(rows.map(r => [r.ticker, r]));
       for (const c of companies) {
         const f = map.get(c.ticker);
         if (!f) continue;
-        if (f.market_cap_msek != null) c.mcapMSEK = Number(f.market_cap_msek);
-        if (f.price_sek != null) c.priceSEK = Number(f.price_sek);
+        if (c.mcapMSEK == null && f.market_cap_msek != null) c.mcapMSEK = Number(f.market_cap_msek);
+        if (c.priceSEK == null && f.price_sek != null) c.priceSEK = Number(f.price_sek);
       }
-    } catch { /* tabellen finns kanske inte än */ }
+    } catch { /* strunta */ }
   }
 
-  // Fallback: räkna ut börsvärdet själva.
-  // Yahoo låser marketCap bakom autentisering, men vi får kursen därifrån
-  // och det totala antalet aktier ur FI:s flaggningsmeddelanden.
-  // börsvärde = kurs × antal aktier. Helt gratis, ingen extern tjänst.
+  // 3) Sista utväg: räkna ut från kurs × antal aktier (ur flaggningsdatan)
   for (const c of companies) {
     if (c.mcapMSEK == null && c.priceSEK != null && c._totalShares) {
       const est = Math.round((c.priceSEK * c._totalShares) / 1e6);
