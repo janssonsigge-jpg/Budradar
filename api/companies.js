@@ -211,6 +211,7 @@ function mergeFlags(map, items) {
     // Emittent från HTML är mer exakt (utan "Finansinspektionen: i ...")
     if (f.issuer) issuer = f.issuer;
     const co = getCo(map, issuer); if (!co) continue;
+    if (f.totalShares && !co._totalShares) co._totalShares = f.totalShares;
     co._flags.push({
       holder: f.holder,
       threshold: f.threshold,
@@ -257,7 +258,37 @@ function parseFlagHtml(html) {
   if (thNum) { const n = ths.find(x => Math.abs(x - thNum) <= 1); if (n) threshold = n + "%"; }
 
   const direction = /avyttr|minskn|sålt|överlåt/i.test(reason || "") ? "ner" : "upp";
-  return { issuer, holder, reason, date, sharePct, threshold, direction };
+
+  // Räkna ut bolagets TOTALA antal aktier ur flaggningen.
+  // Flaggningen anger innehavarens antal aktier OCH deras andel i procent,
+  // men de står i olika delar av tabellen ("Antal" resp "Andel").
+  // total = antal / (andel/100). Ger börsvärde när vi har kursen — gratis.
+  let totalShares = null;
+  {
+    // Samla alla "- aktier"-rader och deras värden
+    const counts = [], pcts = [];
+    for (let i = 0; i < cells.length - 1; i++) {
+      if (!/^\s*-?\s*aktier\s*$/i.test(cells[i])) continue;
+      const raw = String(cells[i + 1]).trim();
+      const pm = raw.match(/^(\d{1,3}(?:[.,]\d+)?)\s*%$/);
+      if (pm) {
+        pcts.push(Number(pm[1].replace(",", ".")));
+      } else {
+        const n = Number(raw.replace(/[\s\u00a0]/g, "").replace(/,/g, ""));
+        if (isFinite(n) && n > 0) counts.push(n);
+      }
+    }
+    // Para ihop första antalet med första procenten
+    if (counts.length && pcts.length) {
+      const cnt = counts[0], pct = pcts[0];
+      if (pct > 0.01 && pct <= 100) {
+        const est = Math.round(cnt / (pct / 100));
+        if (est > 1e5 && est < 1e11) totalShares = est;
+      }
+    }
+  }
+
+  return { issuer, holder, reason, date, sharePct, threshold, direction, totalShares };
 }
 
 // ---------- CSV-parser (semikolon, citattecken) ----------
@@ -315,7 +346,7 @@ function scoreCompany(co) {
 
   const composite = Math.round(insider * 0.3 + flags * 0.3 + shortSig * 0.2 + bv * 0.2);
   return {
-    ticker: co.ticker, name: co.name, list: co.list, priceSEK: co.priceSEK, mcapMSEK: co.mcapMSEK, isin: co._isin || null,
+    ticker: co.ticker, name: co.name, list: co.list, priceSEK: co.priceSEK, mcapMSEK: co.mcapMSEK, isin: co._isin || null, _totalShares: co._totalShares || null,
     score: { composite, tier: tier(composite), parts: { insider: Math.round(insider), flags: Math.round(flags), shortSig: Math.round(shortSig), bv: Math.round(bv) } },
     detail: {
       insider: recentIns.slice(0, 8),
@@ -332,17 +363,30 @@ function scoreCompany(co) {
 // tabell fortsätter appen precis som förut.
 async function enrichWithFundamentals(companies) {
   const conn = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
-  if (!conn) return;
-  try {
-    const { neon } = await import("@neondatabase/serverless");
-    const sql = neon(conn);
-    const rows = await sql`SELECT ticker, market_cap_msek, price_sek FROM fundamentals`;
-    const map = new Map(rows.map(r => [r.ticker, r]));
-    for (const c of companies) {
-      const f = map.get(c.ticker);
-      if (!f) continue;
-      if (f.market_cap_msek != null) c.mcapMSEK = Number(f.market_cap_msek);
-      if (f.price_sek != null) c.priceSEK = Number(f.price_sek);
+  if (conn) {
+    try {
+      const { neon } = await import("@neondatabase/serverless");
+      const sql = neon(conn);
+      const rows = await sql`SELECT ticker, market_cap_msek, price_sek FROM fundamentals`;
+      const map = new Map(rows.map(r => [r.ticker, r]));
+      for (const c of companies) {
+        const f = map.get(c.ticker);
+        if (!f) continue;
+        if (f.market_cap_msek != null) c.mcapMSEK = Number(f.market_cap_msek);
+        if (f.price_sek != null) c.priceSEK = Number(f.price_sek);
+      }
+    } catch { /* tabellen finns kanske inte än */ }
+  }
+
+  // Fallback: räkna ut börsvärdet själva.
+  // Yahoo låser marketCap bakom autentisering, men vi får kursen därifrån
+  // och det totala antalet aktier ur FI:s flaggningsmeddelanden.
+  // börsvärde = kurs × antal aktier. Helt gratis, ingen extern tjänst.
+  for (const c of companies) {
+    if (c.mcapMSEK == null && c.priceSEK != null && c._totalShares) {
+      const est = Math.round((c.priceSEK * c._totalShares) / 1e6);
+      if (est > 0 && est < 1e7) { c.mcapMSEK = est; c.mcapEstimated = true; }
     }
-  } catch { /* tabellen finns kanske inte än — strunta i det */ }
+    delete c._totalShares;
+  }
 }
