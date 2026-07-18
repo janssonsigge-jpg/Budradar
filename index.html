@@ -160,6 +160,7 @@ function RankTab() {
   const selCo = sel ? data.find((c) => c.ticker === sel) : null;
   const top = rows.length ? rows[0].score.composite : 0;
   const high = data.filter((c) => c.score.tier === "HÖG").length;
+  const missingMcap = data.filter((c) => c.mcapMSEK == null).length;
 
   return (
     <>
@@ -190,6 +191,11 @@ function RankTab() {
           <button key={id} className="pill" onClick={() => setSize(id)} style={pill(size === id)}>{label}</button>
         ))}
       </div>
+      {missingMcap > 0 && size !== "ALLA" && (
+        <div style={{ padding: "0 20px 8px", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
+          {missingMcap} av {data.length} bolag saknar börsvärde och kan därför inte storleksfiltreras — de visas ändå.
+        </div>
+      )}
       <div style={s.filterRow}>
         {["ALLA", "HÖG", "MEDEL", "LÅG"].map((f) => (
           <button key={f} className="pill" onClick={() => setFilter(f)} style={pill(filter === f)}>{f}</button>
@@ -198,9 +204,8 @@ function RankTab() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
         {rows.map((c, i) => (
-          <button key={c.ticker} className="card" onClick={() => setSel(c.ticker)}
-            style={{ ...s.co, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(14px)",
-              transition: "transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s, box-shadow .2s", transitionDelay: `${i * 55}ms` }}>
+          <button key={c.ticker} className="card fadein" onClick={() => setSel(c.ticker)}
+            style={{ ...s.co, animationDelay: `${Math.min(i, 8) * 45}ms` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
               <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -212,7 +217,7 @@ function RankTab() {
             <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
               {[["Insyn", c.score.parts.insider], ["Flagg", c.score.parts.flags], ["Short", c.score.parts.shortSig], ["Bolv", c.score.parts.bv]].map(([l, v]) => (
                 <div key={l} style={{ flex: 1 }}>
-                  <div style={s.track}><div style={{ ...s.fill, width: mounted ? `${v}%` : "0%", background: v >= 60 ? C.accent : C.ink }} /></div>
+                  <div style={s.track}><div style={{ ...s.fill, width: `${v}%`, background: v >= 60 ? C.accent : C.ink }} /></div>
                   <div style={s.sparkL}>{l}</div>
                 </div>
               ))}
@@ -599,6 +604,8 @@ const CSS = `
   @keyframes sweep { to { transform: rotate(360deg); } }
   @keyframes blink { 0%,100% { opacity:1;} 50% { opacity:.25;} }
   @keyframes slideUp { from { transform: translateY(100%);} to { transform: translateY(0);} }
+  @keyframes fadein { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }
+  .fadein { animation: fadein .35s cubic-bezier(.2,.8,.2,1) both; }
   .card:active { transform: translateY(1px) scale(.995) !important; }
   .pill:active { transform: scale(.96); }
   .book:hover { transform: translateY(-1px); }
