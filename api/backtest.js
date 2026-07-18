@@ -34,6 +34,18 @@ export default async function handler(req, res) {
   try {
     const sql = neon(CONN);
 
+    // Budregistret = automatiskt detekterade bud (bid_registry) + manuellt seed (_bud.js).
+    // Automatiskt detekterade vinner vid dubbletter.
+    let auto = [];
+    try {
+      auto = await sql`
+        SELECT ticker, company, announced::text AS announced, bidder, bidco, premium_pct AS "premiumPct"
+        FROM bid_registry ORDER BY announced DESC`;
+    } catch { auto = []; } // tabellen finns kanske inte än
+
+    const seen = new Set(auto.map(b => `${b.ticker}|${b.announced}`));
+    const ALLA = auto.concat(BUD.filter(b => !seen.has(`${b.ticker}|${b.announced}`)));
+
     // Hur mycket historik har vi?
     const cov = await sql`
       SELECT MIN(snapshot_date)::text AS first_day,
@@ -43,7 +55,7 @@ export default async function handler(req, res) {
     const coverage = cov[0] || { first_day: null, last_day: null, days: 0 };
 
     const results = [];
-    for (const bud of BUD) {
+    for (const bud of ALLA) {
       const target = addDays(bud.announced, -daysBefore);
 
       // Närmaste snapshot PÅ ELLER FÖRE måldatumet (aldrig efter → ingen lookahead)
@@ -79,9 +91,10 @@ export default async function handler(req, res) {
     const tested = results.filter(r => r.tested);
     const hits = tested.filter(r => r.hit);
     const summary = {
-      budTotal: BUD.length,
+      budTotal: ALLA.length,
+      autoDetected: auto.length,
       testable: tested.length,
-      notTestable: BUD.length - tested.length,
+      notTestable: ALLA.length - tested.length,
       hitRate: tested.length ? Math.round((hits.length / tested.length) * 100) : null,
       avgPercentile: tested.length ? Math.round(tested.reduce((s, r) => s + r.percentile, 0) / tested.length) : null,
       randomBaseline: topPct, // vad slumpen skulle ge
