@@ -74,32 +74,65 @@ export default async function handler(req, res) {
     for (const c of todo) {
       try {
         const y = await lookupYahoo(c.name, c.isin);
-        if (!y) { failed++; results.push({ ticker: c.ticker, name: c.name, status: "hittades ej" }); continue; }
+        if (!y) {
+          // Skriv ändå en rad — annars provas bolaget om vid varje körning
+          // och remainingStale når aldrig noll.
+          await sql`
+            INSERT INTO fundamentals (ticker, name, yahoo_symbol, market_cap_msek, price_sek, currency, lookup_status, updated_at)
+            VALUES (${c.ticker}, ${c.name}, NULL, NULL, NULL, NULL, 'not_found', now())
+            ON CONFLICT (ticker) DO UPDATE SET lookup_status = 'not_found', updated_at = now()`;
+          failed++;
+          results.push({ ticker: c.ticker, name: c.name, status: "hittades ej" });
+          continue;
+        }
         await sql`
-          INSERT INTO fundamentals (ticker, name, yahoo_symbol, market_cap_msek, price_sek, currency, updated_at)
-          VALUES (${c.ticker}, ${c.name}, ${y.symbol}, ${y.mcapMSEK}, ${y.price}, ${y.currency}, now())
+          INSERT INTO fundamentals (ticker, name, yahoo_symbol, market_cap_msek, price_sek, currency, lookup_status, updated_at)
+          VALUES (${c.ticker}, ${c.name}, ${y.symbol}, ${y.mcapMSEK}, ${y.price}, ${y.currency}, 'ok', now())
           ON CONFLICT (ticker) DO UPDATE SET
             yahoo_symbol = EXCLUDED.yahoo_symbol,
             market_cap_msek = EXCLUDED.market_cap_msek,
             price_sek = EXCLUDED.price_sek,
             currency = EXCLUDED.currency,
+            lookup_status = 'ok',
             updated_at = now()`;
         updated++;
         results.push({ ticker: c.ticker, name: c.name, symbol: y.symbol, mcapMSEK: y.mcapMSEK, price: y.price });
       } catch (e) {
+        // Även fel loggas som rad, så vi inte fastnar i en loop
+        try {
+          await sql`
+            INSERT INTO fundamentals (ticker, name, lookup_status, updated_at)
+            VALUES (${c.ticker}, ${c.name}, 'error', now())
+            ON CONFLICT (ticker) DO UPDATE SET lookup_status = 'error', updated_at = now()`;
+        } catch { /* strunta */ }
         failed++;
         results.push({ ticker: c.ticker, name: c.name, status: "FEL: " + String(e.message).slice(0, 60) });
       }
       await sleep(250); // snäll paus
     }
 
+    // Räkna korrekt: hur många av dagens bolag saknar en färsk rad?
+    const fresh = await sql`
+      SELECT ticker FROM fundamentals WHERE updated_at > ${new Date(cutoff).toISOString()}`;
+    const freshSet = new Set(fresh.map(r => r.ticker));
+    const remaining = companies.filter(c => !freshSet.has(c.ticker)).length;
+
     const [{ total }] = await sql`SELECT COUNT(*)::int AS total FROM fundamentals`;
-    const remaining = companies.length - (await sql`SELECT COUNT(*)::int AS c FROM fundamentals WHERE updated_at > ${new Date(cutoff).toISOString()}`)[0].c;
+    const [{ withMcap }] = await sql`SELECT COUNT(*)::int AS "withMcap" FROM fundamentals WHERE market_cap_msek IS NOT NULL`;
+    const [{ notFound }] = await sql`SELECT COUNT(*)::int AS "notFound" FROM fundamentals WHERE lookup_status <> 'ok'`;
 
     res.status(200).json({
-      ok: true, candidates: companies.length, processed: todo.length,
-      updated, failed, totalStored: total, remainingStale: Math.max(0, remaining),
-      note: remaining > 0 ? "Kör igen för att beta av resten (max 60 per körning)." : "Alla uppdaterade.",
+      ok: true,
+      candidates: companies.length,
+      processed: todo.length,
+      updated, failed,
+      totalStored: total,
+      medBörsvärde: withMcap,
+      utanBörsvärde: notFound,
+      remainingStale: remaining,
+      note: remaining > 0
+        ? `Kör igen — ${remaining} bolag kvar (max ${MAX_PER_RUN} per körning).`
+        : `Klart. ${withMcap} av ${companies.length} bolag har börsvärde; ${notFound} hittades inte hos Yahoo.`,
       results: results.slice(0, 40),
     });
   } catch (e) {
@@ -118,6 +151,8 @@ async function ensureSchema(sql) {
       currency         TEXT,
       updated_at       TIMESTAMPTZ DEFAULT now()
     )`;
+  // Lägg till statuskolumnen om tabellen redan fanns
+  await sql`ALTER TABLE fundamentals ADD COLUMN IF NOT EXISTS lookup_status TEXT DEFAULT 'ok'`;
 }
 
 /** Slå upp bolaget på Yahoo. Provar ISIN först (exakt), sen namn. */
@@ -147,18 +182,47 @@ async function lookupYahoo(name, isin) {
   const meta = cjson?.chart?.result?.[0]?.meta || {};
   const price = meta.regularMarketPrice ?? null;
 
-  // Börsvärde
+  // Börsvärde. Yahoo:s quoteSummary kräver numera cookie och ger ofta null,
+  // så vi provar flera vägar och räknar ut det själva som sista utväg.
   let mcap = null;
+
+  // 1) quoteSummary (fungerar ibland)
   try {
     const qres = await fetch(
-      `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(pick.symbol)}?modules=price`,
+      `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(pick.symbol)}?modules=price,defaultKeyStatistics`,
       { headers: { "user-agent": UA, accept: "application/json" } }
     );
     if (qres.ok) {
       const qjson = await qres.json();
-      mcap = qjson?.quoteSummary?.result?.[0]?.price?.marketCap?.raw ?? null;
+      const r0 = qjson?.quoteSummary?.result?.[0] || {};
+      mcap = r0?.price?.marketCap?.raw ?? null;
+      // Räkna ut om marketCap saknas men aktieantal finns
+      if (mcap == null && price != null) {
+        const shares =
+          r0?.defaultKeyStatistics?.sharesOutstanding?.raw ??
+          r0?.price?.sharesOutstanding?.raw ?? null;
+        if (shares) mcap = shares * price;
+      }
     }
-  } catch { /* kursen räcker */ }
+  } catch { /* prova nästa */ }
+
+  // 2) v7/quote — lättare endpoint som ofta har marketCap
+  if (mcap == null) {
+    try {
+      const vres = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(pick.symbol)}`,
+        { headers: { "user-agent": UA, accept: "application/json" } }
+      );
+      if (vres.ok) {
+        const vjson = await vres.json();
+        const q0 = vjson?.quoteResponse?.result?.[0] || {};
+        mcap = q0.marketCap ?? null;
+        if (mcap == null && price != null && q0.sharesOutstanding) {
+          mcap = q0.sharesOutstanding * price;
+        }
+      }
+    } catch { /* ge upp */ }
+  }
 
   return {
     symbol: pick.symbol,
