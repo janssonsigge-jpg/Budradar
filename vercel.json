@@ -1,7 +1,7 @@
 {
   "crons": [
-    { "path": "/api/fundamentals", "schedule": "0 5 * * *" },
-    { "path": "/api/snapshot",     "schedule": "0 18 * * *" },
-    { "path": "/api/detect-bids",  "schedule": "30 18 * * *" }
+    { "path": "/api/borsdata",    "schedule": "0 5 * * *" },
+    { "path": "/api/snapshot",    "schedule": "0 18 * * *" },
+    { "path": "/api/detect-bids", "schedule": "30 18 * * *" }
   ]
 }
