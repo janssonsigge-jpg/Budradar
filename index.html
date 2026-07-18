@@ -210,7 +210,7 @@ function RankTab() {
               <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
-                <div style={s.meta}>{[c.ticker, c.priceSEK != null ? c.priceSEK + " kr" : null, fmtMcap(c.mcapMSEK)].filter(Boolean).join(" · ")}</div>
+                <div style={s.meta}>{[c.ticker, c.priceSEK != null ? c.priceSEK + " kr" : null, c.mcapMSEK != null ? (c.mcapEstimated ? "~" : "") + fmtMcap(c.mcapMSEK) : null].filter(Boolean).join(" · ")}</div>
               </div>
               <Gauge v={c.score.composite} tier={c.score.tier} />
             </div>
