@@ -315,7 +315,7 @@ function scoreCompany(co) {
 
   const composite = Math.round(insider * 0.3 + flags * 0.3 + shortSig * 0.2 + bv * 0.2);
   return {
-    ticker: co.ticker, name: co.name, list: co.list, priceSEK: co.priceSEK, mcapMSEK: co.mcapMSEK,
+    ticker: co.ticker, name: co.name, list: co.list, priceSEK: co.priceSEK, mcapMSEK: co.mcapMSEK, isin: co._isin || null,
     score: { composite, tier: tier(composite), parts: { insider: Math.round(insider), flags: Math.round(flags), shortSig: Math.round(shortSig), bv: Math.round(bv) } },
     detail: {
       insider: recentIns.slice(0, 8),
