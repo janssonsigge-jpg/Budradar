@@ -49,6 +49,10 @@ export default async function handler(req, res) {
       .filter(c => c.score.composite > 0 || c.detail.insider.length || c.detail.flags.length)
       .sort((a, b) => b.score.composite - a.score.composite);
 
+    // Berika med börsvärde/kurs från fundamentals-tabellen (om databas finns).
+    // Detta driver storleksfiltret — stora bolag blir sällan uppköpta.
+    await enrichWithFundamentals(companies);
+
     CACHE = { ts: Date.now(), data: companies };
     res.status(200).json({ source: fresh ? "fresh" : "live", fetched, count: companies.length, companies });
   } catch (e) {
@@ -320,4 +324,25 @@ function scoreCompany(co) {
       bolagsverket: co._bv,
     },
   };
+}
+
+// ---------- berikning: börsvärde & kurs ----------
+// Läser fundamentals-tabellen (fylls av /api/fundamentals) och sätter
+// mcapMSEK + priceSEK på bolagen. Feltolerant: saknas databas eller
+// tabell fortsätter appen precis som förut.
+async function enrichWithFundamentals(companies) {
+  const conn = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
+  if (!conn) return;
+  try {
+    const { neon } = await import("@neondatabase/serverless");
+    const sql = neon(conn);
+    const rows = await sql`SELECT ticker, market_cap_msek, price_sek FROM fundamentals`;
+    const map = new Map(rows.map(r => [r.ticker, r]));
+    for (const c of companies) {
+      const f = map.get(c.ticker);
+      if (!f) continue;
+      if (f.market_cap_msek != null) c.mcapMSEK = Number(f.market_cap_msek);
+      if (f.price_sek != null) c.priceSEK = Number(f.price_sek);
+    }
+  } catch { /* tabellen finns kanske inte än — strunta i det */ }
 }
