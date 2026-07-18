@@ -59,21 +59,38 @@ const DEMO = [
 // Historik — riktiga svenska bud 2026 med verifierade siffror (premie mot senaste
 // stängningskurs före offentliggörandet). Bidco = det nyregistrerade bolaget budet gick genom.
 const HISTORIK = [
-  { name: "Sleep Cycle", ticker: "SLEEP", year: 2026, bidder: "Altor", bidco: "Snark Bidco",
-    priceSEK: 24.5, premiumPct: 47, outcome: "Genomfört",
-    note: "Altor bjöd 24,50 kr via Snark Bidco — 47 % över fredagens kurs. Grundaren och näst största ägaren (ihop ~63 %) tackade ja direkt. Aktien rusade ~46 % samma dag." },
-  { name: "Biotage", ticker: "BIOT", year: 2026, bidder: "KKR", bidco: "—",
-    priceSEK: null, premiumPct: 60, outcome: "Genomfört",
-    note: "Amerikanska KKR lade bud med ~60 % premie. Aktien steg över 55 % på veckan och blev Stockholmsbörsens klart bästa." },
-  { name: "Cint Group", ticker: "CINT", year: 2026, bidder: "Triton + Bolero", bidco: "TriCarbs BidCo",
-    priceSEK: 6.0, premiumPct: 33, outcome: "Höjt bud",
-    note: "TriCarbs BidCo (Triton) bjöd först 5,60 kr, 33 % premie. Efter invändning från Aktiemarknadsnämnden stöptes konsortiet om och budet höjdes till 6,00 kr. Mot 90-dagarssnittet var premien över 70 %." },
-  { name: "Viva Wine Group", ticker: "VIVA", year: 2026, bidder: "Grundarna", bidco: "Riesling Ventures",
-    priceSEK: 38.5, premiumPct: 38, outcome: "Genomfört",
-    note: "Grundarna köpte ut vinbolaget via Riesling Ventures för 38,50 kr, 38 % premie. Aktien hoppade ~36 %. Notera: budet låg ändå under noteringskursen 49 kr — premie mäts mot kursen före budet, inte mot toppen." },
-  { name: "Humana", ticker: "HUM", year: 2026, bidder: "Ambea", bidco: "—",
-    priceSEK: null, premiumPct: 27, outcome: "Genomfört",
-    note: "Omsorgsbolaget Ambea lade ett kombinerat kontant- och aktiebud på konkurrenten Humana, ~27 % premie. Humana steg nästan 25 %." },
+  { name: "Bahnhof", ticker: "BAHN", date: "2026-07-08", bidder: "Telenor", bidco: null,
+    priceSEK: 62, mcapMSEK: null, premiumPct: 22, outcome: "Genomfört",
+    signal: "Kontrollägare sålde", 
+    note: "Grundarna Karlung och Norman sålde sitt innehav — 50,8 % av aktierna men 86 % av rösterna. När den som sitter på rösterna vill ut kan ingen stoppa affären." },
+  { name: "Sleep Cycle", ticker: "SLEEP", date: "2026-05-11", bidder: "Altor Fund V", bidco: "Snark BidCo",
+    priceSEK: 24.5, mcapMSEK: 1000, premiumPct: 47, outcome: "Genomfört",
+    signal: "Nära 52v-lägsta",
+    note: "Aktien handlades kring 15–16 kr, nära årslägsta, när budet kom på 24,50. Klassiskt mönster: budgivaren slår till när kursen är nedtryckt." },
+  { name: "Nilörngruppen", ticker: "NIL B", date: "2026-05-04", bidder: "Trimco (Brookfield)", bidco: null,
+    priceSEK: 77, mcapMSEK: 878, premiumPct: 53, outcome: "Genomfört",
+    signal: "Storägare band sig",
+    note: "Traction hade 26,3 % av kapitalet men 58,1 % av rösterna och band sig oåterkalleligen. Litet bolag (878 Mkr), låg värdering mot historiken." },
+  { name: "Cint Group", ticker: "CINT", date: "2026-04-27", bidder: "Triton + Bolero", bidco: "TriCarbs BidCo",
+    priceSEK: 6.0, mcapMSEK: 2000, premiumPct: 33, outcome: "Höjt bud",
+    signal: "VD med i konsortiet",
+    note: "VD Patrick Comer var själv del av budkonsortiet. Först 5,60 kr, höjt till 6,00 efter invändning. Mot 90-dagarssnittet var premien över 70 %." },
+  { name: "Viva Wine Group", ticker: "VIVA", date: "2026-03-02", bidder: "Grundarna", bidco: "Riesling Ventures",
+    priceSEK: 38.5, mcapMSEK: null, premiumPct: 38, outcome: "Genomfört",
+    signal: "Grundarna köpte ut",
+    note: "Grundarna tog hem bolaget via Riesling Ventures. Budet låg ändå under noteringskursen 49 kr — premie mäts mot kursen före budet, inte mot toppen." },
+  { name: "Humana", ticker: "HUM", date: "2026-02-09", bidder: "Ambea", bidco: null,
+    priceSEK: null, mcapMSEK: null, premiumPct: 27, outcome: "Genomfört",
+    signal: "Branschkonsolidering",
+    note: "Konkurrenten Ambea lade ett kombinerat kontant- och aktiebud. Industriell köpare snarare än private equity." },
+  { name: "Biotage", ticker: "BIOT", date: "2026-01-12", bidder: "KKR", bidco: null,
+    priceSEK: null, mcapMSEK: null, premiumPct: 60, outcome: "Genomfört",
+    signal: "Utländsk PE-jätte",
+    note: "Amerikanska KKR bjöd med ~60 % premie. Aktien steg över 55 % på veckan och blev börsens klart bästa." },
+  { name: "Fortnox", ticker: "FNOX", date: "2025-06-16", bidder: "Hallrup + EQT", bidco: "First Kraft AB",
+    priceSEK: 90, mcapMSEK: null, premiumPct: 38, outcome: "Genomfört",
+    signal: "Storägare + PE",
+    note: "2025 års största bud. Storägaren Olof Hallrup gick ihop med EQT för att ta hem bolaget." },
 ];
 
 // ---------- app ----------
@@ -132,9 +149,11 @@ function RankTab() {
 
   const rows = useMemo(() => {
     let d = [...data];
-    // Storleksfilter: bud sker nästan alltid i small/mid cap.
+    // Storleksfilter. Verkliga bud 2026: Nilörn 878 Mkr, Cint ~2 mdkr,
+    // Sleep Cycle ~1 mdkr. Nästan alla svenska bud sker under 5 mdkr.
     // Bolag utan känt börsvärde behålls (hellre med än att tappa dem).
-    if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= 15000);
+    if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= 5000);
+    if (size === "MEDEL") d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= 20000);
     if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
     return d.sort((a, b) => b.score.composite - a.score.composite);
   }, [filter, size, data]);
@@ -167,7 +186,7 @@ function RankTab() {
       </header>
 
       <div style={{ ...s.filterRow, paddingBottom: 4 }}>
-        {[["SMÅ", "Små & medel"], ["ALLA", "Alla storlekar"]].map(([id, label]) => (
+        {[["SMÅ", "< 5 mdkr"], ["MEDEL", "< 20 mdkr"], ["ALLA", "Alla"]].map(([id, label]) => (
           <button key={id} className="pill" onClick={() => setSize(id)} style={pill(size === id)}>{label}</button>
         ))}
       </div>
@@ -266,14 +285,36 @@ function Sheet({ co, onClose }) {
 function HistorikTab() {
   const done = HISTORIK.filter(h => h.premiumPct > 0);
   const avg = Math.round(done.reduce((s, h) => s + h.premiumPct, 0) / done.length);
+  const withMcap = HISTORIK.filter(h => h.mcapMSEK);
+  const medMcap = withMcap.length ? Math.round(withMcap.reduce((s,h)=>s+h.mcapMSEK,0)/withMcap.length) : null;
   return (
     <>
       <SimpleHeader eyebrow="Avslutade bud" title={<>Vad hände <span style={{ fontStyle: "italic", color: C.accent }}>sen?</span></>}
-        sub="Tidigare uppköp och premien de gav. Det här visar varför signalerna är värda att fånga innan alla andra." />
-      <div style={{ display: "flex", gap: 26, padding: "0 22px 18px" }}>
-        <HeroStat n={`+${avg}%`} l="snittpremie (genomförda)" accent />
-        <HeroStat n={HISTORIK.length} l="exempel" />
+        sub="Riktiga bud på svenska börsen — premien de gav och vad som gick att se i förväg." />
+      <div style={{ display: "flex", gap: 24, padding: "0 22px 18px" }}>
+        <HeroStat n={`+${avg}%`} l="snittpremie" accent />
+        <HeroStat n={HISTORIK.length} l="bud i registret" />
+        {medMcap && <HeroStat n={fmtMcap(medMcap)} l="snitt börsvärde" />}
       </div>
+
+      {/* MÖNSTERANALYS */}
+      <div style={{ ...s.infoBox, margin: "0 18px 16px" }}>
+        <b style={{ color: C.ink }}>Vad de har gemensamt</b>
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 7 }}>
+          {[
+            ["Små bolag", "Nilörn värderades till 878 Mkr, Cint till ~2 mdkr. Nästan inga bud sker över 5 mdkr."],
+            ["Nedtryckt kurs", "Sleep Cycle låg nära 52-veckors lägsta. Budgivare slår till när aktien är billig, inte dyr."],
+            ["Kontrollägaren vill ut", "Bahnhof: grundarna sålde. Nilörn: Traction band sig. Cint: VD var med i konsortiet."],
+            ["Bidco registreras först", "Snark BidCo, TriCarbs BidCo, Riesling Ventures, First Kraft — skalet byggs innan budet."],
+          ].map(([t, d]) => (
+            <div key={t} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+              <span style={{ color: C.accent, fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>·</span>
+              <div><b style={{ color: C.ink, fontSize: 12.5 }}>{t}.</b> <span style={{ fontSize: 12.5 }}>{d}</span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
         {HISTORIK.map((h, i) => {
           const drog = h.outcome === "Drogs tillbaka";
@@ -282,8 +323,8 @@ function HistorikTab() {
               <div style={{ display: "flex", alignItems: "flex-start", gap: 13 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{h.name} <span style={{ color: C.muted, fontWeight: 400, fontSize: 12 }}>{h.ticker}</span></div>
-                  <div style={s.meta}>{h.year} · {h.bidder}{h.priceSEK ? ` · ${h.priceSEK} kr` : ""}</div>
-                  {h.bidco !== "—" && <div style={{ ...s.meta, marginTop: 3, color: C.accent, fontWeight: 600 }}>via {h.bidco}</div>}
+                  <div style={s.meta}>{[h.date, h.bidder, h.priceSEK ? h.priceSEK + " kr" : null, fmtMcap(h.mcapMSEK)].filter(Boolean).join(" · ")}</div>
+                  {h.bidco && <div style={{ ...s.meta, marginTop: 3, color: C.accent, fontWeight: 600 }}>via {h.bidco}</div>}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
                   <div style={{ fontFamily: SERIF, fontSize: 28, lineHeight: .85, color: drog ? C.muted : C.green }}>
@@ -292,16 +333,17 @@ function HistorikTab() {
                   <span style={outcomeTag(h.outcome)}>{h.outcome}</span>
                 </div>
               </div>
-              <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 11 }}>{h.note}</p>
+              {h.signal && <div style={{ marginTop: 10 }}><span style={s.signalTag}>{h.signal}</span></div>}
+              <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 9 }}>{h.note}</p>
             </div>
           );
         })}
       </div>
-      <div style={{ ...s.infoBox, margin: "12px 18px 0" }}>
-        <b style={{ color: C.ink }}>Premie</b> = hur mycket budet ligger över aktiekursen innan budet blev känt. Äger du aktien
-        <i> före</i> budet får du den skillnaden nästan direkt. Det är hela poängen med att fånga signalen tidigt.
+      <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
+        <b style={{ color: C.ink }}>Premie</b> = hur mycket budet ligger över kursen innan budet blev känt. Äger du aktien
+        <i> före</i> budet får du skillnaden nästan direkt. Historiskt snitt på svenska börsen ligger kring 33 %.
       </div>
-      <footer style={s.foot}>Riktiga svenska bud 2026 · premie mot senaste kurs före offentliggörandet · ej investeringsrådgivning.</footer>
+      <footer style={s.foot}>Verifierade bud · premie mot senaste kurs före offentliggörandet · ej investeringsrådgivning.</footer>
     </>
   );
 }
@@ -540,6 +582,7 @@ const s = {
   infoBox: { background: C.accentSoft, border: `1px solid #d9ddff`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
   bidcoHint: { marginTop: 18, background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "13px 15px", fontSize: 12.5, lineHeight: 1.55, color: C.muted, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
   linkBtn: { background: "none", border: "none", color: C.accent, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 13, padding: 0 },
+  signalTag: { display: "inline-block", background: C.accentSoft, color: C.accent, border: "1px solid #d9ddff", borderRadius: 999, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".03em" },
   chipOffer: { background: C.accent, color: "#fff", borderRadius: 999, padding: "2px 9px", fontSize: 9, letterSpacing: ".12em", fontWeight: 700, flexShrink: 0 },
   overlay: { position: "fixed", inset: 0, background: "rgba(13,18,32,.35)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" },
   sheet: { background: C.card, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "24px 24px 0 0", padding: "10px 20px 26px", animation: "slideUp .32s cubic-bezier(.2,.8,.2,1)", boxShadow: "0 -10px 50px rgba(13,18,32,.2)" },
