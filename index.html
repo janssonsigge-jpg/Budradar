@@ -100,6 +100,13 @@ const C = { ink: "#0d1220", paper: "#f6f7fb", card: "#ffffff", line: "#e7e9f0",
 const SERIF = "'Times New Roman', Times, Georgia, serif";
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
+// Lägg till dagar på ett datum (YYYY-MM-DD)
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 // Formatera börsvärde läsbart: 850 mkr / 12,4 mdkr
 function fmtMcap(m) {
   if (m == null) return null;
@@ -486,6 +493,25 @@ function RegistryAnalys({ stats, status }) {
         ))}
       </div>
 
+      {/* Bidco-tidsgap — den unika datapunkten */}
+      {stats.bidcoTiming && stats.bidcoTiming.n > 0 && (
+        <div style={{ ...s.co, cursor: "default", marginBottom: 12, borderColor: "#d9ddff" }}>
+          <div style={s.secT}>Bidco → bud · tidsgap</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginTop: 2 }}>
+            <span style={{ fontFamily: SERIF, fontSize: 40, color: C.accent, lineHeight: .9 }}>{stats.bidcoTiming.medianDagar}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>dagars median</span>
+          </div>
+          <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55, marginTop: 9 }}>
+            Tiden mellan att budgivaren registrerar sitt skalbolag och att budet offentliggörs.
+            Spann {stats.bidcoTiming.kortast}–{stats.bidcoTiming.längst} dagar.
+            {" "}{stats.bidcoTiming.andelInom30Dagar}% skedde inom 30 dagar.
+          </p>
+          <p style={{ fontSize: 11.5, color: C.muted, marginTop: 8, fontStyle: "italic" }}>
+            {stats.bidcoTiming.osäkerhet || `Bygger på ${stats.bidcoTiming.n} observationer.`}
+          </p>
+        </div>
+      )}
+
       {/* Bidco */}
       {stats.bidco && (
         <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
@@ -522,6 +548,7 @@ function RegistryAnalys({ stats, status }) {
 /* ---------------- BIDCO-SPÅR ---------------- */
 function BidcoTab() {
   const [items, setItems] = useState([]);
+  const [timing, setTiming] = useState(null);
   const [status, setStatus] = useState("loading"); // loading | live | empty | error
   const load = useCallback(async () => {
     setStatus("loading");
@@ -530,6 +557,7 @@ function BidcoTab() {
       if (!r.ok) throw 0;
       const j = await r.json();
       setItems(j.items || []);
+      setTiming(j.timing || null);
       setStatus((j.items && j.items.length) ? "live" : "empty");
     } catch { setStatus("error"); }
   }, []);
@@ -539,6 +567,23 @@ function BidcoTab() {
     <>
       <SimpleHeader eyebrow="Nya bolagsskal" title={<>Vem bygger ett <span style={{ fontStyle: "italic", color: C.accent }}>bidco?</span></>}
         sub="Ett bidco (eller lagerbolaget 'Goldcup NNNN AB') är skalet ett uppköp genomförs genom. Dyker det upp i pressflödet kan ett bud vara nära." />
+
+      {timing && timing.n > 0 && (
+        <div style={{ ...s.co, cursor: "default", margin: "0 18px 12px" }}>
+          <div style={s.secT}>Historiskt försprång</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 2 }}>
+            <span style={{ fontFamily: SERIF, fontSize: 44, color: C.accent, lineHeight: .9 }}>{timing.medianDagar}</span>
+            <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>dagar</span>
+          </div>
+          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginTop: 10 }}>
+            Så lång tid gick i median mellan att skalbolaget registrerades och att budet blev offentligt.
+            Spann {timing.kortast}–{timing.längst} dagar.
+          </p>
+          {timing.osäkerhet && (
+            <p style={{ fontSize: 11.5, color: C.muted, marginTop: 8, fontStyle: "italic" }}>{timing.osäkerhet}</p>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
         {status === "loading" && <div style={{ ...s.co, cursor: "default" }}><div style={{ height: 15, background: "#eceef4", borderRadius: 8, width: "60%" }} /></div>}
         {status === "error" && <div style={{ ...s.infoBox }}>Kunde inte hämta pressflödet just nu. <button onClick={load} style={s.linkBtn}>Försök igen</button></div>}
@@ -550,6 +595,11 @@ function BidcoTab() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{it.bidco}</div>
                 {it.issuer && <div style={s.meta}>Kopplat till: {it.issuer}</div>}
+                {!it.isOffer && timing && it.date && (
+                  <div style={{ ...s.meta, marginTop: 4, color: C.accent, fontWeight: 600 }}>
+                    Bud väntas omkring {addDays(it.date, timing.medianDagar)}
+                  </div>
+                )}
                 <div style={{ ...s.meta, marginTop: 4 }}>{it.date || ""}</div>
               </div>
               {it.isOffer && <span style={{ ...s.chipOffer }}>BUD</span>}
