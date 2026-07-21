@@ -22,6 +22,40 @@
 
 import { REGISTRY } from "./_registry-data.js";
 import { derive, completeness } from "./_registry-schema.js";
+import { neon } from "@neondatabase/serverless";
+
+const CONN = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
+
+/** Hämtar bidco-tidsgapet — den datapunkt ingen annan har. */
+async function bidcoTiming() {
+  if (!CONN) return null;
+  try {
+    const sql = neon(CONN);
+    const rows = await sql`
+      SELECT bidco, org_nr, registered::text, announced::text, bud_id
+      FROM bidco_registry WHERE registered IS NOT NULL AND announced IS NOT NULL`;
+    const gaps = rows
+      .map(r => ({ ...r, dagar: Math.round((Date.parse(r.announced) - Date.parse(r.registered)) / 864e5) }))
+      .filter(g => g.dagar >= 0 && g.dagar < 3650)
+      .sort((a, b) => a.dagar - b.dagar);
+    if (!gaps.length) return null;
+    const d = gaps.map(g => g.dagar);
+    const median = d.length % 2 ? d[(d.length - 1) / 2] : (d[d.length / 2 - 1] + d[d.length / 2]) / 2;
+    return {
+      n: gaps.length,
+      medianDagar: Math.round(median),
+      snittDagar: Math.round(d.reduce((a, b) => a + b, 0) / d.length),
+      kortast: d[0],
+      längst: d[d.length - 1],
+      andelInom30Dagar: Math.round(d.filter(x => x <= 30).length / d.length * 100),
+      andelInom90Dagar: Math.round(d.filter(x => x <= 90).length / d.length * 100),
+      osäkerhet: gaps.length < 10
+        ? `Endast ${gaps.length} observationer — behandla som indikation, inte fakta.`
+        : null,
+      affärer: gaps.map(g => ({ bidco: g.bidco, registered: g.registered, announced: g.announced, dagar: g.dagar })),
+    };
+  } catch { return null; }
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -45,7 +79,11 @@ export default async function handler(req, res) {
     rows.sort((a, b) => String(b.announced).localeCompare(String(a.announced)));
 
     // ---- statistik ----
-    if (q.stats === "1") return res.status(200).json(buildStats(rows));
+    if (q.stats === "1") {
+      const stats = buildStats(rows);
+      stats.bidcoTiming = await bidcoTiming();
+      return res.status(200).json(stats);
+    }
 
     // ---- CSV ----
     if (q.format === "csv") {
