@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BudRadar · Bidco-inmatning</title>
+<style>
+  :root { --ink:#0d1220; --paper:#f6f7fb; --card:#fff; --line:#e7e9f0; --muted:#6b7180; --accent:#3b4cff; --accent-soft:#eef0ff; --green:#1faa6c; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--paper); color:var(--ink); font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+         padding:24px 16px 60px; }
+  .wrap { max-width:640px; margin:0 auto; }
+  h1 { font-family:'Times New Roman',Georgia,serif; font-size:34px; font-weight:400; letter-spacing:-.02em; }
+  h1 em { color:var(--accent); }
+  .sub { color:var(--muted); font-size:14px; margin-top:8px; line-height:1.5; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px;
+          margin-top:16px; box-shadow:0 8px 30px rgba(13,18,32,.05); }
+  label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.1em; font-weight:700;
+          color:var(--muted); margin-bottom:5px; margin-top:14px; }
+  input { width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:10px; font-size:15px;
+          font-family:inherit; background:#fff; }
+  input:focus { outline:none; border-color:var(--accent); }
+  button { width:100%; margin-top:18px; padding:14px; background:var(--ink); color:#fff; border:none;
+           border-radius:999px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
+  button:active { transform:translateY(1px); }
+  button.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); margin-top:10px; }
+  .out { margin-top:14px; padding:14px; border-radius:12px; font-size:13.5px; line-height:1.5; display:none; }
+  .ok { background:#e8f6ef; border:1px solid #c9ead9; color:#0f6b45; }
+  .err { background:#fbeaea; border:1px solid #f2cccc; color:#a33; }
+  .hint { background:var(--accent-soft); border:1px solid #d9ddff; border-radius:12px; padding:14px;
+          font-size:13px; line-height:1.55; color:var(--muted); margin-top:16px; }
+  .hint b { color:var(--ink); }
+  a { color:var(--accent); }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; }
+  .stat { display:flex; gap:22px; margin-top:6px; flex-wrap:wrap; }
+  .stat div b { font-family:'Times New Roman',Georgia,serif; font-size:28px; font-weight:400; color:var(--accent); display:block; line-height:1; }
+  .stat div span { font-size:11px; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+  th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+       border-bottom:1px solid var(--line); padding:6px 4px; }
+  td { padding:7px 4px; border-bottom:1px solid var(--line); }
+  .days { font-weight:700; color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bidco → <em>bud</em></h1>
+  <p class="sub">
+    Mät avståndet mellan att budgivaren registrerar sitt skalbolag och att budet blir offentligt.
+    Ingen annan har den här datan — den finns bara om någon gör jobbet.
+  </p>
+
+  <div class="card">
+    <label>Din nyckel (CRON_SECRET)</label>
+    <input id="key" type="password" placeholder="sparas bara i din webbläsare" />
+
+    <label>Bidco-namn</label>
+    <input id="bidco" placeholder="t.ex. Snark BidCo AB" />
+
+    <div class="row">
+      <div>
+        <label>Registrerat</label>
+        <input id="registered" type="date" />
+      </div>
+      <div>
+        <label>Budet offentliggjort</label>
+        <input id="announced" type="date" />
+      </div>
+    </div>
+
+    <label>Organisationsnummer (valfritt)</label>
+    <input id="orgNr" placeholder="559123-4567" />
+
+    <label>Bud-id (valfritt)</label>
+    <input id="budId" placeholder="2026-05-11-sleepcycle" />
+
+    <button onclick="save()">Spara</button>
+    <button class="ghost" onclick="lookup()">Sök upp bolaget på allabolag.se</button>
+
+    <div id="out" class="out"></div>
+  </div>
+
+  <div class="hint">
+    <b>Så hittar du registreringsdatumet:</b><br>
+    1. Sök bidco-namnet på <a href="https://www.allabolag.se" target="_blank">allabolag.se</a><br>
+    2. Klicka på bolaget → leta upp fältet <b>Registrerat</b><br>
+    3. Fyll i här tillsammans med budets datum<br><br>
+    Tar ungefär en minut per bidco. Vid 70 affärer är det drygt en timmes arbete —
+    och resultatet är en analys ingen i Norden kan replikera utan att göra samma jobb.
+  </div>
+
+  <div class="card">
+    <label style="margin-top:0">Resultat hittills</label>
+    <button class="ghost" style="margin-top:6px" onclick="stats()">Visa statistik</button>
+    <div id="stats"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+// Nyckeln sparas lokalt så du slipper skriva den varje gång
+$("key").value = localStorage.getItem("br_key") || "";
+$("key").addEventListener("change", e => localStorage.setItem("br_key", e.target.value));
+
+function show(msg, ok) {
+  const o = $("out");
+  o.className = "out " + (ok ? "ok" : "err");
+  o.innerHTML = msg;
+  o.style.display = "block";
+}
+
+async function save() {
+  const key = $("key").value.trim();
+  const bidco = $("bidco").value.trim();
+  if (!key) return show("Fyll i din nyckel först.", false);
+  if (!bidco) return show("Fyll i bidco-namnet.", false);
+
+  const p = new URLSearchParams({
+    key, save: "1", bidco,
+    registered: $("registered").value,
+    announced: $("announced").value,
+    orgNr: $("orgNr").value.trim(),
+    budId: $("budId").value.trim(),
+  });
+  try {
+    const r = await fetch("/api/bidco-lookup?" + p.toString());
+    const j = await r.json();
+    if (!r.ok) return show("Fel: " + (j.error || r.status), false);
+    show("<b>Sparat.</b> " + (j.kommentar || ""), true);
+    $("bidco").value = ""; $("registered").value = ""; $("orgNr").value = ""; $("budId").value = "";
+    stats();
+  } catch (e) { show("Nätverksfel: " + e.message, false); }
+}
+
+function lookup() {
+  const b = $("bidco").value.trim();
+  if (!b) return show("Skriv bidco-namnet först.", false);
+  window.open("https://www.allabolag.se/what/" + encodeURIComponent(b), "_blank");
+}
+
+async function stats() {
+  const key = $("key").value.trim();
+  if (!key) return;
+  try {
+    const r = await fetch("/api/bidco-lookup?key=" + encodeURIComponent(key) + "&stats=1");
+    const j = await r.json();
+    const el = $("stats");
+    if (!j.n) { el.innerHTML = '<p class="sub">' + (j.kommentar || "Inga par än.") + '</p>'; return; }
+    const g = j.dagarFrånRegistreringTillBud, v = j.varningsfönster;
+    el.innerHTML =
+      '<div class="stat">' +
+        letters(g.median, "dagar median") + letters(g.snitt, "snitt") +
+        letters(g.kortast, "kortast") + letters(g.längst, "längst") +
+      '</div>' +
+      '<p class="sub" style="margin-top:12px">' + j.tolkning + '</p>' +
+      '<p class="sub"><b>' + v.andelInom30Dagar + '%</b> registrerades inom 30 dagar före budet, ' +
+        '<b>' + v.andelInom90Dagar + '%</b> inom 90 dagar.</p>' +
+      '<table><tr><th>Bidco</th><th>Registrerat</th><th>Bud</th><th>Dagar</th></tr>' +
+      j.affärer.map(a => '<tr><td>' + a.bidco + '</td><td>' + a.registered + '</td><td>' +
+        a.announced + '</td><td class="days">' + a.dagar + '</td></tr>').join("") + '</table>';
+  } catch (e) { $("stats").innerHTML = '<p class="sub">Kunde inte hämta statistik.</p>'; }
+}
+function letters(n, l) { return '<div><b>' + n + '</b><span>' + l + '</span></div>'; }
+</script>
+</body>
+</html>
