@@ -77,11 +77,42 @@ export default async function handler(req, res) {
     // Nyast först, bud-relaterade högst
     hits.sort((a, b) => (b.isOffer - a.isOffer) || String(b.date).localeCompare(String(a.date)));
 
+    // Historiskt tidsgap — låter oss säga NÄR budet troligen kommer,
+    // inte bara att ett bidco dykt upp. Detta är BudRadars kärntes.
+    const timing = await bidcoTiming();
+
     CACHE = { ts: Date.now(), data: hits };
-    res.status(200).json({ source: fresh ? "fresh" : "live", fetched, count: hits.length, items: hits });
+    res.status(200).json({
+      source: fresh ? "fresh" : "live", fetched, count: hits.length,
+      timing, items: hits,
+    });
   } catch (e) {
     res.status(500).json({ error: String(e && e.message || e) });
   }
+}
+
+/** Historiskt antal dagar från bidco-registrering till offentliggjort bud. */
+async function bidcoTiming() {
+  const conn = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
+  if (!conn) return null;
+  try {
+    const { neon } = await import("@neondatabase/serverless");
+    const sql = neon(conn);
+    const rows = await sql`
+      SELECT registered::text, announced::text FROM bidco_registry
+      WHERE registered IS NOT NULL AND announced IS NOT NULL`;
+    const d = rows
+      .map(r => Math.round((Date.parse(r.announced) - Date.parse(r.registered)) / 864e5))
+      .filter(x => x >= 0 && x < 3650).sort((a, b) => a - b);
+    if (!d.length) return null;
+    const median = d.length % 2 ? d[(d.length - 1) / 2] : (d[d.length / 2 - 1] + d[d.length / 2]) / 2;
+    return {
+      n: d.length,
+      medianDagar: Math.round(median),
+      kortast: d[0], längst: d[d.length - 1],
+      osäkerhet: d.length < 10 ? `Bygger på ${d.length} observationer — indikation, inte fakta.` : null,
+    };
+  } catch { return null; }
 }
 
 async function fetchFeed(url) {
