@@ -51,6 +51,23 @@
     Ingen annan har den här datan — den finns bara om någon gör jobbet.
   </p>
 
+  
+  <div class="card">
+    <label style="margin-top:0">Snabbinmatning — klistra in text</label>
+    <p class="sub" style="margin:4px 0 10px">
+      Klistra in ett helt pressmeddelande (eller bara några organisationsnummer).
+      Vi plockar ut alla orgnr, slår upp dem hos Bolagsverket och sparar registreringsdatumen.
+    </p>
+    <textarea id="bulk" rows="6" placeholder="Klistra in text här…"
+      style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical"></textarea>
+
+    <label>Budets datum (gäller alla i texten)</label>
+    <input id="bulkDate" type="date" />
+
+    <button onclick="bulk()">Slå upp och spara</button>
+    <div id="bulkOut" class="out"></div>
+  </div>
+
   <div class="card">
     <label>Din nyckel (CRON_SECRET)</label>
     <input id="key" type="password" placeholder="sparas bara i din webbläsare" />
@@ -108,6 +125,33 @@ function show(msg, ok) {
   o.className = "out " + (ok ? "ok" : "err");
   o.innerHTML = msg;
   o.style.display = "block";
+}
+
+async function bulk() {
+  const key = $("key").value.trim();
+  const text = $("bulk").value.trim();
+  const o = $("bulkOut");
+  if (!key) { o.className = "out err"; o.style.display = "block"; o.textContent = "Fyll i din nyckel först."; return; }
+  if (!text) { o.className = "out err"; o.style.display = "block"; o.textContent = "Klistra in text först."; return; }
+  o.className = "out"; o.style.display = "block"; o.textContent = "Slår upp…";
+  try {
+    const p = new URLSearchParams({ key, announced: $("bulkDate").value });
+    const r = await fetch("/api/bolagsverket?" + p.toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const j = await r.json();
+    if (!r.ok) { o.className = "out err"; o.textContent = "Fel: " + (j.error || r.status); return; }
+    o.className = "out ok";
+    o.innerHTML = "<b>Hittade " + j.hittade + " orgnr, sparade " + j.sparade + ".</b><br>" +
+      j.resultat.map(x => "· " + (x.namn || x.orgNr) + " — " +
+        (x.registrerat ? "registrerat " + x.registrerat : x.status) +
+        (x.dagarTillBud != null ? " (" + x.dagarTillBud + " dagar till bud)" : "")).join("<br>");
+    stats();
+  } catch (e) {
+    o.className = "out err"; o.textContent = "Nätverksfel: " + e.message;
+  }
 }
 
 async function save() {
