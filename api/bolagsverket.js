@@ -63,6 +63,41 @@ export default async function handler(req, res) {
       });
     }
 
+    // BATCH: klistra in text (t.ex. ett pressmeddelande) eller flera orgnr.
+    // Vi plockar ut alla organisationsnummer och slår upp dem i en omgång.
+    const bulkText = (req.method === "POST" && req.body && req.body.text) || q.text || q.batch;
+    if (bulkText) {
+      const found = extractOrgNrs(String(bulkText));
+      if (!found.length) {
+        return res.status(400).json({
+          error: "Hittade inga organisationsnummer i texten",
+          tips: "Ett svenskt orgnr ser ut som 559520-3331 eller 5595203331.",
+        });
+      }
+      const announced = (q.announced || "").match(/^\d{4}-\d{2}-\d{2}$/) ? q.announced : null;
+      const results = [];
+      for (const orgNr of found) {
+        try {
+          const info = await fetchCompany(orgNr);
+          if (!info) { results.push({ orgNr, status: "hittades ej" }); continue; }
+          const saved = await saveBidco(info, orgNr, announced);
+          results.push({
+            orgNr, namn: info.name, registrerat: info.registrationDate,
+            dagarTillBud: saved.dagar,
+            status: info.registrationDate ? "sparad" : "inget datum",
+          });
+        } catch (e) {
+          results.push({ orgNr, status: "FEL: " + String(e.message).slice(0, 80) });
+        }
+      }
+      const ok = results.filter(r => r.status === "sparad").length;
+      return res.status(200).json({
+        ok: true, hittade: found.length, sparade: ok, resultat: results,
+        kommentar: announced ? `Budets datum ${announced} användes för alla.` :
+          "Lägg till &announced=ÅÅÅÅ-MM-DD för att räkna ut gapet direkt.",
+      });
+    }
+
     const orgNr = normOrgNr(q.orgNr);
     if (!orgNr) {
       return res.status(400).json({
@@ -245,4 +280,37 @@ async function ensureSchema(sql) {
       bud_id     TEXT,
       updated_at TIMESTAMPTZ DEFAULT now()
     )`;
+}
+
+/** Plockar ut alla svenska organisationsnummer ur fritext. */
+function extractOrgNrs(text) {
+  const out = new Set();
+  // Med bindestreck: 559520-3331
+  for (const m of text.matchAll(/\b(\d{6})-(\d{4})\b/g)) out.add(`${m[1]}-${m[2]}`);
+  // Utan bindestreck: 5595203331 (undvik att fånga t.ex. belopp)
+  for (const m of text.matchAll(/(?<![\d-])(\d{10})(?![\d-])/g)) {
+    const d = m[1];
+    // Svenska orgnr för AB börjar oftast på 55 eller 56
+    if (/^(5[0-9]|16|26|76|86)/.test(d)) out.add(`${d.slice(0, 6)}-${d.slice(6)}`);
+  }
+  return [...out];
+}
+
+/** Sparar bidco i registret och returnerar antal dagar till budet. */
+async function saveBidco(info, orgNr, announced) {
+  if (!CONN || !info.registrationDate) return { dagar: null };
+  const sql = neon(CONN);
+  await ensureSchema(sql);
+  await sql`
+    INSERT INTO bidco_registry (bidco, org_nr, registered, announced, updated_at)
+    VALUES (${info.name || orgNr}, ${orgNr}, ${info.registrationDate}, ${announced}, now())
+    ON CONFLICT (bidco) DO UPDATE SET
+      org_nr = EXCLUDED.org_nr,
+      registered = EXCLUDED.registered,
+      announced = COALESCE(EXCLUDED.announced, bidco_registry.announced),
+      updated_at = now()`;
+  const [row] = await sql`SELECT * FROM bidco_registry WHERE org_nr = ${orgNr} LIMIT 1`;
+  const dagar = row && row.registered && row.announced
+    ? Math.round((Date.parse(row.announced) - Date.parse(row.registered)) / 864e5) : null;
+  return { dagar };
 }
