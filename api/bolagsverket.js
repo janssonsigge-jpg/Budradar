@@ -30,13 +30,12 @@ const CLIENT_ID = process.env.BOLAGSVERKET_CLIENT_ID;
 const CLIENT_SECRET = process.env.BOLAGSVERKET_CLIENT_SECRET;
 const ENV = (process.env.BOLAGSVERKET_ENV || "test").toLowerCase();
 
-// Bolagsverket har separata miljöer. Testmiljön innehåller påhittade
-// testbolag — får du konstiga namn tillbaka är det förklaringen.
-const HOSTS = {
-  test: "https://portal-accept2.api.bolagsverket.se",
-  prod: "https://portal.api.bolagsverket.se",
-};
-const HOST = HOSTS[ENV] || HOSTS.test;
+// Bolagsverket har TVÅ olika hostar:
+//   portal.api.bolagsverket.se → OAuth2-token och dokumentation
+//   gw.api.bolagsverket.se     → själva API-anropen (gateway)
+// Att blanda ihop dem ger 403 med en HTML-sida istället för JSON.
+const TOKEN_URL = "https://portal.api.bolagsverket.se/oauth2/token";
+const API_BASE = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -58,7 +57,7 @@ export default async function handler(req, res) {
     if (q.ping === "1") {
       const token = await getToken();
       return res.status(200).json({
-        ok: true, miljö: ENV, host: HOST,
+        ok: true, miljö: ENV, tokenUrl: TOKEN_URL, apiBase: API_BASE,
         token: token ? "hämtad" : "misslyckades",
         nästaSteg: "Testa ett bolag: ?key=DIN_NYCKEL&orgNr=559520-3331",
       });
@@ -114,10 +113,12 @@ export default async function handler(req, res) {
       error: msg,
       miljö: ENV,
       tolkning: msg.includes("401") || msg.includes("invalid_client")
-        ? "Autentisering nekad — kontrollera client id/secret och att miljön (test/prod) stämmer."
-        : msg.includes("403") ? "Åtkomst nekad — din behörighet täcker kanske inte denna operation."
-        : msg.includes("404") ? "Endpoint hittades inte — kontrollera sökvägen mot utvecklarportalen."
+        ? "Autentisering nekad — kontrollera client id/secret."
+        : msg.includes("403") ? "Åtkomst nekad — kontrollera att sökvägen är rätt (se Developer Portal) och att din prenumeration täcker API:t."
+        : msg.includes("404") ? "Endpoint hittades inte — kontrollera sökvägen mot Developer Portal."
+        : msg.includes("400") ? "Felaktig begäran — kontrollera formatet på organisationsnumret."
         : "Okänt fel.",
+      användeApiBase: API_BASE,
     });
   }
 }
@@ -134,7 +135,7 @@ async function getToken() {
     scope: "vardefulla-datamangder:read",
   });
 
-  const r = await fetch(`${HOST}/oauth2/token`, {
+  const r = await fetch(TOKEN_URL, {
     method: "POST",
     headers: {
       authorization: `Basic ${basic}`,
@@ -156,7 +157,7 @@ async function fetchCompany(orgNr) {
   const clean = orgNr.replace("-", "");
 
   // Värdefulla datamängder: /organisationer tar emot ett eller flera orgnr.
-  const r = await fetch(`${HOST}/vardefulla-datamangder/v1/organisationer`, {
+  const r = await fetch(`${API_BASE}/organisationer`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${token}`,
