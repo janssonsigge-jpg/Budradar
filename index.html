@@ -159,8 +159,11 @@ function RankTab() {
     // Storleksfilter. Verkliga bud 2026: Nilörn 878 Mkr, Cint ~2 mdkr,
     // Sleep Cycle ~1 mdkr. Nästan alla svenska bud sker under 5 mdkr.
     // Bolag utan känt börsvärde behålls (hellre med än att tappa dem).
-    if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= 5000);
-    if (size === "MEDEL") d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= 20000);
+    // HÅRT storleksfilter: bolag utan känt börsvärde döljs när filtret är på.
+    // Anledningen: släpper vi igenom dem hamnar stora bolag (Intrum, H&M) i
+    // toppen och hela listan tappar trovärdighet. Hellre kortare och rätt.
+    if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 5000);
+    if (size === "MEDEL") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 20000);
     if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
     return d.sort((a, b) => b.score.composite - a.score.composite);
   }, [filter, size, data]);
@@ -200,7 +203,7 @@ function RankTab() {
       </div>
       {missingMcap > 0 && size !== "ALLA" && (
         <div style={{ padding: "0 20px 8px", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
-          {missingMcap} av {data.length} bolag saknar börsvärde och kan därför inte storleksfiltreras — de visas ändå.
+          Visar {rows.length} av {data.length} bolag. {missingMcap} saknar börsvärde och döljs när storleksfiltret är på — välj Alla för att se dem.
         </div>
       )}
       <div style={s.filterRow}>
