@@ -164,7 +164,7 @@ async function fetchCompany(orgNr) {
       "content-type": "application/json",
       accept: "application/json",
     },
-    body: JSON.stringify({ identitetsbeteckning: [clean] }),
+    body: JSON.stringify({ identitetsbeteckning: clean }),
   });
 
   const text = await r.text();
@@ -176,15 +176,17 @@ async function fetchCompany(orgNr) {
   const org = pickOrg(j);
   if (!org) return null;
 
-  return {
+  const result = {
     orgNr,
     name: deepFind(org, ["namn", "organisationsnamn", "foretagsnamn"]) || null,
     registrationDate: normDate(deepFind(org, ["registreringsdatum", "registreringstidpunkt", "bildatDatum", "startdatum"])),
     legalForm: deepFind(org, ["juridiskForm", "organisationsform"]) || null,
     status: deepFind(org, ["status", "avregistrerad"]) || null,
-    // Hjälper felsökning om fältnamnen skiljer sig från vad vi gissat
     rawKeys: Object.keys(org).slice(0, 30),
   };
+  // Om vi inte hittade datumet, skicka med råsvaret så fältnamnen kan identifieras
+  if (!result.registrationDate) result.raw = j;  // så vi ser fältnamnen
+  return result;
 }
 
 /** Plockar ut organisationsobjektet oavsett hur svaret är inkapslat. */
