@@ -245,6 +245,20 @@ function RankTab() {
 
 function Sheet({ co, onClose }) {
   const d = co.detail;
+  const [news, setNews] = useState(null);
+  const [newsStatus, setNewsStatus] = useState("loading");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/news?company=" + encodeURIComponent(co.name) + "&limit=6");
+        if (!r.ok) throw 0;
+        const j = await r.json();
+        if (!cancelled) { setNews(j.items || []); setNewsStatus("ok"); }
+      } catch { if (!cancelled) setNewsStatus("error"); }
+    })();
+    return () => { cancelled = true; };
+  }, [co.name]);
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
@@ -274,6 +288,26 @@ function Sheet({ co, onClose }) {
         <Sec title="Korta nettopositioner">
           {!d.shorts.length ? <Empty /> : <Grid items={[["Senaste", `${d.shorts[0].position_pct}%`], ["Datapunkter", d.shorts.length]]} />}
         </Sec>
+        <Sec title="Pressmeddelanden">
+          {newsStatus === "loading" && <div style={{ fontSize: 12, color: C.muted }}>Hämtar…</div>}
+          {newsStatus === "error" && <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>Kunde inte hämta flödet</div>}
+          {newsStatus === "ok" && (!news || !news.length) && <Empty />}
+          {newsStatus === "ok" && news && news.map((n, i) => (
+            <a key={i} href={n.url || "#"} target="_blank" rel="noreferrer"
+              style={{ display: "block", textDecoration: "none", padding: "7px 0", borderBottom: i < news.length - 1 ? `1px solid ${C.line}` : "none" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: C.ink, fontWeight: n.weight > 1 ? 700 : 500, lineHeight: 1.4 }}>{n.title}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.date}</div>
+                </div>
+                {n.tags && n.tags.length > 0 && (
+                  <span style={{ ...s.signalTag, flexShrink: 0, fontSize: 9, padding: "2px 8px" }}>{n.tags[0]}</span>
+                )}
+              </div>
+            </a>
+          ))}
+        </Sec>
+
         <Sec title="Bolagsverket">
           {!d.bolagsverket.length ? <Empty /> : d.bolagsverket.map((e, i) => (
             <Ev key={i} a={e.event_type} b={`${e.note} · ${e.event_date}`} />))}
