@@ -136,6 +136,7 @@ function BudRadar() {
 function RankTab() {
   const [filter, setFilter] = useState("ALLA");
   const [size, setSize] = useState("SMÅ"); // SMÅ = default; stora bolag blir sällan uppköpta
+  const [query, setQuery] = useState("");
   const [sel, setSel] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState(DEMO);
@@ -156,9 +157,15 @@ function RankTab() {
 
   const rows = useMemo(() => {
     let d = [...data];
-    // Storleksfilter. Verkliga bud 2026: Nilörn 878 Mkr, Cint ~2 mdkr,
-    // Sleep Cycle ~1 mdkr. Nästan alla svenska bud sker under 5 mdkr.
-    // Bolag utan känt börsvärde behålls (hellre med än att tappa dem).
+    // Sökning går före allt annat: söker du på ett bolag vill du hitta det
+    // oavsett storleks- eller aktivitetsfilter.
+    const q = query.trim().toLowerCase();
+    if (q) {
+      return d
+        .filter((c) => (c.name || "").toLowerCase().includes(q) || (c.ticker || "").toLowerCase().includes(q))
+        .sort((a, b) => b.score.composite - a.score.composite);
+    }
+
     // HÅRT storleksfilter: bolag utan känt börsvärde döljs när filtret är på.
     // Anledningen: släpper vi igenom dem hamnar stora bolag (Intrum, H&M) i
     // toppen och hela listan tappar trovärdighet. Hellre kortare och rätt.
@@ -166,7 +173,7 @@ function RankTab() {
     if (size === "MEDEL") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 20000);
     if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
     return d.sort((a, b) => b.score.composite - a.score.composite);
-  }, [filter, size, data]);
+  }, [filter, size, data, query]);
   const selCo = sel ? data.find((c) => c.ticker === sel) : null;
   const top = rows.length ? rows[0].score.composite : 0;
   const high = data.filter((c) => c.score.tier === "HÖG").length;
@@ -196,17 +203,29 @@ function RankTab() {
         <div style={s.radar} aria-hidden><div style={s.ring} /><div style={s.ring2} /><div style={s.sweep} /><div style={s.blip} /></div>
       </header>
 
-      <div style={{ ...s.filterRow, paddingBottom: 4 }}>
+      <div style={{ padding: "4px 20px 10px", position: "relative" }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Sök bolag eller ticker…"
+          style={s.search}
+        />
+        {query && (
+          <button onClick={() => setQuery("")} style={s.searchClear} aria-label="Rensa">×</button>
+        )}
+      </div>
+
+      <div style={{ ...s.filterRow, paddingBottom: 4, opacity: query ? 0.4 : 1, pointerEvents: query ? "none" : "auto" }}>
         {[["SMÅ", "< 5 mdkr"], ["MEDEL", "< 20 mdkr"], ["ALLA", "Alla"]].map(([id, label]) => (
           <button key={id} className="pill" onClick={() => setSize(id)} style={pill(size === id)}>{label}</button>
         ))}
       </div>
-      {missingMcap > 0 && size !== "ALLA" && (
+      {!query && missingMcap > 0 && size !== "ALLA" && (
         <div style={{ padding: "0 20px 8px", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
           Visar {rows.length} av {data.length} bolag. {missingMcap} saknar börsvärde och döljs när storleksfiltret är på — välj Alla för att se dem.
         </div>
       )}
-      <div style={s.filterRow}>
+      <div style={{ ...s.filterRow, opacity: query ? 0.4 : 1, pointerEvents: query ? "none" : "auto" }}>
         {["ALLA", "HÖG", "MEDEL", "LÅG"].map((f) => (
           <button key={f} className="pill" onClick={() => setFilter(f)} style={pill(filter === f)}>{f}</button>
         ))}
@@ -791,6 +810,12 @@ const s = {
   sparkL: { fontSize: 9, color: C.muted, marginTop: 5, letterSpacing: ".04em", textAlign: "center" },
   infoBox: { background: C.accentSoft, border: `1px solid #d9ddff`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
   bidcoHint: { marginTop: 18, background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "13px 15px", fontSize: 12.5, lineHeight: 1.55, color: C.muted, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
+  search: { width: "100%", padding: "11px 36px 11px 14px", borderRadius: 999, border: `1px solid ${C.line}`,
+    background: C.card, fontSize: 14, fontFamily: SANS, color: C.ink, outline: "none",
+    boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
+  searchClear: { position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)",
+    background: "none", border: "none", fontSize: 20, color: C.muted, cursor: "pointer",
+    lineHeight: 1, padding: 0, fontFamily: SANS },
   linkBtn: { background: "none", border: "none", color: C.accent, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 13, padding: 0 },
   signalTag: { display: "inline-block", background: C.accentSoft, color: C.accent, border: "1px solid #d9ddff", borderRadius: 999, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".03em" },
   chipOffer: { background: C.accent, color: "#fff", borderRadius: 999, padding: "2px 9px", fontSize: 9, letterSpacing: ".12em", fontWeight: 700, flexShrink: 0 },
