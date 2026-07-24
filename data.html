@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BudRadar · Nordiskt budregister</title>
+<style>
+  :root { --ink:#0d1220; --paper:#f6f7fb; --card:#fff; --line:#e7e9f0; --muted:#6b7180;
+          --accent:#3b4cff; --accent-soft:#eef0ff; --green:#1faa6c; --red:#d64545; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--paper); color:var(--ink);
+         font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; padding:0 0 60px;
+         background-image:linear-gradient(var(--line) 1px,transparent 1px),
+                          linear-gradient(90deg,var(--line) 1px,transparent 1px);
+         background-size:46px 46px; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 20px; }
+  .serif { font-family:'Times New Roman',Times,Georgia,serif; }
+
+  nav { display:flex; align-items:center; justify-content:space-between; margin:16px auto 0;
+        max-width:1080px; padding:13px 20px; background:var(--card); border:1px solid var(--line);
+        border-radius:999px; box-shadow:0 6px 24px rgba(13,18,32,.05); }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; }
+  .dot { width:16px; height:16px; border-radius:50%; background:var(--accent);
+         box-shadow:0 0 0 4px var(--accent-soft); }
+  nav a { color:var(--muted); text-decoration:none; font-size:13px; font-weight:600; }
+  nav a:hover { color:var(--accent); }
+
+  header { padding:44px 0 26px; }
+  h1 { font-size:clamp(34px,5vw,52px); font-weight:400; letter-spacing:-.02em; line-height:1; }
+  h1 em { color:var(--accent); }
+  .sub { color:var(--muted); font-size:16px; margin-top:14px; max-width:620px; line-height:1.55; }
+  .eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 13px; background:var(--card);
+             border:1px solid var(--line); border-radius:999px; font-size:12px; color:var(--muted);
+             font-weight:600; margin-bottom:18px; }
+  .eyebrow i { width:7px; height:7px; border-radius:50%; background:var(--accent); display:block; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:22px 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px;
+          box-shadow:0 8px 30px rgba(13,18,32,.05); }
+  .kpi { font-family:'Times New Roman',Georgia,serif; font-size:42px; line-height:.95; color:var(--accent); }
+  .kpi.dark { color:var(--ink); }
+  .klabel { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em;
+            font-weight:700; margin-top:8px; }
+  .knote { font-size:12.5px; color:var(--muted); margin-top:8px; line-height:1.5; }
+
+  h2 { font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);
+       font-weight:700; margin:34px 0 12px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.09em;
+       color:var(--muted); padding:9px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td { padding:11px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tbody tr:hover { background:#fafbff; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .prem { font-weight:700; color:var(--green); }
+  .bidco { color:var(--accent); font-weight:600; font-size:12.5px; }
+  .muted { color:var(--muted); font-size:12px; }
+  .tag { display:inline-block; padding:2px 9px; border-radius:999px; font-size:9.5px;
+         font-weight:700; letter-spacing:.08em; border:1px solid var(--line); background:#f0f1f5; color:var(--muted); }
+  .tag.done { background:var(--accent-soft); color:var(--accent); border-color:#d9ddff; }
+  .tag.up { background:#e8f6ef; color:var(--green); border-color:#c9ead9; }
+
+  .bar { height:7px; border-radius:999px; background:#eceef4; overflow:hidden; min-width:70px; }
+  .bar div { height:100%; border-radius:999px; background:var(--accent); }
+
+  .btn { display:inline-block; padding:11px 20px; border-radius:999px; background:var(--ink);
+         color:#fff; text-decoration:none; font-size:13.5px; font-weight:600; border:none;
+         cursor:pointer; font-family:inherit; }
+  .btn.ghost { background:var(--card); color:var(--ink); border:1px solid var(--line); }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+  .note { background:var(--accent-soft); border:1px solid #d9ddff; border-radius:14px;
+          padding:16px 18px; font-size:13.5px; line-height:1.6; color:var(--muted); margin-top:20px; }
+  .note b { color:var(--ink); }
+  footer { color:var(--muted); font-size:11.5px; padding:30px 0 0; line-height:1.6; }
+  .loading { color:var(--muted); font-size:14px; padding:30px 0; }
+  @media (max-width:640px){ .hide-sm { display:none; } td,th { padding:9px 6px; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><span class="dot"></span> BudRadar</div>
+  <div style="display:flex;gap:18px">
+    <a href="/">Appen</a>
+    <a href="/api/registry?format=csv">CSV</a>
+    <a href="/api/registry">API</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow"><i></i> Nordiskt budregister</div>
+    <h1 class="serif">Vad betalas i ett <em>uppköp?</em></h1>
+    <p class="sub">
+      En strukturerad databas över offentliga uppköpserbjudanden på svenska börsen — med premie,
+      bidco-struktur, ägarbindning före budet och utfall. Data som idag ligger utspridd i
+      pressmeddelanden, samlad och maskinläsbar.
+    </p>
+    <div class="actions">
+      <a class="btn" href="/api/registry?format=csv">Ladda ner CSV</a>
+      <a class="btn ghost" href="/api/registry">Öppna API</a>
+    </div>
+  </header>
+
+  <div id="kpis" class="grid"></div>
+
+  <h2>Premie per budgivartyp</h2>
+  <div class="card"><div id="bytype"></div></div>
+
+  <h2>Affärer i registret</h2>
+  <div class="card" style="padding:6px 8px"><div id="deals"><div class="loading">Hämtar registret…</div></div></div>
+
+  <div id="bidcoNote"></div>
+
+  <div class="note">
+    <b>Om datan.</b> Sammanställd från offentliga pressmeddelanden (MFN, Cision) och
+    Bolagsverkets register. Premie mäts mot senaste stängningskurs före offentliggörandet.
+    Registret byggs löpande — antalet affärer avgör hur mycket vikt siffrorna tål.
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function fmt(n, suffix) {
+  if (n == null) return "—";
+  return n + (suffix || "");
+}
+
+async function load() {
+  try {
+    const [statsRes, listRes] = await Promise.all([
+      fetch("/api/registry?stats=1"),
+      fetch("/api/registry"),
+    ]);
+    const stats = await statsRes.json();
+    const list = await listRes.json();
+    renderKpis(stats, list);
+    renderTypes(stats);
+    renderDeals(list.results || []);
+    renderBidco(stats);
+    $("foot").textContent =
+      "Registret innehåller " + (list.count || 0) + " affärer. " +
+      "Snitt fullständighet " + ((list.coverage && list.coverage.avgCompleteness) || 0) + "%. " +
+      "Ej investeringsrådgivning.";
+  } catch (e) {
+    $("deals").innerHTML = '<div class="loading">Kunde inte hämta registret. Kontrollera att /api/registry är uppladdad.</div>';
+  }
+}
+
+function renderKpis(s, list) {
+  const p = s.premie || {};
+  const bt = s.bidcoTiming;
+  const cards = [
+    { v: fmt(p.snitt, "%"), l: "Snittpremie", n: "Mot senaste kurs före budet" },
+    { v: fmt(p.median, "%"), l: "Median", n: "Spann " + fmt(p.lägsta, "%") + "–" + fmt(p.högsta, "%"), dark: true },
+    { v: String(s.n || 0), l: "Affärer", n: "I registret just nu", dark: true },
+  ];
+  if (bt && bt.n) {
+    cards.push({ v: bt.medianDagar + " d", l: "Bidco → bud",
+      n: "Median från registrering till offentliggörande (" + bt.n + " obs.)" });
+  }
+  $("kpis").innerHTML = cards.map(c =>
+    '<div class="card"><div class="kpi' + (c.dark ? " dark" : "") + '">' + c.v + '</div>' +
+    '<div class="klabel">' + c.l + '</div><div class="knote">' + c.n + '</div></div>').join("");
+}
+
+function renderTypes(s) {
+  const types = Object.entries(s.perBudgivartyp || {})
+    .sort((a, b) => (b[1].snittPremie || 0) - (a[1].snittPremie || 0));
+  if (!types.length) { $("bytype").innerHTML = '<div class="muted">Ingen data.</div>'; return; }
+  const max = Math.max(...types.map(t => t[1].snittPremie || 0), 1);
+  $("bytype").innerHTML = '<table><tbody>' + types.map(([k, v]) =>
+    '<tr><td style="width:150px"><b>' + k + '</b> <span class="muted">' + v.antal + ' st</span></td>' +
+    '<td><div class="bar"><div style="width:' + ((v.snittPremie || 0) / max * 100) + '%"></div></div></td>' +
+    '<td class="num" style="width:60px"><b>' + fmt(v.snittPremie, "%") + '</b></td></tr>').join("") +
+    '</tbody></table>';
+}
+
+function renderDeals(rows) {
+  if (!rows.length) { $("deals").innerHTML = '<div class="loading">Inga affärer i registret.</div>'; return; }
+  $("deals").innerHTML = '<table><thead><tr>' +
+    '<th>Bolag</th><th>Datum</th><th class="hide-sm">Budgivare</th><th class="hide-sm">Bidco</th>' +
+    '<th class="num">Pris</th><th class="num">Premie</th><th class="hide-sm">Bunden röst</th><th>Utfall</th>' +
+    '</tr></thead><tbody>' +
+    rows.map(r => {
+      const cls = r.outcome === "Genomfört" ? "done" : r.outcome === "Höjt bud" ? "up" : "";
+      const bidco = r.bidcoChain && r.bidcoChain.length > 1 ? r.bidcoChain[r.bidcoChain.length - 1] : "—";
+      return '<tr>' +
+        '<td><b>' + (r.target || "—") + '</b><div class="muted">' + (r.targetTicker || "") + '</div></td>' +
+        '<td class="muted">' + (r.announced || "—") + '</td>' +
+        '<td class="hide-sm">' + (r.bidder || "—") + '<div class="muted">' + (r.bidderType || "") + '</div></td>' +
+        '<td class="hide-sm bidco">' + bidco + '</td>' +
+        '<td class="num">' + (r.pricePerShare != null ? r.pricePerShare + " kr" : "—") + '</td>' +
+        '<td class="num prem">' + (r.premiumLastClose != null ? "+" + r.premiumLastClose + "%" : "—") + '</td>' +
+        '<td class="num hide-sm">' + (r.committedVotes ? r.committedVotes + "%" : "—") + '</td>' +
+        '<td><span class="tag ' + cls + '">' + (r.outcome || "—") + '</span></td>' +
+        '</tr>';
+    }).join("") + '</tbody></table>';
+}
+
+function renderBidco(s) {
+  const bt = s.bidcoTiming;
+  if (!bt || !bt.n) return;
+  $("bidcoNote").innerHTML =
+    '<h2>Bidco → bud</h2><div class="card">' +
+    '<p style="font-size:14px;line-height:1.6;color:var(--muted)">' +
+    'Budgivaren registrerar nästan alltid ett skalbolag innan budet offentliggörs. ' +
+    'I registret är medianen <b style="color:var(--accent)">' + bt.medianDagar + ' dagar</b> ' +
+    '(spann ' + bt.kortast + '–' + bt.längst + '). ' +
+    bt.andelInom30Dagar + '% registrerades inom 30 dagar före budet.' +
+    (bt.osäkerhet ? ' <i>' + bt.osäkerhet + '</i>' : '') +
+    '</p>' +
+    (bt.affärer && bt.affärer.length ?
+      '<table style="margin-top:12px"><thead><tr><th>Bidco</th><th>Registrerat</th><th>Bud</th><th class="num">Dagar</th></tr></thead><tbody>' +
+      bt.affärer.map(a => '<tr><td class="bidco">' + a.bidco + '</td><td class="muted">' + a.registered +
+        '</td><td class="muted">' + a.announced + '</td><td class="num"><b>' + a.dagar + '</b></td></tr>').join("") +
+      '</tbody></table>' : '') +
+    '</div>';
+}
+
+load();
+</script>
+</body>
+</html>
