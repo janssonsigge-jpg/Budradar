@@ -18,7 +18,7 @@ jobs:
           node-version: 20
 
       - name: Installera paket
-        run: npm install
+        run: npm install @vercel/postgres
 
       - name: Kör scriptet
         env:
