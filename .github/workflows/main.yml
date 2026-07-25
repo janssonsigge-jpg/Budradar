@@ -1,0 +1,26 @@
+name: Uppdatera kurser och börsvärde
+
+on:
+  workflow_dispatch: {}   # ger dig en "Run workflow"-knapp på github.com, ingen terminal behövs
+  schedule:
+    - cron: "30 1 * * *"  # körs 30 min efter bolagslistan uppdaterats, natten
+
+jobs:
+  fetch-fundamentals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sätt upp Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installera paket
+        run: npm install
+
+      - name: Kör scriptet
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node fetch_fundamentals.mjs
