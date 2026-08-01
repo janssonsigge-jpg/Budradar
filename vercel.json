@@ -2,6 +2,6 @@
   "crons": [
     { "path": "/api/snapshot",       "schedule": "0 18 * * *" },
     { "path": "/api/detect-bids",    "schedule": "30 18 * * *" },
-    { "path": "/api/cron/daily-scan", "schedule": "0 6 * * *" }
+    { "path": "/api/system?action=daily-scan", "schedule": "0 6 * * *" }
   ]
 }
