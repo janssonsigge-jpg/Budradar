@@ -7,13 +7,21 @@
 // VAD DEN GÖR:
 //   1. Laddar ner bolagsverket_bulkfil.zip
 //   2. Packar upp och läser textfilen radvis (inte allt i minnet samtidigt)
-//   3. Jämför org.nr mot bolagsverket_seen-tabellen (vad vi sett förut)
+//   3. Jämför org.nr mot förra veckans org.nr-lista (sparad som komprimerad
+//      textfil i Vercel Blob — INTE i Postgres, se not nedan)
 //   4. FÖRSTA körningen: bara bootstrap — sparar alla org.nr, flaggar INGET
 //      (annars skulle miljontals befintliga bolag räknas som "nya")
 //   5. Efterföljande körningar: nya org.nr som är aktiebolag, aktiva,
 //      och har en kort/generisk verksamhetsbeskrivning → kandidater
 //   6. Kandidater vars adress matchar known_advisors → flaggas i
 //      track_record_log (samma hash-kedja + GitHub-tidsstämpel som allt annat)
+//
+// VARFÖR BLOB OCH INTE POSTGRES FÖR ORG.NR-LISTAN:
+//   Ett första försök lagrade alla sedda org.nr i en Postgres-tabell och
+//   sprängde Neons gratisnivås 512 MB-gräns efter ~1,2 miljoner rader.
+//   Org.nr-listan (miljontals enkla strängar) hör hemma i billig fillagring,
+//   inte i en relationsdatabas — Postgres ska bara innehålla den faktiska
+//   värdefulla datan (flaggor, known_advisors).
 //
 // KÖRS LOKALT FÖR TEST:
 //   DATABASE_URL=... node scripts/bolagsverket-scan.mjs
@@ -28,11 +36,13 @@
 //   att gissningen är fel.
 
 import { neon } from '@neondatabase/serverless';
+import { put, head } from '@vercel/blob';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import readline from 'node:readline';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 
 const CONN = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
 if (!CONN) {
@@ -54,6 +64,33 @@ const MAX_DESCRIPTION_LENGTH = 80; // korta/tomma beskrivningar är typiska för
 function todaysRunId() {
   const d = new Date();
   return `bv-weekly-${d.toISOString().slice(0, 10)}`;
+}
+
+const SNAPSHOT_BLOB_PATH = 'bolagsverket/seen-org-numbers.txt.gz';
+
+// Hämta förra veckans org.nr-lista från Blob. Returnerar tom Set om ingen finns än (bootstrap).
+async function loadPreviousSnapshot() {
+  try {
+    const info = await head(SNAPSHOT_BLOB_PATH);
+    console.log(`Hittade tidigare snapshot: ${(info.size / 1e6).toFixed(1)} MB, uppladdad ${info.uploadedAt}`);
+    const res = await fetch(info.url);
+    const gz = Buffer.from(await res.arrayBuffer());
+    const text = zlib.gunzipSync(gz).toString('utf8');
+    const set = new Set(text.split('\n').filter(Boolean));
+    console.log(`${set.size} kända org.nr sedan förra körningen.`);
+    return set;
+  } catch (err) {
+    console.log('Ingen tidigare snapshot hittad — detta är bootstrap-körningen.');
+    return new Set();
+  }
+}
+
+// Ladda upp hela den aktuella org.nr-listan (komprimerad) som ny snapshot för nästa körning
+async function saveSnapshot(orgNrSet) {
+  const text = Array.from(orgNrSet).join('\n');
+  const gz = zlib.gzipSync(Buffer.from(text, 'utf8'));
+  console.log(`Laddar upp ny snapshot: ${orgNrSet.size} org.nr, ${(gz.length / 1e6).toFixed(1)} MB komprimerat`);
+  await put(SNAPSHOT_BLOB_PATH, gz, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
 }
 
 // ---------- Nedladdning + uppackning via CLI (robust, hanterar alla zip-varianter) ----------
@@ -162,17 +199,11 @@ async function main() {
 
     let header = null;
 
-    // Är detta en bootstrap (första körningen)?
-    const countResult = await sql`SELECT COUNT(*)::int AS c FROM bolagsverket_seen`;
-    const isBootstrap = countResult.rows[0].c === 0;
+    // Ladda förra veckans org.nr-lista från Blob (tom Set = bootstrap-körning)
+    const seenSet = await loadPreviousSnapshot();
+    const isBootstrap = seenSet.size === 0;
     if (isBootstrap) console.log('FÖRSTA KÖRNINGEN — bootstrap-läge, inga flaggor skapas denna gång.');
-
-    // Hämta kända org.nr som ett Set (snabb lookup, hela listan i minnet — miljontals
-    // strängar är hanterbart, ca 30-60 MB för ett par miljoner org.nr)
-    console.log('Hämtar kända org.nr...');
-    const seenRows = await sql`SELECT org_nr FROM bolagsverket_seen`;
-    const seenSet = new Set(seenRows.rows.map((r) => r.org_nr));
-    console.log(`${seenSet.size} kända org.nr sedan tidigare.`);
+    const startSize = seenSet.size;
 
     // Hämta known_advisors för adressmatchning
     const advisorsResult = await sql`SELECT name, known_address, weight FROM known_advisors WHERE known_address IS NOT NULL`;
@@ -183,28 +214,6 @@ async function main() {
     let candidates = 0;
     let flagged = 0;
     const orgformCounts = {};
-    const newSeenBatch = [];
-    const BATCH_SIZE = 2000;
-
-    async function flushSeenBatch() {
-      if (newSeenBatch.length === 0) return;
-      const org_nrs = newSeenBatch.map((r) => r.org_nr);
-      const names = newSeenBatch.map((r) => r.name);
-      const orgforms = newSeenBatch.map((r) => r.orgform);
-      const registered_ats = newSeenBatch.map((r) => r.registered_at || null);
-      const descriptions = newSeenBatch.map((r) => r.description);
-      const addresses = newSeenBatch.map((r) => r.address);
-
-      await sql`
-        INSERT INTO bolagsverket_seen (org_nr, name, orgform, registered_at, description, address)
-        SELECT * FROM unnest(
-          ${org_nrs}::text[], ${names}::text[], ${orgforms}::text[],
-          ${registered_ats}::date[], ${descriptions}::text[], ${addresses}::text[]
-        )
-        ON CONFLICT (org_nr) DO NOTHING
-      `;
-      newSeenBatch.length = 0;
-    }
 
     for await (const line of rl) {
       if (header === null) { header = line; console.log('Header:', header); continue; }
@@ -224,8 +233,6 @@ async function main() {
       if (seenSet.has(row.org_nr)) continue; // känt sedan tidigare
       newOrgs++;
       seenSet.add(row.org_nr);
-      newSeenBatch.push(row);
-      if (newSeenBatch.length >= BATCH_SIZE) await flushSeenBatch();
 
       if (isBootstrap) continue; // bootstrap: bara spara, inte utvärdera
 
@@ -271,7 +278,8 @@ async function main() {
       console.log(`FLAGGAD: ${row.name} (${row.org_nr}) — ${matchedAdvisor.name}, score ${score}`);
     }
 
-    await flushSeenBatch();
+    await saveSnapshot(seenSet);
+    console.log(`Snapshot sparad: ${startSize} -> ${seenSet.size} org.nr (${newOrgs} nya).`);
 
     await sql`
       UPDATE bolagsverket_scan_runs
