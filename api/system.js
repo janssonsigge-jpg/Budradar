@@ -25,7 +25,7 @@
 
 import { sql } from '../lib/db.js';
 import { scoreCompany, FLAG_THRESHOLD } from '../lib/scoring.js';
-import { appendFlag, verifyChain } from '../lib/trackRecordLog.js';
+import { appendFlag, verifyChain, recordOutcome } from '../lib/trackRecordLog.js';
 import { recordHealthCheck, getAllHealth } from '../lib/healthCheck.js';
 import { archiveRawSnapshot, todaysRunId } from '../lib/archiveSnapshot.js';
 
@@ -212,10 +212,20 @@ async function handleFlag(req, res) {
 
 // ============================================================
 // GET ?action=daily-scan  (cron)
+//
+// Kopplar ihop er befintliga pipeline med track record-loggen:
+//   1. Hämtar live scoring från /api/companies (er befintliga motor:
+//      insider + MFN-flaggningar + blankning + bolagsverket-signal)
+//   2. Bolag som klassas som tier "HÖG" (composite >= 65) och inte
+//      redan har en väntande flagg → skrivs till track_record_log
+//   3. Matchar väntande flaggor mot bid_registry (från detect-bids.js)
+//      — om ett verkligt bud dykt upp för ett flaggat bolag sätts
+//      outcome='hit' automatiskt, ingen manuell uppdatering behövs
 // ============================================================
 async function handleDailyScan(req, res) {
   const authHeader = req.headers['authorization'];
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isCron = req.headers['x-vercel-cron'] != null;
+  if (!isCron && process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -232,74 +242,78 @@ async function handleDailyScan(req, res) {
     ON CONFLICT (run_id) DO UPDATE SET started_at = now(), status = 'running'
   `;
 
-  const summary = { flagsCreated: 0, signalsLogged: 0, errors: [] };
+  const summary = { newFlags: 0, hitsMatched: 0, errors: [] };
 
   try {
-    // ---- Bolagsverket ----
-    try {
-      const rawData = await placeholderFetch('bolagsverket');
-      await archiveRawSnapshot('bolagsverket', JSON.stringify(rawData), 'json');
-      await recordHealthCheck({ source: 'bolagsverket', success: true, rowCount: rawData.length });
+    // ---- 1. Hämta live scoring från er befintliga /api/companies ----
+    const proto = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
 
-      for (const company of rawData) {
-        await sql`
-          INSERT INTO signal_log (source, company_name, org_nr, signal_type, raw_payload, run_id)
-          VALUES ('bolagsverket', ${company.name}, ${company.org_nr}, 'sni_64200_registration', ${JSON.stringify(company)}, ${runId})
-          ON CONFLICT (source, signal_type, org_nr, run_id) DO NOTHING
-        `;
-        summary.signalsLogged++;
+    const companiesRes = await fetch(`${proto}://${host}/api/companies?fresh=1`);
+    if (!companiesRes.ok) throw new Error('companies HTTP ' + companiesRes.status);
+    const companiesData = await companiesRes.json();
+    const companies = companiesData.companies || [];
 
-        const scored = await scoreCompany({
-          isBidcoSniRegistration: true,
-          signatoryName: company.signatoryName,
-          registeredAddress: company.registeredAddress,
+    // Arkivera rådata innan vi processar (samma princip som snapshot.js,
+    // men här sparar vi den fulla scoring-payloaden för framtida backtest)
+    await archiveRawSnapshot('companies-daily', JSON.stringify(companiesData), 'json');
+
+    // Health check per underliggande källa, baserat på companiesData.fetched
+    const sourceMap = { insider: 'fi_insider', shorts: 'fi_short', flags: 'mfn' };
+    for (const [key, mappedSource] of Object.entries(sourceMap)) {
+      const status = companiesData.fetched?.[key] || '';
+      const ok = status.startsWith('ok');
+      await recordHealthCheck({
+        source: mappedSource,
+        success: ok,
+        rowCount: ok ? Number((status.match(/\((\d+)/) || [])[1]) || null : null,
+        error: ok ? null : status,
+      });
+      if (!ok) summary.errors.push({ source: mappedSource, error: status });
+    }
+
+    // ---- 2. Flagga nya "HÖG"-klassade bolag (composite >= 65) ----
+    for (const c of companies) {
+      if (c.score.tier !== 'HÖG') continue;
+
+      const alreadyPending = await sql`
+        SELECT id FROM track_record_log WHERE ticker = ${c.ticker} AND outcome = 'pending' LIMIT 1
+      `;
+      if (alreadyPending.rows.length > 0) continue; // redan flaggad, väntar på utfall
+
+      await appendFlag({
+        company_name: c.name,
+        org_nr: null,
+        ticker: c.ticker,
+        flag_reason: `composite_${c.score.composite}_tier_hog`,
+        score: c.score.composite,
+        signal_snapshot: {
+          parts: c.score.parts,
+          insiderCount: c.detail?.insider?.length || 0,
+          flagsCount: c.detail?.flags?.length || 0,
+          shortsCount: c.detail?.shorts?.length || 0,
+        },
+      });
+      summary.newFlags++;
+    }
+
+    // ---- 3. Matcha väntande flaggor mot verkliga bud (bid_registry) ----
+    const pending = await sql`SELECT id, ticker, created_at FROM track_record_log WHERE outcome = 'pending'`;
+    for (const p of pending.rows) {
+      const bidMatch = await sql`
+        SELECT company, announced, bidder, bidco FROM bid_registry
+        WHERE ticker = ${p.ticker} AND announced >= ${p.created_at}::date
+        ORDER BY announced ASC LIMIT 1
+      `;
+      if (bidMatch.rows.length > 0) {
+        const bid = bidMatch.rows[0];
+        await recordOutcome({
+          id: p.id,
+          outcome: 'hit',
+          outcome_note: `Bud från ${bid.bidder || 'okänd budgivare'}${bid.bidco ? ` (bidco: ${bid.bidco})` : ''} offentliggjort ${bid.announced}`,
         });
-
-        if (scored.shouldFlag) {
-          await appendFlag({
-            company_name: company.name,
-            org_nr: company.org_nr,
-            ticker: company.suspectedTargetTicker || null,
-            flag_reason: scored.breakdown.map((b) => b.signal).join('+'),
-            score: scored.score,
-            signal_snapshot: { ...company, breakdown: scored.breakdown },
-          });
-          summary.flagsCreated++;
-        }
+        summary.hitsMatched++;
       }
-    } catch (err) {
-      await recordHealthCheck({ source: 'bolagsverket', success: false, error: err.message });
-      summary.errors.push({ source: 'bolagsverket', error: err.message });
-    }
-
-    // ---- FI insider ----
-    try {
-      const rawData = await placeholderFetch('fi_insider');
-      await archiveRawSnapshot('fi_insider', JSON.stringify(rawData), 'json');
-      await recordHealthCheck({ source: 'fi_insider', success: true, rowCount: rawData.length });
-    } catch (err) {
-      await recordHealthCheck({ source: 'fi_insider', success: false, error: err.message });
-      summary.errors.push({ source: 'fi_insider', error: err.message });
-    }
-
-    // ---- FI short ----
-    try {
-      const rawData = await placeholderFetch('fi_short');
-      await archiveRawSnapshot('fi_short', JSON.stringify(rawData), 'json');
-      await recordHealthCheck({ source: 'fi_short', success: true, rowCount: rawData.length });
-    } catch (err) {
-      await recordHealthCheck({ source: 'fi_short', success: false, error: err.message });
-      summary.errors.push({ source: 'fi_short', error: err.message });
-    }
-
-    // ---- MFN ----
-    try {
-      const rawData = await placeholderFetch('mfn');
-      await archiveRawSnapshot('mfn', JSON.stringify(rawData), 'json');
-      await recordHealthCheck({ source: 'mfn', success: true, rowCount: rawData.length });
-    } catch (err) {
-      await recordHealthCheck({ source: 'mfn', success: false, error: err.message });
-      summary.errors.push({ source: 'mfn', error: err.message });
     }
 
     await sql`
@@ -318,9 +332,4 @@ async function handleDailyScan(req, res) {
     console.error('Cron-körning misslyckades fatalt:', err);
     return res.status(500).json({ error: 'Cron misslyckades', detail: err.message });
   }
-}
-
-async function placeholderFetch(source) {
-  console.warn(`placeholderFetch(${source}) anropad — koppla in er riktiga hämtningslogik här`);
-  return [];
 }
