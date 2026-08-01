@@ -1,0 +1,28 @@
+name: Bolagsverket veckoscan
+
+on:
+  schedule:
+    # Måndagar 05:00 UTC = 06:00/07:00 svensk tid beroende på sommartid
+    - cron: '0 5 * * 1'
+  workflow_dispatch: {}   # gör att du kan trigga den manuellt från GitHub-fliken "Actions"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installera beroenden
+        run: npm install @neondatabase/serverless
+
+      - name: Kör Bolagsverket-scan
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+        run: node scripts/bolagsverket-scan.mjs
