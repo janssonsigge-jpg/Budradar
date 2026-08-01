@@ -97,6 +97,14 @@ function splitLine(line) {
   return res;
 }
 
+function clean(str) {
+  if (!str) return str;
+  // Ta bort null-bytes och andra osynliga kontrolltecken som Postgres text-kolumner
+  // inte accepterar. Källdatan innehåller sporadiskt sådana skräptecken.
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+}
+
 function parseRow(cells) {
   // Kolumnordning enligt bekräftad header:
   // organisationsidentitet;namnskyddslopnummer;registreringsland;organisationsnamn;
@@ -104,20 +112,20 @@ function parseRow(cells) {
   // pagandeAvvecklingsEllerOmstruktureringsforfarande;registreringsdatum;
   // verksamhetsbeskrivning;postadress
   const orgIdRaw = cells[0] || '';
-  const org_nr = orgIdRaw.split('$')[0].trim();
+  const org_nr = clean(orgIdRaw.split('$')[0].trim());
   if (!org_nr) return null;
 
   const nameRaw = cells[3] || '';
-  const name = nameRaw.split('$')[0].trim();
+  const name = clean(nameRaw.split('$')[0].trim());
 
-  const orgform = (cells[4] || '').trim();
+  const orgform = clean((cells[4] || '').trim());
   const avregistreringsdatum = (cells[5] || '').trim();
   const registered_at = (cells[8] || '').trim() || null;
-  const description = (cells[9] || '').trim();
+  const description = clean((cells[9] || '').trim());
 
   const addrRaw = cells[10] || '';
   const addrParts = addrRaw.split('$');
-  const address = [addrParts[0], addrParts[2], addrParts[3]].filter(Boolean).join(', ');
+  const address = clean([addrParts[0], addrParts[2], addrParts[3]].filter(Boolean).join(', '));
 
   return {
     org_nr,
