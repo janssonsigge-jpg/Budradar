@@ -35,20 +35,13 @@
 //   jag inte kunnat verifiera. Justera AKTIEBOLAG_KODER om loggen visar
 //   att gissningen är fel.
 
-import { neon } from '@neondatabase/serverless';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import readline from 'node:readline';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import zlib from 'node:zlib';
-
-const CONN = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
-if (!CONN) {
-  console.error('DATABASE_URL saknas.');
-  process.exit(1);
-}
-const sql = neon(CONN, { fullResults: true });
+import { sql } from '../lib/db.js';
+import { appendFlag } from '../lib/trackRecordLog.js';
 
 const BULK_URL = 'https://vardefulla-datamangder.bolagsverket.se/bolagsverket/bolagsverket_bulkfil.zip';
 const UA = 'BudRadar/0.2 (+offentlig data)';
@@ -253,9 +246,10 @@ async function main() {
       }
       if (!matchedAdvisor) continue; // ingen adressmatch → för svagt signal ännu, hoppa över
 
-      // ---- Flagga i track_record_log (hash-kedja + GitHub-tidsstämpel) ----
+      // ---- Flagga i track_record_log (delad funktion: hash-kedja +
+      // GitHub-tidsstämpel + Slack-notis, allt automatiskt) ----
       const score = 40 + 30 * Number(matchedAdvisor.weight); // enkel poängmodell, samma anda som lib/scoring.js
-      const flagPayload = {
+      await appendFlag({
         company_name: row.name,
         org_nr: row.org_nr,
         ticker: null,
@@ -267,12 +261,7 @@ async function main() {
           address: row.address,
           matchedAdvisor: matchedAdvisor.name,
         },
-      };
-
-      // Enkel direkt-insert (undviker att importera lib/trackRecordLog.js's
-      // GitHub-commit-logik per rad här — batch:a GitHub-commits separat om
-      // volymen blir hög. MVP: en rad i taget, samma hash-kedjeprincip.)
-      await insertFlagWithHashChain(flagPayload);
+      });
       flagged++;
       console.log(`FLAGGAD: ${row.name} (${row.org_nr}) — ${matchedAdvisor.name}, score ${score}`);
     }
@@ -300,26 +289,6 @@ async function main() {
     `;
     process.exit(1);
   }
-}
-
-async function insertFlagWithHashChain(payload) {
-  const { rows } = await sql`SELECT row_hash FROM track_record_log ORDER BY id DESC LIMIT 1`;
-  const prev_hash = rows.length > 0 ? rows[0].row_hash : 'genesis';
-  const created_at = new Date().toISOString();
-  const row_hash = crypto
-    .createHash('sha256')
-    .update(JSON.stringify({ ...payload, prev_hash, created_at }))
-    .digest('hex');
-
-  await sql`
-    INSERT INTO track_record_log
-      (company_name, org_nr, ticker, flag_reason, score, signal_snapshot, row_hash, prev_hash, created_at)
-    VALUES
-      (${payload.company_name}, ${payload.org_nr}, ${payload.ticker}, ${payload.flag_reason},
-       ${payload.score}, ${JSON.stringify(payload.signal_snapshot)}, ${row_hash}, ${prev_hash}, ${created_at})
-  `;
-  // Not: GitHub-tidsstämpling (samma som lib/githubTimestamp.js) kan läggas till
-  // här på samma sätt om ni vill ha extern tidsstämpel även för dessa flaggor.
 }
 
 main();
