@@ -73,7 +73,11 @@ async function loadPreviousSnapshot() {
   try {
     const info = await head(SNAPSHOT_BLOB_PATH);
     console.log(`Hittade tidigare snapshot: ${(info.size / 1e6).toFixed(1)} MB, uppladdad ${info.uploadedAt}`);
-    const res = await fetch(info.url);
+    // Privat store — nedladdning kräver samma token som skrivningen
+    const res = await fetch(info.url, {
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+    });
+    if (!res.ok) throw new Error('Kunde inte hämta snapshot: HTTP ' + res.status);
     const gz = Buffer.from(await res.arrayBuffer());
     const text = zlib.gunzipSync(gz).toString('utf8');
     const set = new Set(text.split('\n').filter(Boolean));
@@ -90,7 +94,7 @@ async function saveSnapshot(orgNrSet) {
   const text = Array.from(orgNrSet).join('\n');
   const gz = zlib.gzipSync(Buffer.from(text, 'utf8'));
   console.log(`Laddar upp ny snapshot: ${orgNrSet.size} org.nr, ${(gz.length / 1e6).toFixed(1)} MB komprimerat`);
-  await put(SNAPSHOT_BLOB_PATH, gz, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
+  await put(SNAPSHOT_BLOB_PATH, gz, { access: 'private', addRandomSuffix: false, allowOverwrite: true });
 }
 
 // ---------- Nedladdning + uppackning via CLI (robust, hanterar alla zip-varianter) ----------
