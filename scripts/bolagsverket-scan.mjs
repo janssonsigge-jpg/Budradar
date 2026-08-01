@@ -271,7 +271,7 @@ async function main() {
 
     await sql`
       UPDATE bolagsverket_scan_runs
-      SET status = 'success', finished_at = now(),
+      SET status = 'success', finished_at = now(), error = NULL,
           total_rows = ${totalRows}, new_orgs = ${newOrgs},
           candidates = ${candidates}, flagged = ${flagged},
           orgform_counts = ${JSON.stringify(orgformCounts)}
