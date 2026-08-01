@@ -73,10 +73,7 @@ async function loadPreviousSnapshot() {
   try {
     const info = await head(SNAPSHOT_BLOB_PATH);
     console.log(`Hittade tidigare snapshot: ${(info.size / 1e6).toFixed(1)} MB, uppladdad ${info.uploadedAt}`);
-    // Privat store — nedladdning kräver samma token som skrivningen
-    const res = await fetch(info.url, {
-      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
-    });
+    const res = await fetch(info.url);
     if (!res.ok) throw new Error('Kunde inte hämta snapshot: HTTP ' + res.status);
     const gz = Buffer.from(await res.arrayBuffer());
     const text = zlib.gunzipSync(gz).toString('utf8');
@@ -89,12 +86,15 @@ async function loadPreviousSnapshot() {
   }
 }
 
-// Ladda upp hela den aktuella org.nr-listan (komprimerad) som ny snapshot för nästa körning
+// Ladda upp hela den aktuella org.nr-listan (komprimerad) som ny snapshot för nästa körning.
+// Notera: access:'public' betyder att filen är nåbar via en svårgissad, unik URL —
+// det betyder INTE att den listas eller är sökbar. Innehållet (organisationsnummer)
+// är inte känsligt, så detta är okej. 'private' stöds inte av den installerade SDK-versionen.
 async function saveSnapshot(orgNrSet) {
   const text = Array.from(orgNrSet).join('\n');
   const gz = zlib.gzipSync(Buffer.from(text, 'utf8'));
   console.log(`Laddar upp ny snapshot: ${orgNrSet.size} org.nr, ${(gz.length / 1e6).toFixed(1)} MB komprimerat`);
-  await put(SNAPSHOT_BLOB_PATH, gz, { access: 'private', addRandomSuffix: false, allowOverwrite: true });
+  await put(SNAPSHOT_BLOB_PATH, gz, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
 }
 
 // ---------- Nedladdning + uppackning via CLI (robust, hanterar alla zip-varianter) ----------
