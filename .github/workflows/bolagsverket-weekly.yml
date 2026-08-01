@@ -40,4 +40,5 @@ jobs:
       - name: Kör Bolagsverket-scan
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
         run: node scripts/bolagsverket-scan.mjs
