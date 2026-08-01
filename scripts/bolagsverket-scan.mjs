@@ -28,7 +28,11 @@
 //   att gissningen är fel.
 
 import { neon } from '@neondatabase/serverless';
-import zlib from 'node:zlib';
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import readline from 'node:readline';
+import path from 'node:path';
+import crypto from 'node:crypto';
 
 const CONN = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
 if (!CONN) {
@@ -52,25 +56,30 @@ function todaysRunId() {
   return `bv-weekly-${d.toISOString().slice(0, 10)}`;
 }
 
-// ---------- Minimal ZIP-läsare (samma princip som companies.js använder för ODS) ----------
-function readZipFirstEntry(buf) {
-  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  let i = 0;
-  while (i + 4 <= buf.length) {
-    if (dv.getUint32(i, true) === 0x04034b50) {
-      const method = dv.getUint16(i + 8, true);
-      const compSize = dv.getUint32(i + 18, true);
-      const nameLen = dv.getUint16(i + 26, true);
-      const extraLen = dv.getUint16(i + 28, true);
-      const dataStart = i + 30 + nameLen + extraLen;
-      const data = buf.subarray(dataStart, dataStart + compSize);
-      if (method === 0) return Buffer.from(data);
-      if (method === 8) return zlib.inflateRawSync(data);
-      throw new Error('okänd komprimeringsmetod ' + method);
-    }
-    i++;
-  }
-  throw new Error('Ingen fil hittades i zip-arkivet');
+// ---------- Nedladdning + uppackning via CLI (robust, hanterar alla zip-varianter) ----------
+const WORK_DIR = '/tmp/bv-scan';
+
+async function downloadAndExtract() {
+  fs.rmSync(WORK_DIR, { recursive: true, force: true });
+  fs.mkdirSync(WORK_DIR, { recursive: true });
+
+  const zipPath = path.join(WORK_DIR, 'bulkfil.zip');
+  console.log('Laddar ner bulkfil...');
+  const res = await fetch(BULK_URL, { headers: { 'user-agent': UA } });
+  if (!res.ok) throw new Error('Nedladdning misslyckades: HTTP ' + res.status);
+  const buf = Buffer.from(await res.arrayBuffer());
+  fs.writeFileSync(zipPath, buf);
+  console.log(`Nedladdad: ${(buf.length / 1e6).toFixed(1)} MB`);
+
+  console.log('Packar upp (unzip CLI)...');
+  execSync(`unzip -o "${zipPath}" -d "${WORK_DIR}"`, { stdio: 'inherit' });
+
+  // Hitta den uppackade text/csv-filen (ta första .txt eller .csv som inte är zip:en själv)
+  const files = fs.readdirSync(WORK_DIR).filter((f) => /\.(txt|csv)$/i.test(f));
+  if (files.length === 0) throw new Error('Ingen .txt/.csv-fil hittades efter uppackning');
+  const extractedPath = path.join(WORK_DIR, files[0]);
+  console.log(`Uppackad fil: ${files[0]} (${(fs.statSync(extractedPath).size / 1e6).toFixed(1)} MB)`);
+  return extractedPath;
 }
 
 // ---------- CSV-radparser (semikolon, citattecken) ----------
@@ -138,20 +147,12 @@ async function main() {
   `;
 
   try {
-    console.log('Laddar ner bulkfil...');
-    const res = await fetch(BULK_URL, { headers: { 'user-agent': UA } });
-    if (!res.ok) throw new Error('Nedladdning misslyckades: HTTP ' + res.status);
-    const zipBuf = Buffer.from(await res.arrayBuffer());
-    console.log(`Nedladdad: ${(zipBuf.length / 1e6).toFixed(1)} MB`);
+    const extractedPath = await downloadAndExtract();
 
-    console.log('Packar upp...');
-    const textBuf = readZipFirstEntry(zipBuf);
-    const text = textBuf.toString('utf8');
-    console.log(`Uppackad: ${(textBuf.length / 1e6).toFixed(1)} MB`);
+    const fileStream = fs.createReadStream(extractedPath, { encoding: 'utf8' });
+    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
-    const lines = text.split(/\r?\n/);
-    const header = lines[0];
-    console.log('Header:', header);
+    let header = null;
 
     // Är detta en bootstrap (första körningen)?
     const countResult = await sql`SELECT COUNT(*)::int AS c FROM bolagsverket_seen`;
@@ -189,8 +190,8 @@ async function main() {
       newSeenBatch.length = 0;
     }
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
+    for await (const line of rl) {
+      if (header === null) { header = line; console.log('Header:', header); continue; }
       if (!line.trim()) continue;
       totalRows++;
 
@@ -275,7 +276,6 @@ async function main() {
 }
 
 async function insertFlagWithHashChain(payload) {
-  const crypto = await import('node:crypto');
   const { rows } = await sql`SELECT row_hash FROM track_record_log ORDER BY id DESC LIMIT 1`;
   const prev_hash = rows.length > 0 ? rows[0].row_hash : 'genesis';
   const created_at = new Date().toISOString();
