@@ -176,17 +176,25 @@ async function main() {
     let flagged = 0;
     const orgformCounts = {};
     const newSeenBatch = [];
-    const BATCH_SIZE = 500;
+    const BATCH_SIZE = 2000;
 
     async function flushSeenBatch() {
       if (newSeenBatch.length === 0) return;
-      for (const row of newSeenBatch) {
-        await sql`
-          INSERT INTO bolagsverket_seen (org_nr, name, orgform, registered_at, description, address)
-          VALUES (${row.org_nr}, ${row.name}, ${row.orgform}, ${row.registered_at}, ${row.description}, ${row.address})
-          ON CONFLICT (org_nr) DO NOTHING
-        `;
-      }
+      const org_nrs = newSeenBatch.map((r) => r.org_nr);
+      const names = newSeenBatch.map((r) => r.name);
+      const orgforms = newSeenBatch.map((r) => r.orgform);
+      const registered_ats = newSeenBatch.map((r) => r.registered_at || null);
+      const descriptions = newSeenBatch.map((r) => r.description);
+      const addresses = newSeenBatch.map((r) => r.address);
+
+      await sql`
+        INSERT INTO bolagsverket_seen (org_nr, name, orgform, registered_at, description, address)
+        SELECT * FROM unnest(
+          ${org_nrs}::text[], ${names}::text[], ${orgforms}::text[],
+          ${registered_ats}::date[], ${descriptions}::text[], ${addresses}::text[]
+        )
+        ON CONFLICT (org_nr) DO NOTHING
+      `;
       newSeenBatch.length = 0;
     }
 
@@ -200,6 +208,10 @@ async function main() {
       if (!row) continue;
 
       orgformCounts[row.orgform] = (orgformCounts[row.orgform] || 0) + 1;
+
+      if (totalRows % 200000 === 0) {
+        console.log(`... ${totalRows} rader bearbetade, ${newOrgs} nya org.nr hittills`);
+      }
 
       if (seenSet.has(row.org_nr)) continue; // känt sedan tidigare
       newOrgs++;
