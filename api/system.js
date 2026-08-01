@@ -29,6 +29,20 @@ import { appendFlag, verifyChain, recordOutcome } from '../lib/trackRecordLog.js
 import { recordHealthCheck, getAllHealth } from '../lib/healthCheck.js';
 import { archiveRawSnapshot, todaysRunId } from '../lib/archiveSnapshot.js';
 
+// Enkel bearer-token-koll för admin-actions. Sätt ADMIN_SECRET i Vercel env vars.
+function requireAdmin(req, res) {
+  const authHeader = req.headers['authorization'];
+  if (!process.env.ADMIN_SECRET) {
+    res.status(500).json({ error: 'ADMIN_SECRET är inte konfigurerad på servern' });
+    return false;
+  }
+  if (authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+    res.status(401).json({ error: 'Unauthorized — saknar eller felaktig Authorization-header' });
+    return false;
+  }
+  return true;
+}
+
 export default async function handler(req, res) {
   const action = req.query.action;
 
@@ -43,9 +57,15 @@ export default async function handler(req, res) {
       return handleFlag(req, res);
     case 'daily-scan':
       return handleDailyScan(req, res);
+    case 'bolagsverket-status':
+      return handleBolagsverketStatus(req, res);
+    case 'admin-add-advisor':
+      return handleAdminAddAdvisor(req, res);
+    case 'admin-outcome':
+      return handleAdminOutcome(req, res);
     default:
       return res.status(400).json({
-        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan',
+        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome',
       });
   }
 }
@@ -331,5 +351,100 @@ async function handleDailyScan(req, res) {
     `;
     console.error('Cron-körning misslyckades fatalt:', err);
     return res.status(500).json({ error: 'Cron misslyckades', detail: err.message });
+  }
+}
+
+// ============================================================
+// GET ?action=bolagsverket-status
+// Visar de senaste veckoscanningarna (från bolagsverket-scan.mjs,
+// körs via GitHub Actions, skriver till bolagsverket_scan_runs).
+// ============================================================
+async function handleBolagsverketStatus(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Endast GET tillåtet' });
+  }
+  try {
+    const { rows } = await sql`
+      SELECT run_id, started_at, finished_at, status,
+             total_rows, new_orgs, candidates, flagged, orgform_counts, error
+      FROM bolagsverket_scan_runs
+      ORDER BY started_at DESC
+      LIMIT 20
+    `;
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    return res.status(200).json({ runs: rows });
+  } catch (err) {
+    console.error('Fel vid hämtning av bolagsverket-status:', err);
+    return res.status(500).json({ error: 'Internt fel', detail: err.message });
+  }
+}
+
+// ============================================================
+// POST ?action=admin-add-advisor
+// Lägg till/uppdatera en rad i known_advisors utan att öppna Neon SQL Editor.
+// Kräver Authorization: Bearer <ADMIN_SECRET>
+//
+// Body: { name, type, match_names: [...], known_address, weight }
+// ============================================================
+async function handleAdminAddAdvisor(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Endast POST tillåtet' });
+  }
+  if (!requireAdmin(req, res)) return;
+
+  const { name, type, match_names, known_address, weight } = req.body || {};
+
+  if (!name || !type || !Array.isArray(match_names) || match_names.length === 0) {
+    return res.status(400).json({
+      error: 'name, type och match_names (array, minst 1 alias) krävs',
+    });
+  }
+  if (!['law_firm', 'pe_firm', 'investment_bank'].includes(type)) {
+    return res.status(400).json({ error: "type måste vara 'law_firm', 'pe_firm' eller 'investment_bank'" });
+  }
+
+  try {
+    const { rows } = await sql`
+      INSERT INTO known_advisors (name, type, match_names, known_address, weight)
+      VALUES (${name}, ${type}, ${match_names}, ${known_address || null}, ${weight ?? 1.0})
+      ON CONFLICT (name) DO UPDATE SET
+        type = EXCLUDED.type,
+        match_names = EXCLUDED.match_names,
+        known_address = EXCLUDED.known_address,
+        weight = EXCLUDED.weight
+      RETURNING id, name
+    `;
+    return res.status(201).json({ added: rows[0] });
+  } catch (err) {
+    console.error('Fel vid tillägg av rådgivare:', err);
+    return res.status(500).json({ error: 'Internt fel', detail: err.message });
+  }
+}
+
+// ============================================================
+// POST ?action=admin-outcome
+// Markera utfall (hit/miss/expired) på en befintlig flagg.
+// Kräver Authorization: Bearer <ADMIN_SECRET>
+//
+// Body: { id, outcome: 'hit'|'miss'|'expired', outcome_note }
+// ============================================================
+async function handleAdminOutcome(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Endast POST tillåtet' });
+  }
+  if (!requireAdmin(req, res)) return;
+
+  const { id, outcome, outcome_note } = req.body || {};
+
+  if (!id || !outcome) {
+    return res.status(400).json({ error: 'id och outcome krävs' });
+  }
+
+  try {
+    await recordOutcome({ id, outcome, outcome_note });
+    return res.status(200).json({ updated: id, outcome });
+  } catch (err) {
+    console.error('Fel vid uppdatering av utfall:', err);
+    return res.status(400).json({ error: err.message });
   }
 }
