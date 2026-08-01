@@ -60,6 +60,10 @@
          font-weight:700; letter-spacing:.08em; border:1px solid var(--line); background:#f0f1f5; color:var(--muted); }
   .tag.done { background:var(--accent-soft); color:var(--accent); border-color:#d9ddff; }
   .tag.up { background:#e8f6ef; color:var(--green); border-color:#c9ead9; }
+  .tag.hit { background:#e8f6ef; color:var(--green); border-color:#c9ead9; }
+  .tag.miss { background:#fbe9e9; color:var(--red); border-color:#f3caca; }
+  .verify-link { font-size:12.5px; color:var(--accent); text-decoration:none; font-weight:600; cursor:pointer; }
+  .verify-link:hover { text-decoration:underline; }
 
   .bar { height:7px; border-radius:999px; background:#eceef4; overflow:hidden; min-width:70px; }
   .bar div { height:100%; border-radius:999px; background:var(--accent); }
@@ -114,6 +118,8 @@
 
   <div id="bidcoNote"></div>
 
+  <div id="trackRecordNote"></div>
+
   <div class="note">
     <b>Om datan.</b> Sammanställd från offentliga pressmeddelanden (MFN, Cision) och
     Bolagsverkets register. Premie mäts mot senaste stängningskurs före offentliggörandet.
@@ -133,16 +139,19 @@ function fmt(n, suffix) {
 
 async function load() {
   try {
-    const [statsRes, listRes] = await Promise.all([
+    const [statsRes, listRes, trRes] = await Promise.all([
       fetch("/api/registry?stats=1"),
       fetch("/api/registry"),
+      fetch("/api/system?action=track-record"),
     ]);
     const stats = await statsRes.json();
     const list = await listRes.json();
+    const tr = await trRes.json();
     renderKpis(stats, list);
     renderTypes(stats);
     renderDeals(list.results || []);
     renderBidco(stats);
+    renderTrackRecord(tr);
     $("foot").textContent =
       "Registret innehåller " + (list.count || 0) + " affärer. " +
       "Snitt fullständighet " + ((list.coverage && list.coverage.avgCompleteness) || 0) + "%. " +
@@ -221,6 +230,72 @@ function renderBidco(s) {
         '</td><td class="muted">' + a.announced + '</td><td class="num"><b>' + a.dagar + '</b></td></tr>').join("") +
       '</tbody></table>' : '') +
     '</div>';
+}
+
+function renderTrackRecord(tr) {
+  if (!tr || !tr.summary) return;
+  const s = tr.summary;
+  const flags = tr.flags || [];
+
+  const kpiCards = [
+    { v: String(s.total), l: "Flaggade bolag", n: "Totalt i track record", dark: true },
+    { v: String(s.hits), l: "Träffar", n: "Bud kom efter flaggning" },
+    { v: String(s.pending), l: "Väntar", n: "Utfall ännu okänt", dark: true },
+    { v: s.hitRate == null ? "—" : Math.round(s.hitRate * 100) + "%", l: "Träffsäkerhet", n: "Av avgjorda flaggningar" },
+  ];
+
+  const kpiHtml = '<div class="grid">' + kpiCards.map(c =>
+    '<div class="card"><div class="kpi' + (c.dark ? " dark" : "") + '">' + c.v + '</div>' +
+    '<div class="klabel">' + c.l + '</div><div class="knote">' + c.n + '</div></div>').join("") + '</div>';
+
+  const rowsHtml = flags.length
+    ? '<table><thead><tr><th>Bolag</th><th>Flaggat</th><th class="hide-sm">Skäl</th><th class="num">Score</th><th>Status</th><th>Verifiering</th></tr></thead><tbody>' +
+      flags.map(f => {
+        const tagClass = f.outcome === "hit" ? "hit" : f.outcome === "miss" ? "miss" : "";
+        const label = f.outcome === "hit" ? "Bud kom" : f.outcome === "miss" ? "Inget bud" : f.outcome === "expired" ? "Utgången" : "Väntar";
+        const date = new Date(f.created_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" });
+        const reason = (f.flag_reason || "").replace(/_/g, " ").replace(/\+/g, ", ");
+        const link = (f.github_commit_sha && tr.githubRepo)
+          ? '<a class="verify-link" href="https://github.com/' + tr.githubRepo + '/commit/' + f.github_commit_sha + '" target="_blank" rel="noopener">GitHub →</a>'
+          : '<span class="muted">—</span>';
+        return '<tr>' +
+          '<td><b>' + f.company_name + '</b></td>' +
+          '<td class="muted">' + date + '</td>' +
+          '<td class="hide-sm muted">' + reason + '</td>' +
+          '<td class="num">' + Number(f.score).toFixed(0) + '</td>' +
+          '<td><span class="tag ' + tagClass + '">' + label + '</span></td>' +
+          '<td>' + link + '</td>' +
+          '</tr>';
+      }).join("") + '</tbody></table>'
+    : '<div class="loading">Inga flaggningar registrerade än.</div>';
+
+  document.getElementById("trackRecordNote").innerHTML =
+    '<h2>Track record</h2>' +
+    kpiHtml +
+    '<div class="card" style="padding:6px 8px; margin-top:14px">' + rowsHtml + '</div>' +
+    '<div class="note">' +
+    '<b>Om verifieringen.</b> Varje flaggning skrivs till en hash-kedjad logg och committas samtidigt ' +
+    'till ett publikt GitHub-repo som extern, oberoende tidsstämpel. ' +
+    '<a class="verify-link" onclick="verifyChainIntegrity(event)">Verifiera hela kedjans integritet →</a>' +
+    '<span id="verifyResult" style="margin-left:8px"></span>' +
+    '</div>';
+}
+
+async function verifyChainIntegrity(e) {
+  e.preventDefault();
+  const el = document.getElementById("verifyResult");
+  el.textContent = "Verifierar...";
+  try {
+    const res = await fetch("/api/system?action=verify");
+    const data = await res.json();
+    if (data.valid) {
+      el.innerHTML = '<b style="color:var(--green)">✓ Verifierad — ' + data.totalRows + ' rader, ingen manipulation upptäckt</b>';
+    } else {
+      el.innerHTML = '<b style="color:var(--red)">✗ Integritetsfel vid rad ' + data.brokenAtId + '</b>';
+    }
+  } catch (err) {
+    el.textContent = "Kunde inte verifiera just nu.";
+  }
 }
 
 load();
