@@ -120,6 +120,8 @@
 
   <div id="trackRecordNote"></div>
 
+  <div id="bolagsverketStatusNote"></div>
+
   <div class="note">
     <b>Om datan.</b> Sammanställd från offentliga pressmeddelanden (MFN, Cision) och
     Bolagsverkets register. Premie mäts mot senaste stängningskurs före offentliggörandet.
@@ -139,19 +141,22 @@ function fmt(n, suffix) {
 
 async function load() {
   try {
-    const [statsRes, listRes, trRes] = await Promise.all([
+    const [statsRes, listRes, trRes, bvRes] = await Promise.all([
       fetch("/api/registry?stats=1"),
       fetch("/api/registry"),
       fetch("/api/system?action=track-record"),
+      fetch("/api/system?action=bolagsverket-status"),
     ]);
     const stats = await statsRes.json();
     const list = await listRes.json();
     const tr = await trRes.json();
+    const bv = await bvRes.json();
     renderKpis(stats, list);
     renderTypes(stats);
     renderDeals(list.results || []);
     renderBidco(stats);
     renderTrackRecord(tr);
+    renderBolagsverketStatus(bv);
     $("foot").textContent =
       "Registret innehåller " + (list.count || 0) + " affärer. " +
       "Snitt fullständighet " + ((list.coverage && list.coverage.avgCompleteness) || 0) + "%. " +
@@ -296,6 +301,42 @@ async function verifyChainIntegrity(e) {
   } catch (err) {
     el.textContent = "Kunde inte verifiera just nu.";
   }
+}
+
+function renderBolagsverketStatus(bv) {
+  const runs = (bv && bv.runs) || [];
+  if (!runs.length) return; // inga körningar än, visa ingenting
+
+  const latest = runs[0];
+  const statusTag = latest.status === "success" ? "done" : latest.status === "failed" ? "" : "";
+  const statusLabel = latest.status === "success" ? "Klar" : latest.status === "failed" ? "Misslyckades" : "Pågår";
+  const started = new Date(latest.started_at).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" });
+
+  const rowsHtml = runs.slice(0, 8).map((r) => {
+    const date = new Date(r.started_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" });
+    const cls = r.status === "success" ? "done" : r.status === "failed" ? "" : "";
+    return '<tr>' +
+      '<td class="muted">' + date + '</td>' +
+      '<td class="num">' + (r.total_rows ?? "—") + '</td>' +
+      '<td class="num">' + (r.new_orgs ?? "—") + '</td>' +
+      '<td class="num">' + (r.candidates ?? "—") + '</td>' +
+      '<td class="num"><b>' + (r.flagged ?? "—") + '</b></td>' +
+      '<td><span class="tag ' + cls + '">' + (r.status === "success" ? "Klar" : r.status === "failed" ? "Fel" : "Pågår") + '</span></td>' +
+      '</tr>';
+  }).join("");
+
+  document.getElementById("bolagsverketStatusNote").innerHTML =
+    '<h2>Bolagsverket — veckoscan</h2>' +
+    '<div class="card">' +
+    '<p style="font-size:14px;line-height:1.6;color:var(--muted)">' +
+    'Senaste körningen (' + started + '): <b style="color:var(--ink)">' + statusLabel + '</b>. ' +
+    'Skannar hela Bolagsverkets register veckovis efter nyregistrerade aktiebolag vars adress matchar en känd M&amp;A-rådgivare.' +
+    '</p>' +
+    '<table style="margin-top:12px"><thead><tr>' +
+    '<th>Datum</th><th class="num">Rader</th><th class="num">Nya org.nr</th>' +
+    '<th class="num">Kandidater</th><th class="num">Flaggade</th><th>Status</th>' +
+    '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+    '</div>';
 }
 
 load();
