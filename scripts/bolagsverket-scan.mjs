@@ -36,7 +36,6 @@
 //   att gissningen är fel.
 
 import { neon } from '@neondatabase/serverless';
-import { put, head } from '@vercel/blob';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import readline from 'node:readline';
@@ -66,35 +65,31 @@ function todaysRunId() {
   return `bv-weekly-${d.toISOString().slice(0, 10)}`;
 }
 
-const SNAPSHOT_BLOB_PATH = 'bolagsverket/seen-org-numbers.txt.gz';
+// Sökväg hanteras av .github/workflows/bolagsverket-weekly.yml via actions/cache —
+// workflown återställer denna fil från förra veckans cache innan skriptet körs,
+// och sparar den uppdaterade filen till cachen igen efter att skriptet är klart.
+// Ingen extern tjänst eller token behövs — GitHub Actions cache är gjord för
+// exakt detta (spara data mellan schemalagda körningar).
+const CACHE_PATH = path.join(process.cwd(), '.cache', 'bv-seen.txt.gz');
 
-// Hämta förra veckans org.nr-lista från Blob. Returnerar tom Set om ingen finns än (bootstrap).
-async function loadPreviousSnapshot() {
-  try {
-    const info = await head(SNAPSHOT_BLOB_PATH);
-    console.log(`Hittade tidigare snapshot: ${(info.size / 1e6).toFixed(1)} MB, uppladdad ${info.uploadedAt}`);
-    const res = await fetch(info.url);
-    if (!res.ok) throw new Error('Kunde inte hämta snapshot: HTTP ' + res.status);
-    const gz = Buffer.from(await res.arrayBuffer());
-    const text = zlib.gunzipSync(gz).toString('utf8');
-    const set = new Set(text.split('\n').filter(Boolean));
-    console.log(`${set.size} kända org.nr sedan förra körningen.`);
-    return set;
-  } catch (err) {
+function loadPreviousSnapshot() {
+  if (!fs.existsSync(CACHE_PATH)) {
     console.log('Ingen tidigare snapshot hittad — detta är bootstrap-körningen.');
     return new Set();
   }
+  const gz = fs.readFileSync(CACHE_PATH);
+  const text = zlib.gunzipSync(gz).toString('utf8');
+  const set = new Set(text.split('\n').filter(Boolean));
+  console.log(`${set.size} kända org.nr sedan förra körningen.`);
+  return set;
 }
 
-// Ladda upp hela den aktuella org.nr-listan (komprimerad) som ny snapshot för nästa körning.
-// Notera: access:'public' betyder att filen är nåbar via en svårgissad, unik URL —
-// det betyder INTE att den listas eller är sökbar. Innehållet (organisationsnummer)
-// är inte känsligt, så detta är okej. 'private' stöds inte av den installerade SDK-versionen.
-async function saveSnapshot(orgNrSet) {
+function saveSnapshot(orgNrSet) {
+  fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
   const text = Array.from(orgNrSet).join('\n');
   const gz = zlib.gzipSync(Buffer.from(text, 'utf8'));
-  console.log(`Laddar upp ny snapshot: ${orgNrSet.size} org.nr, ${(gz.length / 1e6).toFixed(1)} MB komprimerat`);
-  await put(SNAPSHOT_BLOB_PATH, gz, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
+  fs.writeFileSync(CACHE_PATH, gz);
+  console.log(`Snapshot sparad lokalt: ${orgNrSet.size} org.nr, ${(gz.length / 1e6).toFixed(1)} MB komprimerat`);
 }
 
 // ---------- Nedladdning + uppackning via CLI (robust, hanterar alla zip-varianter) ----------
