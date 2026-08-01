@@ -23,10 +23,21 @@ jobs:
         run: which unzip || sudo apt-get update && sudo apt-get install -y unzip
 
       - name: Installera beroenden
-        run: npm install @neondatabase/serverless @vercel/blob@latest
+        run: npm install @neondatabase/serverless
+
+      # Återställer förra veckans org.nr-lista (om den finns) till .cache/bv-seen.txt.gz
+      # innan skriptet körs. Unik key per körning (run_id) gör att GitHub Actions alltid
+      # sparar en NY cache-post i slutet av jobbet (post-steg, automatiskt) — restore-keys
+      # ser till att den ändå hittar och laddar senaste tidigare snapshot vid start.
+      - name: Återställ org.nr-snapshot från cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/bv-seen.txt.gz
+          key: bv-seen-${{ github.run_id }}
+          restore-keys: |
+            bv-seen-
 
       - name: Kör Bolagsverket-scan
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
-          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
         run: node scripts/bolagsverket-scan.mjs
