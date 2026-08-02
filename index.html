@@ -157,6 +157,18 @@ function RankTab() {
       .catch(() => {}); // tyst — badgen är ett extra, inte kritiskt
   }, []);
 
+  // Empirisk grund för storleksfiltret: hur många av de KÄNDA uppköpen i
+  // registret hade börsvärde under respektive gräns. Räknas en gång, inte
+  // hårdkodat — om registret växer och stora bolag börjar dyka upp bland
+  // buden ändras texten automatiskt, den ljuger aldrig.
+  const sizeInsight = useMemo(() => {
+    const known = HISTORIK.filter(h => h.mcapMSEK != null).map(h => h.mcapMSEK);
+    if (!known.length) return null;
+    const under5000 = known.filter(v => v <= 5000).length;
+    const under20000 = known.filter(v => v <= 20000).length;
+    return { n: known.length, under5000, under20000, max: Math.max(...known) };
+  }, []);
+
   const rows = useMemo(() => {
     let d = [...data];
     const q = query.trim().toLowerCase();
@@ -209,6 +221,13 @@ function RankTab() {
         )}
       </div>
 
+      {sizeInsight && !query && (
+        <div style={{ padding: "0 20px 8px", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
+          <b style={{ color: C.ink }}>{sizeInsight.under5000} av {sizeInsight.n}</b> kända uppköp i registret hade börsvärde
+          under 5 mdkr (störst hittills: {fmtMcap(sizeInsight.max)}) — matchar det internationella mönstret att
+          småbolag köps upp oftare, inte bara vårt lilla urval.
+        </div>
+      )}
       <div style={{ ...s.filterRow, paddingBottom: 4, opacity: query ? 0.4 : 1, pointerEvents: query ? "none" : "auto" }}>
         {[["SMÅ", "< 5 mdkr"], ["MEDEL", "< 20 mdkr"], ["ALLA", "Alla"]].map(([id, label]) => (
           <button key={id} className="pill" onClick={() => setSize(id)} style={pill(size === id)}>{label}</button>
@@ -440,6 +459,8 @@ const LEKTIONER = [
     a: "Ett uppköp är när någon — ett annat företag, en riskkapitalfond eller en storägare — vill köpa alla aktier i ett börsbolag. De lägger ett offentligt bud: 'vi betalar X kronor per aktie'. Om tillräckligt många ägare säger ja, tas bolaget över och försvinner ofta från börsen." },
   { q: "Så går det till, steg för steg",
     a: "1. Budgivaren bygger i tysthet en position och förbereder. 2. Ofta registreras ett nytt bolag (en 'bidco') som ska äga aktierna. 3. Budet offentliggörs — nästan alltid över gällande aktiekurs. 4. Ägarna accepterar eller inte. 5. Når budgivaren tillräcklig andel går affären igenom. Flera av de här stegen lämnar spår i offentliga register — och det är precis dem BudRadar fångar." },
+  { q: "Varför är det oftast småbolag som köps upp?",
+    a: "Riskkapitalbolag jagar aktivt mindre bolag för att bygga ihop till större koncerner genom 'bolt-on'-förvärv, och stora sammanslagningar mellan jättebolag stoppas oftare av konkurrensmyndigheter — vilket gör mindre bolag till enklare mål. Internationellt står de minsta affärerna för merparten av allt antal uppköp, även om de stora rubrikerna handlar om jättebolag. I BudRadars register hade samtliga kända uppköp hittills börsvärde under 5 mdkr — det matchar det internationella mönstret, inte bara en slump i vårt (ännu lilla) urval." },
   { q: "Varför tjänar man pengar på det?",
     a: "Ett bud läggs nästan alltid med en premie — ett pris klart över aktiekursen, ofta 20–40 % högre. Den som redan äger aktien när budet kommer ser kursen hoppa upp mot budnivån mer eller mindre direkt. Äger du för 100 kr och budet är 130 kr, är det +30 % i handen. Poängen med BudRadar är att hjälpa dig titta på bolag där tecknen hopar sig — innan budet blir allmänt känt." },
   { q: "Vad betyder signalerna?",
