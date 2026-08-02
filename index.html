@@ -91,6 +91,11 @@ const C = { ink: "#0d1220", paper: "#f6f7fb", card: "#ffffff", line: "#e7e9f0",
   muted: "#6b7180", accent: "#243c79", accentSoft: "#e8ebf5", gold: "#b9862f", goldSoft: "#faf3e3", green: "#1faa6c", red: "#d64545" };
 const SERIF = "'Times New Roman', Times, Georgia, serif";
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+// Fast tak för Rank-listan, ingen knapp att växla. Stora bolag blir sällan
+// uppköpta (se "Lär dig"-fliken), så de sorteras bort istället för att
+// dränka listan i brus. 10 mdkr är en rimlig generös gräns — höj/sänk här
+// om ni ser att gränsen klipper fel.
+const MCAP_CEILING = 10000;
 
 function addDays(dateStr, n) {
   const d = new Date(dateStr + "T00:00:00Z");
@@ -124,7 +129,6 @@ function BudRadar() {
 
 function RankTab() {
   const [filter, setFilter] = useState("ALLA");
-  const [size, setSize] = useState("SMÅ");
   const [query, setQuery] = useState("");
   const [sel, setSel] = useState(null);
   const [mounted, setMounted] = useState(false);
@@ -157,18 +161,6 @@ function RankTab() {
       .catch(() => {}); // tyst — badgen är ett extra, inte kritiskt
   }, []);
 
-  // Empirisk grund för storleksfiltret: hur många av de KÄNDA uppköpen i
-  // registret hade börsvärde under respektive gräns. Räknas en gång, inte
-  // hårdkodat — om registret växer och stora bolag börjar dyka upp bland
-  // buden ändras texten automatiskt, den ljuger aldrig.
-  const sizeInsight = useMemo(() => {
-    const known = HISTORIK.filter(h => h.mcapMSEK != null).map(h => h.mcapMSEK);
-    if (!known.length) return null;
-    const under5000 = known.filter(v => v <= 5000).length;
-    const under20000 = known.filter(v => v <= 20000).length;
-    return { n: known.length, under5000, under20000, max: Math.max(...known) };
-  }, []);
-
   const rows = useMemo(() => {
     let d = [...data];
     const q = query.trim().toLowerCase();
@@ -177,15 +169,17 @@ function RankTab() {
         .filter((c) => (c.name || "").toLowerCase().includes(q) || (c.ticker || "").toLowerCase().includes(q))
         .sort((a, b) => b.score.composite - a.score.composite);
     }
-    if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 5000);
-    if (size === "MEDEL") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 20000);
+    // Fast tak, ingen knapp: stora bolag blir sällan uppköpta (se "Lär dig")
+    // så de sorteras bort som brus. MEN bolag med okänt börsvärde släpps
+    // igenom istället för att gömmas — det var det som gjorde listan tunn.
+    d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= MCAP_CEILING);
     if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
     return d.sort((a, b) => b.score.composite - a.score.composite);
-  }, [filter, size, data, query]);
+  }, [filter, data, query]);
   const selCo = sel ? data.find((c) => c.ticker === sel) : null;
   const top = rows.length ? rows[0].score.composite : 0;
   const high = data.filter((c) => c.score.tier === "HÖG").length;
-  const missingMcap = data.filter((c) => c.mcapMSEK == null).length;
+  const hiddenLarge = data.length - data.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= MCAP_CEILING).length;
 
   return (
     <>
@@ -221,28 +215,16 @@ function RankTab() {
         )}
       </div>
 
-      {sizeInsight && !query && (
-        <div style={{ padding: "0 20px 8px", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
-          <b style={{ color: C.ink }}>{sizeInsight.under5000} av {sizeInsight.n}</b> kända uppköp i registret hade börsvärde
-          under 5 mdkr (störst hittills: {fmtMcap(sizeInsight.max)}) — matchar det internationella mönstret att
-          småbolag köps upp oftare, inte bara vårt lilla urval.
-        </div>
-      )}
-      <div style={{ ...s.filterRow, paddingBottom: 4, opacity: query ? 0.4 : 1, pointerEvents: query ? "none" : "auto" }}>
-        {[["SMÅ", "< 5 mdkr"], ["MEDEL", "< 20 mdkr"], ["ALLA", "Alla"]].map(([id, label]) => (
-          <button key={id} className="pill" onClick={() => setSize(id)} style={pill(size === id)}>{label}</button>
-        ))}
-      </div>
-      {!query && missingMcap > 0 && size !== "ALLA" && (
-        <div style={{ padding: "0 20px 8px", fontSize: 11.5, color: C.muted, lineHeight: 1.45 }}>
-          Visar {rows.length} av {data.length} bolag. {missingMcap} saknar börsvärde och döljs när storleksfiltret är på — välj Alla för att se dem.
-        </div>
-      )}
       <div style={{ ...s.filterRow, opacity: query ? 0.4 : 1, pointerEvents: query ? "none" : "auto" }}>
         {["ALLA", "HÖG", "MEDEL", "LÅG"].map((f) => (
           <button key={f} className="pill" onClick={() => setFilter(f)} style={pill(filter === f)}>{f}</button>
         ))}
       </div>
+      {!query && hiddenLarge > 0 && (
+        <div style={{ padding: "0 20px 10px", fontSize: 11, color: C.muted, lineHeight: 1.4 }}>
+          {hiddenLarge} bolag över {fmtMcap(MCAP_CEILING)} döljs — de blir sällan uppköpta.
+        </div>
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
         {rows.map((c, i) => (
