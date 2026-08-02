@@ -130,6 +130,7 @@ function RankTab() {
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState(DEMO);
   const [status, setStatus] = useState("loading");
+  const [flagged, setFlagged] = useState({}); // ticker -> outcome
   useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
   const load = useCallback(async () => {
     setStatus("loading");
@@ -142,6 +143,19 @@ function RankTab() {
     } catch { setData(DEMO); setStatus("demo"); }
   }, []);
   useEffect(() => { load(); }, [load]);
+  // Hämta vilka tickers som redan har en verifierad bidco-flagg i track record,
+  // så vi kan visa en badge på dem i listan nedan — kopplar ihop appens
+  // generella aktivitetssignal med den starkare, hash-kedjade signalen.
+  useEffect(() => {
+    fetch("/api/system?action=flagged-tickers")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(j => {
+        const map = {};
+        (j.tickers || []).forEach(t => { map[t.ticker] = t.outcome; });
+        setFlagged(map);
+      })
+      .catch(() => {}); // tyst — badgen är ett extra, inte kritiskt
+  }, []);
 
   const rows = useMemo(() => {
     let d = [...data];
@@ -218,7 +232,10 @@ function RankTab() {
             <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
               <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
+                  {flagged[c.ticker] && <FlagBadge outcome={flagged[c.ticker]} />}
+                </div>
                 <div style={s.meta}>{[c.ticker, c.priceSEK != null ? c.priceSEK + " kr" : null, c.mcapMSEK != null ? (c.mcapEstimated ? "~" : "") + fmtMcap(c.mcapMSEK) : null].filter(Boolean).join(" · ")}</div>
               </div>
               <Gauge v={c.score.composite} tier={c.score.tier} />
@@ -733,6 +750,17 @@ const Ev = ({ a, b }) => (
   </div>
 );
 const Empty = () => <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>Inga registrerade händelser</div>;
+
+// Liten badge som visar att bolaget redan har en verifierad bidco-flagg i
+// track record — guld för väntande, grön för bekräftad träff (bud kom).
+const FlagBadge = ({ outcome }) => {
+  const hit = outcome === "hit";
+  return (
+    <span title={hit ? "Bud bekräftat efter flaggning" : "Flaggad i track record, väntar på utfall"}
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center",
+        fontSize: 12, lineHeight: 1, flexShrink: 0 }}>{hit ? "✅" : "🚩"}</span>
+  );
+};
 
 function pill(a) {
   return { padding: "8px 18px", borderRadius: 999, border: `1px solid ${a ? C.ink : C.line}`,
