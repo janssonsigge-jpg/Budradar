@@ -63,9 +63,11 @@ export default async function handler(req, res) {
       return handleAdminAddAdvisor(req, res);
     case 'admin-outcome':
       return handleAdminOutcome(req, res);
+    case 'flagged-tickers':
+      return handleFlaggedTickers(req, res);
     default:
       return res.status(400).json({
-        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome',
+        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers',
       });
   }
 }
@@ -446,5 +448,32 @@ async function handleAdminOutcome(req, res) {
   } catch (err) {
     console.error('Fel vid uppdatering av utfall:', err);
     return res.status(400).json({ error: err.message });
+  }
+}
+
+// ============================================================
+// GET ?action=flagged-tickers
+// Lättviktig lista över tickers som har minst en flagg i track_record_log.
+// Används av Rank-fliken i index.html för att visa en 🚩-badge på bolag
+// som redan är flaggade, så appens svagaste signal (generisk aktivitet)
+// och starkaste signal (verifierad bidco-flaggning) kopplas ihop visuellt.
+// ============================================================
+async function handleFlaggedTickers(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Endast GET tillåtet' });
+  }
+  try {
+    const { rows } = await sql`
+      SELECT DISTINCT ticker, outcome
+      FROM track_record_log
+      WHERE ticker IS NOT NULL AND ticker != ''
+    `;
+    res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
+    return res.status(200).json({
+      tickers: rows.map((r) => ({ ticker: r.ticker, outcome: r.outcome })),
+    });
+  } catch (err) {
+    console.error('Fel vid hämtning av flaggade tickers:', err);
+    return res.status(500).json({ error: 'Internt fel', detail: err.message });
   }
 }
