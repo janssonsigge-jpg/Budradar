@@ -17,12 +17,8 @@
 <script type="text/babel">
 const { useState, useEffect, useMemo, useCallback } = React;
 
-// Live-datakälla: samma adress som appen. Rank-fliken hämtar härifrån,
-// faller tillbaka på DEMO om API:t inte svarar.
 const API = "/api/companies";
 
-
-// ---------- data ----------
 const DEMO = [
   { ticker: "NETEL", name: "Netel Holding", list: "Nasdaq Sthlm", priceSEK: 22.1, mcapMSEK: 1100,
     score: { composite: 78, tier: "HÖG", parts: { insider: 88, flags: 90, shortSig: 32, bv: 50 } },
@@ -56,12 +52,10 @@ const DEMO = [
     detail: { insider: [], flags: [], shorts: [], bolagsverket: [] } },
 ];
 
-// Historik — riktiga svenska bud 2026 med verifierade siffror (premie mot senaste
-// stängningskurs före offentliggörandet). Bidco = det nyregistrerade bolaget budet gick genom.
 const HISTORIK = [
   { name: "Bahnhof", ticker: "BAHN", date: "2026-07-08", bidder: "Telenor", bidco: null,
     priceSEK: 62, mcapMSEK: null, premiumPct: 22, outcome: "Genomfört",
-    signal: "Kontrollägare sålde", 
+    signal: "Kontrollägare sålde",
     note: "Grundarna Karlung och Norman sålde sitt innehav — 50,8 % av aktierna men 86 % av rösterna. När den som sitter på rösterna vill ut kan ingen stoppa affären." },
   { name: "Sleep Cycle", ticker: "SLEEP", date: "2026-05-11", bidder: "Altor Fund V", bidco: "Snark BidCo",
     priceSEK: 24.5, mcapMSEK: 1000, premiumPct: 47, outcome: "Genomfört",
@@ -93,21 +87,17 @@ const HISTORIK = [
     note: "2025 års största bud. Storägaren Olof Hallrup gick ihop med EQT för att ta hem bolaget." },
 ];
 
-// ---------- app ----------
-
 const C = { ink: "#0d1220", paper: "#f6f7fb", card: "#ffffff", line: "#e7e9f0",
-  muted: "#6b7180", accent: "#3b4cff", accentSoft: "#eef0ff", green: "#1faa6c", red: "#d64545" };
+  muted: "#6b7180", accent: "#243c79", accentSoft: "#e8ebf5", gold: "#b9862f", goldSoft: "#faf3e3", green: "#1faa6c", red: "#d64545" };
 const SERIF = "'Times New Roman', Times, Georgia, serif";
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
-// Lägg till dagar på ett datum (YYYY-MM-DD)
 function addDays(dateStr, n) {
   const d = new Date(dateStr + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
 
-// Formatera börsvärde läsbart: 850 mkr / 12,4 mdkr
 function fmtMcap(m) {
   if (m == null) return null;
   if (m >= 1000) return (m / 1000).toFixed(1).replace(".", ",") + " mdkr";
@@ -132,15 +122,14 @@ function BudRadar() {
   );
 }
 
-/* ---------------- RANK ---------------- */
 function RankTab() {
   const [filter, setFilter] = useState("ALLA");
-  const [size, setSize] = useState("SMÅ"); // SMÅ = default; stora bolag blir sällan uppköpta
+  const [size, setSize] = useState("SMÅ");
   const [query, setQuery] = useState("");
   const [sel, setSel] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState(DEMO);
-  const [status, setStatus] = useState("loading"); // loading | live | demo
+  const [status, setStatus] = useState("loading");
   useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
   const load = useCallback(async () => {
     setStatus("loading");
@@ -148,7 +137,6 @@ function RankTab() {
       const r = await fetch(API); if (!r.ok) throw 0;
       const j = await r.json();
       if (!j.companies || !j.companies.length) throw 0;
-      // API-bolagen saknar detail-fältet i samma form → normalisera lätt
       setData(j.companies.map(c => ({ ...c, detail: c.detail || { insider: [], flags: [], shorts: [], bolagsverket: [] } })));
       setStatus("live");
     } catch { setData(DEMO); setStatus("demo"); }
@@ -157,18 +145,12 @@ function RankTab() {
 
   const rows = useMemo(() => {
     let d = [...data];
-    // Sökning går före allt annat: söker du på ett bolag vill du hitta det
-    // oavsett storleks- eller aktivitetsfilter.
     const q = query.trim().toLowerCase();
     if (q) {
       return d
         .filter((c) => (c.name || "").toLowerCase().includes(q) || (c.ticker || "").toLowerCase().includes(q))
         .sort((a, b) => b.score.composite - a.score.composite);
     }
-
-    // HÅRT storleksfilter: bolag utan känt börsvärde döljs när filtret är på.
-    // Anledningen: släpper vi igenom dem hamnar stora bolag (Intrum, H&M) i
-    // toppen och hela listan tappar trovärdighet. Hellre kortare och rätt.
     if (size === "SMÅ") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 5000);
     if (size === "MEDEL") d = d.filter((c) => c.mcapMSEK != null && c.mcapMSEK <= 20000);
     if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
@@ -182,9 +164,7 @@ function RankTab() {
   return (
     <>
       <nav style={s.nav}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span style={s.brandDot} /><span style={{ fontWeight: 700, fontSize: 17, color: C.ink }}>BudRadar</span>
-        </div>
+        <img src="budradar-logo.png" alt="BudRadar" style={s.logoImg} />
         <div style={{ fontSize: 11, color: status==="live"?C.accent:C.muted, fontWeight: 700, letterSpacing: ".04em" }}>{status==="live"?"● live":status==="demo"?"demo":"…"}</div>
       </nav>
 
@@ -349,15 +329,13 @@ function Sheet({ co, onClose }) {
   );
 }
 
-/* ---------------- HISTORIK ---------------- */
 function HistorikTab() {
-  const [view, setView] = useState("bud"); // bud | analys
+  const [view, setView] = useState("bud");
   const done = HISTORIK.filter(h => h.premiumPct > 0);
   const avg = Math.round(done.reduce((s, h) => s + h.premiumPct, 0) / done.length);
   const withMcap = HISTORIK.filter(h => h.mcapMSEK);
   const medMcap = withMcap.length ? Math.round(withMcap.reduce((s,h)=>s+h.mcapMSEK,0)/withMcap.length) : null;
 
-  // Registerdata från API:t (samma data som /api/registry)
   const [stats, setStats] = useState(null);
   const [statsStatus, setStatsStatus] = useState("idle");
   useEffect(() => {
@@ -387,7 +365,6 @@ function HistorikTab() {
 
       {view === "analys" ? <RegistryAnalys stats={stats} status={statsStatus} /> : <>
 
-      {/* MÖNSTERANALYS */}
       <div style={{ ...s.infoBox, margin: "0 18px 16px" }}>
         <b style={{ color: C.ink }}>Vad de har gemensamt</b>
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 7 }}>
@@ -439,7 +416,6 @@ function HistorikTab() {
   );
 }
 
-/* ---------------- LÄR DIG ---------------- */
 const LEKTIONER = [
   { q: "Vad är BudRadar?",
     a: "BudRadar bevakar svenska börsbolag och letar efter tecken på att ett uppköp kan vara på väg. Appen läser bara offentlig information — sånt som vem som köper aktier, vem som passerar ägargränser och vilka nya bolag som registreras — och rankar bolagen efter hur många signaler som pekar åt samma håll. Ju högre score, desto fler samtidiga tecken." },
@@ -487,10 +463,6 @@ function LarDigTab() {
   );
 }
 
-/* ---------------- REGISTER-ANALYS ---------------- */
-// Visar aggregerad statistik från /api/registry?stats=1 — alltså budregistret.
-// Det här är den delen som är intressant för proffs: vilka premier betalas,
-// av vem, och hur ägarbindningen såg ut före budet.
 function RegistryAnalys({ stats, status }) {
   if (status === "loading") return <div style={{ padding: "0 20px", color: C.muted, fontSize: 13 }}>Hämtar registret…</div>;
   if (status === "error" || !stats) return (
@@ -506,7 +478,6 @@ function RegistryAnalys({ stats, status }) {
 
   return (
     <div style={{ padding: "0 18px" }}>
-      {/* Premiespann */}
       <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
         <div style={s.secT}>Premie · alla bud i registret</div>
         <div style={{ display: "flex", gap: 22, marginTop: 4 }}>
@@ -519,7 +490,6 @@ function RegistryAnalys({ stats, status }) {
         </div>
       </div>
 
-      {/* Premie per budgivartyp — den mest säljbara insikten */}
       <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
         <div style={s.secT}>Snittpremie per budgivartyp</div>
         {types.map(([type, v]) => (
@@ -538,7 +508,6 @@ function RegistryAnalys({ stats, status }) {
         </p>
       </div>
 
-      {/* Bransch */}
       <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
         <div style={s.secT}>Per bransch</div>
         {sectors.slice(0, 8).map(([sec, v]) => (
@@ -549,9 +518,8 @@ function RegistryAnalys({ stats, status }) {
         ))}
       </div>
 
-      {/* Bidco-tidsgap — den unika datapunkten */}
       {stats.bidcoTiming && stats.bidcoTiming.n > 0 && (
-        <div style={{ ...s.co, cursor: "default", marginBottom: 12, borderColor: "#d9ddff" }}>
+        <div style={{ ...s.co, cursor: "default", marginBottom: 12, borderColor: "#c7cdf0" }}>
           <div style={s.secT}>Bidco → bud · tidsgap</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginTop: 2 }}>
             <span style={{ fontFamily: SERIF, fontSize: 40, color: C.accent, lineHeight: .9 }}>{stats.bidcoTiming.medianDagar}</span>
@@ -568,7 +536,6 @@ function RegistryAnalys({ stats, status }) {
         </div>
       )}
 
-      {/* Bidco */}
       {stats.bidco && (
         <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
           <div style={s.secT}>Bidco-strukturer</div>
@@ -585,7 +552,6 @@ function RegistryAnalys({ stats, status }) {
         </div>
       )}
 
-      {/* Ägarbindning */}
       {stats.ägarbindning && stats.ägarbindning.antalMedData > 0 && (
         <div style={{ ...s.infoBox, marginBottom: 12 }}>
           <b style={{ color: C.ink }}>Ägarbindning före budet.</b> I snitt hade{" "}
@@ -601,11 +567,10 @@ function RegistryAnalys({ stats, status }) {
   );
 }
 
-/* ---------------- BIDCO-SPÅR ---------------- */
 function BidcoTab() {
   const [items, setItems] = useState([]);
   const [timing, setTiming] = useState(null);
-  const [status, setStatus] = useState("loading"); // loading | live | empty | error
+  const [status, setStatus] = useState("loading");
   const load = useCallback(async () => {
     setStatus("loading");
     try {
@@ -674,7 +639,6 @@ function BidcoTab() {
   );
 }
 
-/* ---------------- delade komponenter ---------------- */
 function BottomNav({ tab, setTab }) {
   const items = [
     { id: "rank", label: "Rank", icon: IconRadar },
@@ -721,9 +685,7 @@ function SimpleHeader({ eyebrow, title, sub }) {
   return (
     <>
       <nav style={s.nav}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span style={s.brandDot} /><span style={{ fontWeight: 700, fontSize: 17, color: C.ink }}>BudRadar</span>
-        </div>
+        <img src="budradar-logo.png" alt="BudRadar" style={s.logoImg} />
       </nav>
       <header style={{ padding: "34px 22px 18px" }}>
         <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> {eyebrow}</div>
@@ -780,10 +742,10 @@ function pill(a) {
 function tag(t) {
   const hot = t === "HÖG";
   return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".1em", fontWeight: 700,
-    background: hot ? C.accentSoft : "#f0f1f5", color: hot ? C.accent : C.muted, border: `1px solid ${hot ? "#d9ddff" : C.line}` };
+    background: hot ? C.accentSoft : "#f0f1f5", color: hot ? C.accent : C.muted, border: `1px solid ${hot ? "#c7cdf0" : C.line}` };
 }
 function outcomeTag(o) {
-  const map = { "Genomfört": [C.accentSoft, C.accent, "#d9ddff"], "Höjt bud": ["#e8f6ef", C.green, "#c9ead9"], "Drogs tillbaka": ["#fbeaea", C.red, "#f2cccc"] };
+  const map = { "Genomfört": [C.accentSoft, C.accent, "#c7cdf0"], "Höjt bud": ["#e8f6ef", C.green, "#c9ead9"], "Drogs tillbaka": ["#fbeaea", C.red, "#f2cccc"] };
   const [bg, col, br] = map[o] || ["#f0f1f5", C.muted, C.line];
   return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".08em", fontWeight: 700, background: bg, color: col, border: `1px solid ${br}` };
 }
@@ -791,7 +753,7 @@ function outcomeTag(o) {
 const s = {
   nav: { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "14px 14px 0", padding: "12px 16px",
     background: C.card, border: `1px solid ${C.line}`, borderRadius: 999, boxShadow: "0 6px 24px rgba(13,18,32,.05)" },
-  brandDot: { width: 16, height: 16, borderRadius: "50%", background: C.accent, boxShadow: `0 0 0 4px ${C.accentSoft}` },
+  logoImg: { height: 22, width: "auto", display: "block" },
   eyebrow: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 13px", background: C.card,
     border: `1px solid ${C.line}`, borderRadius: 999, fontSize: 12, color: C.muted, fontWeight: 600, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
   h1: { fontFamily: SERIF, fontSize: 52, lineHeight: .98, fontWeight: 400, letterSpacing: "-.02em", margin: "20px 0 0", maxWidth: 360, color: C.ink },
@@ -799,7 +761,7 @@ const s = {
   radar: { position: "absolute", top: -30, right: -46, width: 150, height: 150, opacity: .9 },
   ring: { position: "absolute", inset: 0, border: `1px solid ${C.line}`, borderRadius: "50%" },
   ring2: { position: "absolute", inset: 34, border: `1px solid ${C.line}`, borderRadius: "50%" },
-  sweep: { position: "absolute", inset: 0, borderRadius: "50%", background: "conic-gradient(from 0deg, rgba(59,76,255,.16), transparent 65%)", animation: "sweep 3.4s linear infinite" },
+  sweep: { position: "absolute", inset: 0, borderRadius: "50%", background: "conic-gradient(from 0deg, rgba(36,60,121,.16), transparent 65%)", animation: "sweep 3.4s linear infinite" },
   blip: { position: "absolute", top: 44, left: 96, width: 7, height: 7, borderRadius: "50%", background: C.accent, boxShadow: `0 0 0 4px ${C.accentSoft}`, animation: "blink 1.7s infinite" },
   filterRow: { display: "flex", gap: 8, padding: "6px 20px 12px" },
   co: { textAlign: "left", background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 16px 14px", cursor: "pointer", fontFamily: SANS, boxShadow: "0 8px 30px rgba(13,18,32,.05)" },
@@ -808,7 +770,7 @@ const s = {
   track: { height: 5, borderRadius: 999, background: "#eceef4", overflow: "hidden" },
   fill: { height: "100%", borderRadius: 999, transition: "width .9s cubic-bezier(.2,.8,.2,1)" },
   sparkL: { fontSize: 9, color: C.muted, marginTop: 5, letterSpacing: ".04em", textAlign: "center" },
-  infoBox: { background: C.accentSoft, border: `1px solid #d9ddff`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
+  infoBox: { background: C.accentSoft, border: `1px solid #c7cdf0`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
   bidcoHint: { marginTop: 18, background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "13px 15px", fontSize: 12.5, lineHeight: 1.55, color: C.muted, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
   search: { width: "100%", padding: "11px 36px 11px 14px", borderRadius: 999, border: `1px solid ${C.line}`,
     background: C.card, fontSize: 14, fontFamily: SANS, color: C.ink, outline: "none",
@@ -817,7 +779,7 @@ const s = {
     background: "none", border: "none", fontSize: 20, color: C.muted, cursor: "pointer",
     lineHeight: 1, padding: 0, fontFamily: SANS },
   linkBtn: { background: "none", border: "none", color: C.accent, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 13, padding: 0 },
-  signalTag: { display: "inline-block", background: C.accentSoft, color: C.accent, border: "1px solid #d9ddff", borderRadius: 999, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".03em" },
+  signalTag: { display: "inline-block", background: C.accentSoft, color: C.accent, border: "1px solid #c7cdf0", borderRadius: 999, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".03em" },
   chipOffer: { background: C.accent, color: "#fff", borderRadius: 999, padding: "2px 9px", fontSize: 9, letterSpacing: ".12em", fontWeight: 700, flexShrink: 0 },
   overlay: { position: "fixed", inset: 0, background: "rgba(13,18,32,.35)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" },
   sheet: { background: C.card, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "24px 24px 0 0", padding: "10px 20px 26px", animation: "slideUp .32s cubic-bezier(.2,.8,.2,1)", boxShadow: "0 -10px 50px rgba(13,18,32,.2)" },
