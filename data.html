@@ -64,6 +64,11 @@
   .tag.miss { background:#fbe9e9; color:var(--red); border-color:#f3caca; }
   .verify-link { font-size:12.5px; color:var(--accent); text-decoration:none; font-weight:600; cursor:pointer; }
   .verify-link:hover { text-decoration:underline; }
+  tr.highlight-flag { animation: flagPulse 2s ease-out 2; }
+  @keyframes flagPulse {
+    0% { background:var(--accent-soft); }
+    100% { background:transparent; }
+  }
 
   .bar { height:7px; border-radius:999px; background:#eceef4; overflow:hidden; min-width:70px; }
   .bar div { height:100%; border-radius:999px; background:var(--accent); }
@@ -263,7 +268,7 @@ function renderTrackRecord(tr) {
         const link = (f.github_commit_sha && tr.githubRepo)
           ? '<a class="verify-link" href="https://github.com/' + tr.githubRepo + '/commit/' + f.github_commit_sha + '" target="_blank" rel="noopener">GitHub →</a>'
           : '<span class="muted">—</span>';
-        return '<tr>' +
+        return '<tr id="flag-' + f.id + '">' +
           '<td><b>' + f.company_name + '</b></td>' +
           '<td class="muted">' + date + '</td>' +
           '<td class="hide-sm muted">' + reason + '</td>' +
@@ -339,7 +344,20 @@ function renderBolagsverketStatus(bv) {
     '</div>';
 }
 
-load();
+// Om sidan öppnas med #flag-ID i URL:en (t.ex. från en Discord-notis),
+// scrolla dit och markera raden visuellt en kort stund.
+function scrollToFlagFromHash() {
+  if (!location.hash.startsWith('#flag-')) return;
+  // liten fördröjning så DOM:en hunnit renderas av renderTrackRecord()
+  setTimeout(() => {
+    const el = document.querySelector(location.hash);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('highlight-flag');
+  }, 400);
+}
+
+load().then(scrollToFlagFromHash);
 </script>
 </body>
 </html>
