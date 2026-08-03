@@ -53,12 +53,13 @@ const AKTIEBOLAG_KODER = ['AB-ORGFO'];
 const HOLDING_PATTERN = /^$|förvalta|holdingverksamhet|äga och förvalta|kapitalförvaltning|inneha aktier|bedriva handel med och förvaltning av aktier/i;
 const MAX_DESCRIPTION_LENGTH = 80; // korta/tomma beskrivningar är typiska för skalbolag
 
-// Namnmönster typiska för bidco/skalbolag. Adressmatch ENSAM räckte inte —
-// en jättebyrå som Baker McKenzie registrerar hundratals helt vanliga bolag
-// på sin adress. Kräver nu ATT namnet också ser ut som ett skal, inte bara
-// att beskrivningen är kort/tom.
-const BIDCO_NAME_PATTERN =
-  /\b(BidCo|Bidco|HoldCo|Holdco|MidCo|Midco|TopCo|Topco|NewCo|Newco|Holding|Ventures?|Capital|Kapital|Invest(?:ment)?)\b/i;
+// Namnmönster typiska för bidco/skalbolag. STRIKT med flit — "Holding",
+// "Ventures", "Capital" är för vanliga ord (många legitima bolag heter så)
+// och gav falska träffar (t.ex. "LedgerBuddy" gick igenom på adress ensam
+// innan detta ens fanns, men bredare ord hade ändå släppt igenom fel bolag).
+// Kräver nu det faktiska bidco-mönstret: BidCo/HoldCo/MidCo/TopCo/NewCo,
+// eller lagerbolagsnamnet "Goldcup NNNN AB".
+const BIDCO_NAME_PATTERN = /\b(BidCo|Bidco|HoldCo|Holdco|MidCo|Midco|TopCo|Topco|NewCo|Newco)\b/i;
 const GOLDCUP_PATTERN = /^Goldcup\s+\d+\s+AB$/i;
 
 function todaysRunId() {
