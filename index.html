@@ -610,6 +610,9 @@ function BidcoTab() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const liveFlags = flags.filter(f => f.source !== "historical_verification");
+  const historicalFlags = flags.filter(f => f.source === "historical_verification");
+
   return (
     <>
       <SimpleHeader eyebrow="Verifierade skalbolag" title={<>Vem bygger ett <span style={{ fontStyle: "italic", color: C.accent }}>bidco?</span></>}
@@ -634,8 +637,10 @@ function BidcoTab() {
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
         {status === "loading" && <div style={{ ...s.co, cursor: "default" }}><div style={{ height: 15, background: "#eceef4", borderRadius: 8, width: "60%" }} /></div>}
         {status === "error" && <div style={{ ...s.infoBox }}>Kunde inte hämta track record just nu. <button onClick={load} style={s.linkBtn}>Försök igen</button></div>}
-        {status === "empty" && <div style={{ ...s.infoBox }}>Inga skalbolag flaggade än. Bolagsverket-scanningen körs veckovis — kolla igen om några dagar.</div>}
-        {status === "live" && flags.map((f, i) => (
+        {status !== "loading" && status !== "error" && liveFlags.length === 0 && (
+          <div style={{ ...s.infoBox }}>Inga skalbolag flaggade live än. Bolagsverket-scanningen körs veckovis — kolla igen om några dagar.</div>
+        )}
+        {liveFlags.map((f, i) => (
           <div key={f.id || i} className="card" style={{ ...s.co, cursor: "default" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -656,10 +661,40 @@ function BidcoTab() {
       </div>
       <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
         <b style={{ color: C.ink }}>Så funkar spåret:</b> varje vecka laddar BudRadar ner Bolagsverkets hela register och
-        jämför mot förra veckan. Nya aktiebolag vars namn matchar bidco-mönster (BidCo, Holding, Ventures, "Goldcup NNNN AB")
-        <i> och</i> vars adress delas med en känd M&A-advokatbyrå flaggas automatiskt — tidsstämplat så det inte går att
-        justera i efterhand.
+        jämför mot förra veckan. Nya aktiebolag vars namn matchar bidco-mönster (BidCo, HoldCo, MidCo, TopCo, NewCo, "Goldcup NNNN AB")
+        flaggas automatiskt — tidsstämplat så det inte går att justera i efterhand. Adressmatch mot en känd
+        M&amp;A-rådgivare ger extra poäng men krävs inte.
       </div>
+
+      {historicalFlags.length > 0 && (
+        <>
+          <div style={{ padding: "24px 18px 4px" }}>
+            <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: C.muted }}>Historik</div>
+            <div style={{ fontFamily: SERIF, fontSize: 22, color: C.ink, marginTop: 4 }}>Bakåtverifierade bud</div>
+            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55, marginTop: 6 }}>
+              Dessa {historicalFlags.length} bidco var redan kända uppköp när de lades in — inte samma bevis som
+              live-flaggorna ovan, men verifierade Bolagsverket-datum som bekräftar mönstret.
+            </p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
+            {historicalFlags.map((f, i) => (
+              <div key={f.id || i} className="card" style={{ ...s.co, cursor: "default", opacity: 0.85 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{f.company_name}</div>
+                    {f.org_nr && <div style={s.meta}>Org.nr {f.org_nr}</div>}
+                    <div style={{ ...s.meta, marginTop: 4 }}>
+                      Registrerat {new Date(f.created_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" })}
+                    </div>
+                  </div>
+                  <span style={{ ...tag("MEDEL"), background: "#f0f1f5", color: C.muted, border: `1px solid ${C.line}` }}>Historik</span>
+                </div>
+                {f.outcome_note && <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 10 }}>{f.outcome_note}</p>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <footer style={s.foot}>Bolagsverkets register, veckovis · ej investeringsrådgivning.</footer>
     </>
   );
