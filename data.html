@@ -288,21 +288,25 @@ function renderBidco(s) {
 function renderTrackRecord(tr) {
   if (!tr || !tr.summary) return;
   const s = tr.summary;
-  const flags = tr.flags || [];
+  const allFlags = tr.flags || [];
+  const liveFlags = allFlags.filter(f => f.source !== "historical_verification");
+  const historicalFlags = allFlags.filter(f => f.source === "historical_verification");
 
   const kpiCards = [
-    { v: String(s.total), l: "Flaggade bolag", n: "Totalt i track record", dark: true },
+    { v: String(s.total), l: "Live-flaggor", n: "Framåtblickande, innan utfall känt", dark: true },
     { v: String(s.hits), l: "Träffar", n: "Bud kom efter flaggning" },
     { v: String(s.pending), l: "Väntar", n: "Utfall ännu okänt", dark: true },
-    { v: s.hitRate == null ? "—" : Math.round(s.hitRate * 100) + "%", l: "Träffsäkerhet", n: "Av avgjorda flaggningar" },
+    { v: s.hitRate == null ? "—" : Math.round(s.hitRate * 100) + "%", l: "Träffsäkerhet", n: "Av live-flaggor, avgjorda" },
+    { v: String(s.historicalVerified || 0), l: "Historik", n: "Bakåtverifierade, se separat lista nedan" },
   ];
 
   const kpiHtml = '<div class="grid">' + kpiCards.map(c =>
     '<div class="card"><div class="kpi' + (c.dark ? " dark" : "") + '">' + c.v + '</div>' +
     '<div class="klabel">' + c.l + '</div><div class="knote">' + c.n + '</div></div>').join("") + '</div>';
 
-  const rowsHtml = flags.length
-    ? '<table><thead><tr><th>Bolag</th><th>Flaggat</th><th class="hide-sm">Skäl</th><th class="num">Score</th><th>Status</th><th>Verifiering</th></tr></thead><tbody>' +
+  function buildTable(flags) {
+    if (!flags.length) return '<div class="loading">Inga flaggningar registrerade än.</div>';
+    return '<table><thead><tr><th>Bolag</th><th>Flaggat</th><th class="hide-sm">Skäl</th><th class="num">Score</th><th>Status</th><th>Verifiering</th></tr></thead><tbody>' +
       flags.map(f => {
         const tagClass = f.outcome === "hit" ? "hit" : f.outcome === "miss" ? "miss" : "";
         const label = f.outcome === "hit" ? "Bud kom" : f.outcome === "miss" ? "Inget bud" : f.outcome === "expired" ? "Utgången" : "Väntar";
@@ -319,19 +323,29 @@ function renderTrackRecord(tr) {
           '<td><span class="tag ' + tagClass + '">' + label + '</span></td>' +
           '<td>' + link + '</td>' +
           '</tr>';
-      }).join("") + '</tbody></table>'
-    : '<div class="loading">Inga flaggningar registrerade än.</div>';
+      }).join("") + '</tbody></table>';
+  }
 
   document.getElementById("trackRecordNote").innerHTML =
     '<h2>Track record</h2>' +
     kpiHtml +
-    '<div class="card" style="padding:6px 8px; margin-top:14px">' + rowsHtml + '</div>' +
+    '<div class="card" style="padding:6px 8px; margin-top:14px">' + buildTable(liveFlags) + '</div>' +
     '<div class="note">' +
     '<b>Om verifieringen.</b> Varje flaggning skrivs till en hash-kedjad logg och committas samtidigt ' +
     'till ett publikt GitHub-repo som extern, oberoende tidsstämpel. ' +
     '<a class="verify-link" onclick="verifyChainIntegrity(event)">Verifiera hela kedjans integritet →</a>' +
     '<span id="verifyResult" style="margin-left:8px"></span>' +
-    '</div>';
+    '</div>' +
+    (historicalFlags.length ? (
+      '<div class="kicker" style="margin-top:34px"><span class="bar" style="background:var(--muted)"></span><span class="label" style="color:var(--muted)">Historik</span></div>' +
+      '<h2 style="margin-top:2px">Bakåtverifierade bud</h2>' +
+      '<p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 12px">' +
+      'Dessa ' + historicalFlags.length + ' bidco var redan kända uppköp när de lades in — utfallet var inte okänt ' +
+      'vid registreringen. De bevisar mönstret (bidco-registrering → bud) med verifierade Bolagsverket-datum, men är ' +
+      '<b>inte</b> samma typ av bevis som live-flaggorna ovan.' +
+      '</p>' +
+      '<div class="card" style="padding:6px 8px">' + buildTable(historicalFlags) + '</div>'
+    ) : '');
 }
 
 async function verifyChainIntegrity(e) {
