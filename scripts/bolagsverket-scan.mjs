@@ -53,6 +53,14 @@ const AKTIEBOLAG_KODER = ['AB-ORGFO'];
 const HOLDING_PATTERN = /^$|förvalta|holdingverksamhet|äga och förvalta|kapitalförvaltning|inneha aktier|bedriva handel med och förvaltning av aktier/i;
 const MAX_DESCRIPTION_LENGTH = 80; // korta/tomma beskrivningar är typiska för skalbolag
 
+// Namnmönster typiska för bidco/skalbolag. Adressmatch ENSAM räckte inte —
+// en jättebyrå som Baker McKenzie registrerar hundratals helt vanliga bolag
+// på sin adress. Kräver nu ATT namnet också ser ut som ett skal, inte bara
+// att beskrivningen är kort/tom.
+const BIDCO_NAME_PATTERN =
+  /\b(BidCo|Bidco|HoldCo|Holdco|MidCo|Midco|TopCo|Topco|NewCo|Newco|Holding|Ventures?|Capital|Kapital|Invest(?:ment)?)\b/i;
+const GOLDCUP_PATTERN = /^Goldcup\s+\d+\s+AB$/i;
+
 function todaysRunId() {
   const d = new Date();
   return `bv-weekly-${d.toISOString().slice(0, 10)}`;
@@ -234,6 +242,9 @@ async function main() {
       const shortOrHoldingDesc =
         row.description.length <= MAX_DESCRIPTION_LENGTH || HOLDING_PATTERN.test(row.description);
       if (!shortOrHoldingDesc) continue;
+
+      const looksLikeShell = BIDCO_NAME_PATTERN.test(row.name) || GOLDCUP_PATTERN.test(row.name);
+      if (!looksLikeShell) continue;
       candidates++;
 
       // ---- Adressmatchning mot known_advisors ----
