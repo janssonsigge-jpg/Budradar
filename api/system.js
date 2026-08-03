@@ -28,6 +28,7 @@ import { scoreCompany, FLAG_THRESHOLD } from '../lib/scoring.js';
 import { appendFlag, verifyChain, recordOutcome } from '../lib/trackRecordLog.js';
 import { recordHealthCheck, getAllHealth } from '../lib/healthCheck.js';
 import { archiveRawSnapshot, todaysRunId } from '../lib/archiveSnapshot.js';
+import { REGISTRY } from './_registry-data.js';
 
 // Enkel bearer-token-koll för admin-actions. Sätt ADMIN_SECRET i Vercel env vars.
 function requireAdmin(req, res) {
@@ -65,9 +66,11 @@ export default async function handler(req, res) {
       return handleAdminOutcome(req, res);
     case 'flagged-tickers':
       return handleFlaggedTickers(req, res);
+    case 'admin-sync-historical':
+      return handleAdminSyncHistorical(req, res);
     default:
       return res.status(400).json({
-        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers',
+        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers | admin-sync-historical',
       });
   }
 }
@@ -83,21 +86,32 @@ async function handleTrackRecord(req, res) {
     const { rows } = await sql`
       SELECT
         id, company_name, org_nr, ticker, flag_reason, score,
-        outcome, outcome_date, outcome_note,
+        outcome, outcome_date, outcome_note, source,
         row_hash, github_commit_sha, created_at
       FROM track_record_log
       ORDER BY created_at DESC
     `;
 
     const total = rows.length;
-    const hits = rows.filter((r) => r.outcome === 'hit').length;
-    const misses = rows.filter((r) => r.outcome === 'miss').length;
-    const pending = rows.filter((r) => r.outcome === 'pending').length;
+    const liveRows = rows.filter((r) => r.source !== 'historical_verification');
+    const historicalRows = rows.filter((r) => r.source === 'historical_verification');
+
+    const hits = liveRows.filter((r) => r.outcome === 'hit').length;
+    const misses = liveRows.filter((r) => r.outcome === 'miss').length;
+    const pending = liveRows.filter((r) => r.outcome === 'pending').length;
 
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
 
     return res.status(200).json({
-      summary: { total, hits, misses, pending, hitRate: total > pending ? hits / (total - pending) : null },
+      summary: {
+        total: liveRows.length,
+        hits, misses, pending,
+        // hitRate räknas ENDAST på live-flaggor — historisk import är per
+        // definition alltid "hit" (vi importerar bara bekräftade affärer),
+        // så den ska aldrig blandas in i träffsäkerhetsmåttet.
+        hitRate: liveRows.length > pending ? hits / (liveRows.length - pending) : null,
+        historicalVerified: historicalRows.length,
+      },
       flags: rows,
       githubRepo: process.env.GITHUB_TIMESTAMP_REPO || null,
     });
@@ -474,6 +488,89 @@ async function handleFlaggedTickers(req, res) {
     });
   } catch (err) {
     console.error('Fel vid hämtning av flaggade tickers:', err);
+    return res.status(500).json({ error: 'Internt fel', detail: err.message });
+  }
+}
+
+// ============================================================
+// POST ?action=admin-sync-historical
+// Engångsimport: hämtar redan verifierade bidco-poster ur bidco_registry
+// (samma tabell som ger "Bidco → bud"-medianen på data.html) och lägger in
+// dem i track_record_log med source='historical_verification'.
+//
+// VIKTIGT: dessa poster skapas MEDVETET med redan känt utfall — det är inte
+// samma bevis som en live-flagg (som skapas innan utfallet är känt). Därför
+// den separata source-kolumnen, så de aldrig visas som om de vore
+// förutsägelser i efterhand.
+//
+// Säker att köra flera gånger — hoppar över org.nr som redan importerats.
+// Kräver Authorization: Bearer <ADMIN_SECRET>
+// ============================================================
+async function handleAdminSyncHistorical(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Endast POST tillåtet' });
+  }
+  if (!requireAdmin(req, res)) return;
+
+  try {
+    const { rows: bidcoRows } = await sql`
+      SELECT bidco, org_nr, registered::text, announced::text, bud_id
+      FROM bidco_registry
+      WHERE registered IS NOT NULL AND announced IS NOT NULL
+    `;
+
+    if (bidcoRows.length === 0) {
+      return res.status(200).json({ synced: 0, skipped: 0, message: 'bidco_registry innehåller inga rader med både registered och announced satta.' });
+    }
+
+    const registryById = new Map(REGISTRY.map((r) => [r.id, r]));
+
+    let synced = 0;
+    let skipped = 0;
+    const results = [];
+
+    for (const row of bidcoRows) {
+      if (!row.org_nr) { skipped++; continue; }
+
+      const existing = await sql`
+        SELECT id FROM track_record_log
+        WHERE org_nr = ${row.org_nr} AND source = 'historical_verification'
+        LIMIT 1
+      `;
+      if (existing.rows.length > 0) { skipped++; continue; }
+
+      const matchedEntry = row.bud_id ? registryById.get(row.bud_id) : null;
+      const outcomeNote = matchedEntry
+        ? `Bud från ${matchedEntry.bidder} på ${matchedEntry.target}, offentliggjort ${row.announced}`
+        : `Bud offentliggjort ${row.announced}`;
+
+      const logEntry = await appendFlag({
+        company_name: row.bidco,
+        org_nr: row.org_nr,
+        ticker: matchedEntry?.targetTicker || null,
+        flag_reason: 'historisk_verifiering_bidco_registrering',
+        score: 100, // fast värde, skiljer sig medvetet från live-flaggors 50-95 spann
+        signal_snapshot: {
+          registered_at: row.registered,
+          announced_at: row.announced,
+          target: matchedEntry?.target || null,
+          bidder: matchedEntry?.bidderType || null,
+        },
+        source: 'historical_verification',
+        created_at_override: new Date(row.registered).toISOString(),
+        initial_outcome: 'hit',
+        outcome_date: new Date(row.announced).toISOString(),
+        outcome_note: outcomeNote,
+        notify: false, // undvik att spamma Discord med 8 gamla, redan kända affärer
+      });
+
+      synced++;
+      results.push({ id: logEntry.id, company_name: row.bidco, org_nr: row.org_nr });
+    }
+
+    return res.status(200).json({ synced, skipped, results });
+  } catch (err) {
+    console.error('Fel vid historisk synk:', err);
     return res.status(500).json({ error: 'Internt fel', detail: err.message });
   }
 }
