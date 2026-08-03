@@ -41,4 +41,8 @@ jobs:
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          GITHUB_TIMESTAMP_TOKEN: ${{ secrets.GH_TIMESTAMP_TOKEN }}
+          GITHUB_TIMESTAMP_REPO: ${{ secrets.GH_TIMESTAMP_REPO }}
+          GITHUB_TIMESTAMP_PATH: ${{ secrets.GH_TIMESTAMP_PATH }}
+          GITHUB_TIMESTAMP_BRANCH: ${{ secrets.GH_TIMESTAMP_BRANCH }}
         run: node scripts/bolagsverket-scan.mjs
