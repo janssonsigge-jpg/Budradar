@@ -248,7 +248,10 @@ async function main() {
       if (!looksLikeShell) continue;
       candidates++;
 
-      // ---- Adressmatchning mot known_advisors ----
+      // ---- Adressmatchning mot known_advisors — förstärker score, filtrerar INTE bort.
+      // Namnet (BidCo/HoldCo/Goldcup) är den starka signalen i sig. En adressmatch är
+      // extra bekräftelse, inte ett krav — annars missar vi bidco kopplade till
+      // rådgivare som ännu inte finns i known_advisors.
       let matchedAdvisor = null;
       for (const advisor of advisors) {
         if (row.address && advisor.known_address && row.address.toLowerCase().includes(advisor.known_address.toLowerCase())) {
@@ -256,26 +259,30 @@ async function main() {
           break;
         }
       }
-      if (!matchedAdvisor) continue; // ingen adressmatch → för svagt signal ännu, hoppa över
 
       // ---- Flagga i track_record_log (delad funktion: hash-kedja +
       // GitHub-tidsstämpel + Slack-notis, allt automatiskt) ----
-      const score = 40 + 30 * Number(matchedAdvisor.weight); // enkel poängmodell, samma anda som lib/scoring.js
+      const baseScore = GOLDCUP_PATTERN.test(row.name) ? 55 : 50; // Goldcup är extra specifikt mönster
+      const advisorBonus = matchedAdvisor ? 30 * Number(matchedAdvisor.weight) : 0;
+      const score = baseScore + advisorBonus;
+      const reasonParts = ['bolagsverket_bulk_registrering', 'bidco_namnmonster'];
+      if (matchedAdvisor) reasonParts.push(`advokatadress_${matchedAdvisor.name.replace(/\s+/g, '_')}`);
+
       await appendFlag({
         company_name: row.name,
         org_nr: row.org_nr,
         ticker: null,
-        flag_reason: `bolagsverket_bulk_registrering+advokatadress_${matchedAdvisor.name.replace(/\s+/g, '_')}`,
+        flag_reason: reasonParts.join('+'),
         score,
         signal_snapshot: {
           registered_at: row.registered_at,
           description: row.description,
           address: row.address,
-          matchedAdvisor: matchedAdvisor.name,
+          matchedAdvisor: matchedAdvisor ? matchedAdvisor.name : null,
         },
       });
       flagged++;
-      console.log(`FLAGGAD: ${row.name} (${row.org_nr}) — ${matchedAdvisor.name}, score ${score}`);
+      console.log(`FLAGGAD: ${row.name} (${row.org_nr}) — ${matchedAdvisor ? matchedAdvisor.name : 'ingen adressmatch'}, score ${score}`);
     }
 
     await saveSnapshot(seenSet);
