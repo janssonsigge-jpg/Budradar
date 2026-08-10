@@ -13,14 +13,20 @@
 //      (annars skulle miljontals befintliga bolag räknas som "nya")
 //   5. Efterföljande körningar: nya org.nr som är aktiebolag, aktiva,
 //      och har en kort/generisk verksamhetsbeskrivning → kandidater
-//   6. Kandidater vars NAMN matchar bidco-mönster → flaggas direkt i
-//      track_record_log. Kandidater som INTE matchar namnmönstret (t.ex.
-//      "Goldcup 12345 AB" som ännu inte bytt namn) läggs istället i
-//      `watchlist` — de kastas inte bort längre.
+//   6. Kandidater vars NAMN matchar ett EXPLICIT bidco-mönster (BidCo/HoldCo/
+//      MidCo/TopCo/NewCo — medvetet valt namn) → flaggas direkt i
+//      track_record_log. Kandidater med ett rått, obytt "Goldcup NNNN AB"-namn
+//      läggs ALLTID i watchlist istället — ett sådant namn säger ingenting om
+//      M&A-avsikt i sig (tusentals lagerbolag heter så varje år, oavsett syfte).
 //   7. VARJE rad i bulkfilen (inte bara nya) jämförs mot watchlist. Om ett
 //      bevakat bolag bytt namn bort från Goldcup-mönstret, eller flyttat
 //      adress till en känd M&A-rådgivare, flaggas det — det är den starkaste
 //      signalen av alla: skalbolaget har "aktiverats" för en affär.
+//
+// RÄTTELSE (2026-08-10): tidigare flaggades rått "Goldcup NNNN AB" direkt vid
+// registrering (och fick t.o.m. HÖGRE score än ett explicit bidco-namn) —
+// motsatsen till vad kommentarerna i koden alltid sagt att den skulle göra.
+// Se `isExplicitBidcoName` / `isRawGoldcup`-uppdelningen nedan för fixen.
 //
 // VARFÖR BLOB OCH INTE POSTGRES FÖR ORG.NR-LISTAN:
 //   Ett första försök lagrade alla sedda org.nr i en Postgres-tabell och
@@ -291,7 +297,7 @@ async function main() {
       }
 
       // ---- Watchlist-kontroll: körs för VARJE rad, inte bara nya org.nr,
-      // eftersom bevakade bolag registrerades tidigare veckor. ----
+      // eftersom bevakade bolag registrerades tidigare veckor.
       if (!isBootstrap && watchlistMap.has(row.org_nr)) {
         const entry = watchlistMap.get(row.org_nr);
         const { score: wScore, changes, matchedAdvisor } = scoreWatchlistChange(entry, row, advisors);
@@ -338,11 +344,18 @@ async function main() {
         row.description.length <= MAX_DESCRIPTION_LENGTH || HOLDING_PATTERN.test(row.description);
       if (!shortOrHoldingDesc) continue;
 
-      const looksLikeShell = BIDCO_NAME_PATTERN.test(row.name) || GOLDCUP_PATTERN.test(row.name);
-      if (!looksLikeShell) {
-        // Matchar inte bidco-namnmönstret ÄN — men ser ut som ett skalbolag
-        // (kort/tom beskrivning). Lägg i watchlist istället för att kasta bort.
-        // 90 dagars bevakningsfönster, därefter expired om inget hänt.
+      // ---- RÄTTAD LOGIK ----
+      // Ett EXPLICIT bidco-namn (BidCo/HoldCo/MidCo/TopCo/NewCo) är ett medvetet
+      // val och flaggas direkt. Ett rått, obytt "Goldcup NNNN AB"-namn säger
+      // ingenting om avsikt i sig — tusentals lagerbolag heter så varje år av
+      // helt oskyldiga skäl. Sådana ska ALLTID till watchlist och vänta på en
+      // verklig signal (namnbyte bort från Goldcup-mönstret, eller adressflytt
+      // till en känd M&A-rådgivare) innan de räknas som en bidco-kandidat.
+      const isExplicitBidcoName = BIDCO_NAME_PATTERN.test(row.name);
+
+      if (!isExplicitBidcoName) {
+        // Täcker både rått Goldcup-namn och andra kort/holding-liknande bolag
+        // som redan passerat shortOrHoldingDesc-filtret ovan.
         await sql`
           INSERT INTO watchlist (org_nr, original_name, original_address, original_description, registered_at, window_expires_at)
           VALUES (${row.org_nr}, ${row.name}, ${row.address}, ${row.description}, ${row.registered_at},
@@ -355,7 +368,7 @@ async function main() {
       candidates++;
 
       // ---- Adressmatchning mot known_advisors — förstärker score, filtrerar INTE bort.
-      // Namnet (BidCo/HoldCo/Goldcup) är den starka signalen i sig. En adressmatch är
+      // Namnet (BidCo/HoldCo) är den starka signalen i sig. En adressmatch är
       // extra bekräftelse, inte ett krav — annars missar vi bidco kopplade till
       // rådgivare som ännu inte finns i known_advisors.
       let matchedAdvisor = null;
@@ -368,7 +381,9 @@ async function main() {
 
       // ---- Flagga i track_record_log (delad funktion: hash-kedja +
       // GitHub-tidsstämpel + Slack-notis, allt automatiskt) ----
-      const baseScore = GOLDCUP_PATTERN.test(row.name) ? 55 : 50; // Goldcup är extra specifikt mönster
+      // baseScore är nu fast 50 -- denna gren nås bara av EXPLICITA bidco-namn,
+      // så Goldcup-specialfallet (tidigare 55, felaktigt högre) är borttaget.
+      const baseScore = 50;
       const advisorBonus = matchedAdvisor ? 30 * Number(matchedAdvisor.weight) : 0;
       const score = baseScore + advisorBonus;
       const reasonParts = ['bolagsverket_bulk_registrering', 'bidco_namnmonster'];
