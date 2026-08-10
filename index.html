@@ -591,12 +591,14 @@ function BidcoTab() {
   const [flags, setFlags] = useState([]);
   const [timing, setTiming] = useState(null);
   const [status, setStatus] = useState("loading");
+  const [watchlist, setWatchlist] = useState([]);
   const load = useCallback(async () => {
     setStatus("loading");
     try {
-      const [trRes, statsRes] = await Promise.all([
+      const [trRes, statsRes, wlRes] = await Promise.all([
         fetch("/api/system?action=track-record"),
         fetch("/api/registry?stats=1").catch(() => null),
+        fetch("/api/system?action=watchlist-status").catch(() => null),
       ]);
       if (!trRes.ok) throw 0;
       const tr = await trRes.json();
@@ -604,6 +606,10 @@ function BidcoTab() {
       if (statsRes && statsRes.ok) {
         const st = await statsRes.json();
         setTiming(st.bidcoTiming || null);
+      }
+      if (wlRes && wlRes.ok) {
+        const wl = await wlRes.json();
+        setWatchlist(wl.pending || []);
       }
       setStatus((tr.flags && tr.flags.length) ? "live" : "empty");
     } catch { setStatus("error"); }
@@ -665,6 +671,40 @@ function BidcoTab() {
         flaggas automatiskt — tidsstämplat så det inte går att justera i efterhand. Adressmatch mot en känd
         M&amp;A-rådgivare ger extra poäng men krävs inte.
       </div>
+
+      {watchlist.length > 0 && (
+        <>
+          <div style={{ padding: "24px 18px 4px" }}>
+            <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: C.muted }}>Under bevakning</div>
+            <div style={{ fontFamily: SERIF, fontSize: 22, color: C.ink, marginTop: 4 }}>Väntar på signal</div>
+            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55, marginTop: 6 }}>
+              {watchlist.length} nyregistrerade skalbolag utan bekräftad bidco-signal ännu. Flaggas automatiskt om de
+              byter namn eller flyttar adress till en känd M&amp;A-rådgivare inom 90 dagar.
+            </p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
+            {watchlist.map((w) => {
+              const daysLeft = Math.max(0, Math.round((new Date(w.window_expires_at) - new Date()) / 86400000));
+              return (
+                <div key={w.org_nr} className="card" style={{ ...s.co, cursor: "default", opacity: 0.85 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{w.original_name}</div>
+                      <div style={s.meta}>Org.nr {w.org_nr}</div>
+                      <div style={{ ...s.meta, marginTop: 4 }}>
+                        Registrerat {new Date(w.registered_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" })}
+                      </div>
+                    </div>
+                    <span style={{ ...tag("LÅG"), background: "#f0f1f5", color: C.muted, border: `1px solid ${C.line}` }}>
+                      {daysLeft}d kvar
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {historicalFlags.length > 0 && (
         <>
