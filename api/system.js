@@ -581,6 +581,10 @@ async function handleAdminSyncHistorical(req, res) {
 // GET ?action=watchlist-status
 // Snabb överblick över bevakningslistan — hur många väntar, hur många
 // har flaggats via en förändring, hur många gått ut utan att hända något.
+//
+// UPPDATERAD: returnerar nu även den faktiska listan över bolag som väntar
+// (status='pending'), inte bara ett antal, så index.html kan visa dem under
+// Bidco-spår-fliken.
 // ============================================================
 async function handleWatchlistStatus(req, res) {
   if (req.method !== 'GET') {
@@ -595,10 +599,19 @@ async function handleWatchlistStatus(req, res) {
       FROM watchlist WHERE status = 'flagged'
       ORDER BY last_checked_at DESC LIMIT 10
     `;
+    // NYTT: faktiska bolag under bevakning, inte bara ett antal.
+    // Nyast registrerade först -- det är de som fortfarande har längst kvar
+    // av sitt 90-dagarsfönster och är mest relevanta att hålla koll på.
+    const { rows: pending } = await sql`
+      SELECT org_nr, original_name, registered_at, window_expires_at, last_checked_at
+      FROM watchlist WHERE status = 'pending'
+      ORDER BY registered_at DESC LIMIT 50
+    `;
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return res.status(200).json({
       counts: Object.fromEntries(counts.map((c) => [c.status, c.count])),
       recentlyFlagged,
+      pending,
     });
   } catch (err) {
     console.error('Fel vid hämtning av watchlist-status:', err);
