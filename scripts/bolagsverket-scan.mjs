@@ -13,8 +13,14 @@
 //      (annars skulle miljontals befintliga bolag räknas som "nya")
 //   5. Efterföljande körningar: nya org.nr som är aktiebolag, aktiva,
 //      och har en kort/generisk verksamhetsbeskrivning → kandidater
-//   6. Kandidater vars adress matchar known_advisors → flaggas i
-//      track_record_log (samma hash-kedja + GitHub-tidsstämpel som allt annat)
+//   6. Kandidater vars NAMN matchar bidco-mönster → flaggas direkt i
+//      track_record_log. Kandidater som INTE matchar namnmönstret (t.ex.
+//      "Goldcup 12345 AB" som ännu inte bytt namn) läggs istället i
+//      `watchlist` — de kastas inte bort längre.
+//   7. VARJE rad i bulkfilen (inte bara nya) jämförs mot watchlist. Om ett
+//      bevakat bolag bytt namn bort från Goldcup-mönstret, eller flyttat
+//      adress till en känd M&A-rådgivare, flaggas det — det är den starkaste
+//      signalen av alla: skalbolaget har "aktiverats" för en affär.
 //
 // VARFÖR BLOB OCH INTE POSTGRES FÖR ORG.NR-LISTAN:
 //   Ett första försök lagrade alla sedda org.nr i en Postgres-tabell och
@@ -143,6 +149,48 @@ function clean(str) {
   return str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
 }
 
+// ---------- Watchlist: poängsätt förändringar mot sparad baseline ----------
+// Tröskel 40 för att flaggas — se sql/006_watchlist.sql för tabellen.
+const WATCHLIST_FLAG_THRESHOLD = 40;
+
+function scoreWatchlistChange(entry, row, advisors) {
+  let score = 0;
+  const changes = [];
+  let matchedAdvisor = null;
+
+  const wasGoldcup = GOLDCUP_PATTERN.test(entry.original_name);
+  const stillGoldcup = GOLDCUP_PATTERN.test(row.name);
+  if (wasGoldcup && !stillGoldcup && row.name !== entry.original_name) {
+    score += 40;
+    changes.push('namnbyte_fran_goldcup');
+  }
+
+  if (row.address && row.address !== entry.original_address) {
+    for (const advisor of advisors) {
+      if (advisor.known_address && row.address.toLowerCase().includes(advisor.known_address.toLowerCase())) {
+        matchedAdvisor = advisor;
+        break;
+      }
+    }
+    if (matchedAdvisor) {
+      score += 35 * Number(matchedAdvisor.weight);
+      changes.push(`adressbyte_advokat_${matchedAdvisor.name.replace(/\s+/g, '_')}`);
+    } else {
+      score += 5; // svag signal — adress ändrad, men inte till en känd rådgivare
+      changes.push('adressbyte_okand');
+    }
+  }
+
+  const wasHoldingLike = HOLDING_PATTERN.test(entry.original_description || '');
+  const nowHoldingLike = HOLDING_PATTERN.test(row.description || '');
+  if (!wasHoldingLike && nowHoldingLike) {
+    score += 10;
+    changes.push('beskrivning_andrad_holding');
+  }
+
+  return { score, changes, matchedAdvisor };
+}
+
 function parseRow(cells) {
   // Kolumnordning enligt bekräftad header:
   // organisationsidentitet;namnskyddslopnummer;registreringsland;organisationsnamn;
@@ -210,10 +258,21 @@ async function main() {
     const advisorsResult = await sql`SELECT name, known_address, weight FROM known_advisors WHERE known_address IS NOT NULL`;
     const advisors = advisorsResult.rows;
 
+    // Hämta pending watchlist-poster — kollas mot VARJE rad i bulkfilen
+    // (inte bara nya org.nr), eftersom bevakade bolag registrerades tidigare veckor.
+    const watchlistResult = await sql`
+      SELECT org_nr, original_name, original_address, original_description
+      FROM watchlist WHERE status = 'pending'
+    `;
+    const watchlistMap = new Map(watchlistResult.rows.map((w) => [w.org_nr, w]));
+    console.log(`${watchlistMap.size} bolag under bevakning (watchlist).`);
+
     let totalRows = 0;
     let newOrgs = 0;
     let candidates = 0;
     let flagged = 0;
+    let watchlistAdded = 0;
+    let watchlistFlagged = 0;
     const orgformCounts = {};
 
     for await (const line of rl) {
@@ -231,6 +290,41 @@ async function main() {
         console.log(`... ${totalRows} rader bearbetade, ${newOrgs} nya org.nr hittills`);
       }
 
+      // ---- Watchlist-kontroll: körs för VARJE rad, inte bara nya org.nr,
+      // eftersom bevakade bolag registrerades tidigare veckor. ----
+      if (!isBootstrap && watchlistMap.has(row.org_nr)) {
+        const entry = watchlistMap.get(row.org_nr);
+        const { score: wScore, changes, matchedAdvisor } = scoreWatchlistChange(entry, row, advisors);
+
+        if (wScore >= WATCHLIST_FLAG_THRESHOLD) {
+          const logEntry = await appendFlag({
+            company_name: row.name,
+            org_nr: row.org_nr,
+            ticker: null,
+            flag_reason: `watchlist_${changes.join('+')}`,
+            score: wScore,
+            signal_snapshot: {
+              original_name: entry.original_name,
+              new_name: row.name,
+              original_address: entry.original_address,
+              new_address: row.address,
+              matchedAdvisor: matchedAdvisor ? matchedAdvisor.name : null,
+            },
+          });
+          await sql`
+            UPDATE watchlist
+            SET status = 'flagged', score = ${wScore}, last_checked_at = now(),
+                flagged_track_record_id = ${logEntry.id}
+            WHERE org_nr = ${row.org_nr}
+          `;
+          watchlistFlagged++;
+          console.log(`WATCHLIST-FLAGG: ${entry.original_name} → ${row.name} (${row.org_nr}), score ${wScore}`);
+        } else {
+          await sql`UPDATE watchlist SET last_checked_at = now() WHERE org_nr = ${row.org_nr}`;
+        }
+        watchlistMap.delete(row.org_nr); // klar för denna körning
+      }
+
       if (seenSet.has(row.org_nr)) continue; // känt sedan tidigare
       newOrgs++;
       seenSet.add(row.org_nr);
@@ -245,7 +339,19 @@ async function main() {
       if (!shortOrHoldingDesc) continue;
 
       const looksLikeShell = BIDCO_NAME_PATTERN.test(row.name) || GOLDCUP_PATTERN.test(row.name);
-      if (!looksLikeShell) continue;
+      if (!looksLikeShell) {
+        // Matchar inte bidco-namnmönstret ÄN — men ser ut som ett skalbolag
+        // (kort/tom beskrivning). Lägg i watchlist istället för att kasta bort.
+        // 90 dagars bevakningsfönster, därefter expired om inget hänt.
+        await sql`
+          INSERT INTO watchlist (org_nr, original_name, original_address, original_description, registered_at, window_expires_at)
+          VALUES (${row.org_nr}, ${row.name}, ${row.address}, ${row.description}, ${row.registered_at},
+                  (${row.registered_at}::date + INTERVAL '90 days'))
+          ON CONFLICT (org_nr) DO NOTHING
+        `;
+        watchlistAdded++;
+        continue;
+      }
       candidates++;
 
       // ---- Adressmatchning mot known_advisors — förstärker score, filtrerar INTE bort.
@@ -288,6 +394,16 @@ async function main() {
     await saveSnapshot(seenSet);
     console.log(`Snapshot sparad: ${startSize} -> ${seenSet.size} org.nr (${newOrgs} nya).`);
 
+    // Bolag vars 90-dagarsfönster gått ut utan att något hänt — inga fler kontroller
+    const expiredResult = await sql`
+      UPDATE watchlist SET status = 'expired'
+      WHERE status = 'pending' AND window_expires_at < CURRENT_DATE
+      RETURNING org_nr
+    `;
+    if (expiredResult.rows.length > 0) {
+      console.log(`${expiredResult.rows.length} watchlist-poster gick ut (90 dagar utan förändring).`);
+    }
+
     await sql`
       UPDATE bolagsverket_scan_runs
       SET status = 'success', finished_at = now(), error = NULL,
@@ -297,7 +413,8 @@ async function main() {
       WHERE run_id = ${runId}
     `;
 
-    console.log(`Klart. ${totalRows} rader, ${newOrgs} nya org.nr, ${candidates} kandidater, ${flagged} flaggade.`);
+    console.log(`Klart. ${totalRows} rader, ${newOrgs} nya org.nr, ${candidates} kandidater, ${flagged} flaggade direkt.`);
+    console.log(`Watchlist: ${watchlistAdded} nya tillagda, ${watchlistFlagged} flaggade via förändring, ${expiredResult.rows.length} gick ut.`);
     console.log('Orgform-fördelning (verifiera AKTIEBOLAG_KODER mot denna):', orgformCounts);
   } catch (err) {
     console.error('Körning misslyckades:', err);
