@@ -68,9 +68,11 @@ export default async function handler(req, res) {
       return handleFlaggedTickers(req, res);
     case 'admin-sync-historical':
       return handleAdminSyncHistorical(req, res);
+    case 'watchlist-status':
+      return handleWatchlistStatus(req, res);
     default:
       return res.status(400).json({
-        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers | admin-sync-historical',
+        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers | admin-sync-historical | watchlist-status',
       });
   }
 }
@@ -571,6 +573,35 @@ async function handleAdminSyncHistorical(req, res) {
     return res.status(200).json({ synced, skipped, results });
   } catch (err) {
     console.error('Fel vid historisk synk:', err);
+    return res.status(500).json({ error: 'Internt fel', detail: err.message });
+  }
+}
+
+// ============================================================
+// GET ?action=watchlist-status
+// Snabb överblick över bevakningslistan — hur många väntar, hur många
+// har flaggats via en förändring, hur många gått ut utan att hända något.
+// ============================================================
+async function handleWatchlistStatus(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Endast GET tillåtet' });
+  }
+  try {
+    const { rows: counts } = await sql`
+      SELECT status, COUNT(*)::int AS count FROM watchlist GROUP BY status
+    `;
+    const { rows: recentlyFlagged } = await sql`
+      SELECT org_nr, original_name, score, last_checked_at, flagged_track_record_id
+      FROM watchlist WHERE status = 'flagged'
+      ORDER BY last_checked_at DESC LIMIT 10
+    `;
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    return res.status(200).json({
+      counts: Object.fromEntries(counts.map((c) => [c.status, c.count])),
+      recentlyFlagged,
+    });
+  } catch (err) {
+    console.error('Fel vid hämtning av watchlist-status:', err);
     return res.status(500).json({ error: 'Internt fel', detail: err.message });
   }
 }
