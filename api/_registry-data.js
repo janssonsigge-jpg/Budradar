@@ -2,27 +2,249 @@
 // BUDREGISTER — data
 // Fullständiga poster enligt _registry-schema.js
 //
-// Nilörngruppen och Sleep Cycle är byggda som REFERENSPOSTER — de visar
-// hur en komplett rad ser ut. Använd dem som mall när du fyller på.
+// Ombyggt 2026-11-16: alla poster verifierade mot budgivarens/målbolagets
+// pressmeddelanden eller etablerad finanspress. Tidigare poster hade fel
+// datum (Biotage, Fortnox, Humana, Viva Wine) och är rättade här.
+// Fält som inte kunnat verifieras är null — hellre tomt än fel.
 //
-// Källor: MFN-pressmeddelanden, Placera, EFN, Affärsvärlden, VQM.
+// OBS: id-fälten för de ursprungliga posterna (t.ex. "2026-01-12-biotage")
+// behålls oförändrade eftersom bidco_registry.bud_id pekar på dem.
+// Datumet i id:t är alltså inte nödvändigtvis budets datum — använd fältet announced.
 // ============================================================
 
 export const REGISTRY = [
+  // ---------------------------------------------------------- 2026
+  {
+    id: "2026-11-09-qliro",
+    target: "Qliro", targetTicker: "QLIRO", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Fintech / Betalningar",
+    bidder: "Svea Bank", bidderType: "Industriell", bidderCountry: "SE",
+    bidcoChain: ["Svea Bank AB (publ)"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 23.5, currency: "SEK",
+    equityValueMSEK: 805, evMSEK: null,
+    premiumLastClose: 85, premium30d: 80.6, premium90d: 57,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [
+      { name: "Rite Ventures, Cidro Förvaltning (Peter Lindell) m.fl. — sålde till Svea", capitalPct: 29.8, votesPct: null, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
+    firstFlagging: "2026-11-06", rumourDate: null,
+    announced: "2026-11-09", acceptStart: "2026-12-21", acceptEnd: "2027-02-25",
+    settlement: "2027-03-04", delisting: null,
+    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: true,
+    boardRecommended: null, fairnessOpinion: null,
+    outcome: "Pågår", finalAcceptance: null, raisedTo: null,
+    notes: "Svea köpte 10,2 miljoner aktier för 17,79 kr den 6 november och gick från 3,5 % till 33,2 % — budplikt. " +
+           "Tre dagar senare kom budet på 23,50 kr. Aktien hade fallit ~14 % på Q3-rapporten den 22 oktober. " +
+           "Enda villkoret är myndighetstillstånd.",
+    sources: ["https://via.tt.se/announcement/4632837?publisherId=2899986"],
+  },
+  {
+    id: "2026-10-01-triona",
+    target: "Triona", targetTicker: "TRIONA", targetIsin: null, targetOrgNr: null,
+    market: "NGM Nordic SME", sector: "Mjukvara / Infrastruktur",
+    bidder: "Volaris Group (Constellation Software)", bidderType: "Industriell", bidderCountry: "CA",
+    bidcoChain: ["Constellation Software", "Volaris Group Inc.", "VLRS GRP BidCo AB"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 45.5, currency: "SEK",
+    equityValueMSEK: 259, evMSEK: null,
+    premiumLastClose: 30.7, premium30d: null, premium90d: null,
+    evEbit: null, evSales: 1.0, consideration: "Kontant",
+    preBidOwners: [
+      { name: "Grundare och styrelse (bl.a. Håkan Blomdahl)", capitalPct: 12.7, votesPct: 12.7, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-10-01", acceptStart: "2026-10-02", acceptEnd: "2026-11-12",
+    settlement: null, delisting: null,
+    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
+    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
+    notes: "Klassiskt Constellation-förvärv: litet vertikalt mjukvarubolag, låg multipel (~1x omsättning). " +
+           "Erbjudandet förklarades ovillkorat 12 november.",
+    sources: ["https://www.prnewswire.co.uk/news-releases/vlrs-grp-bidco-ab-announces-a-recommended-cash-offer-of-sek-45-5-per-share-to-the-shareholders-of-triona-ab-publ-302895424.html"],
+  },
+  {
+    id: "2026-09-29-preservium",
+    target: "Preservium Property", targetTicker: null, targetIsin: null, targetOrgNr: null,
+    market: "Spotlight", sector: "Fastigheter",
+    bidder: "Public Property Invest (PPI)", bidderType: "Industriell", bidderCountry: "NO",
+    bidcoChain: ["Public Property Invest"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: null, currency: "SEK",
+    equityValueMSEK: null, evMSEK: null,
+    premiumLastClose: 44, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Aktier",
+    preBidOwners: [
+      { name: "SBB (positiv, ej bunden)", capitalPct: 35, votesPct: null, committed: false },
+    ],
+    irrevocable: false, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-09-29", acceptStart: "2026-11-06", acceptEnd: "2026-12-07",
+    settlement: "2026-12-09", delisting: null,
+    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: null, fairnessOpinion: null,
+    outcome: "Pågår", finalAcceptance: null, raisedTo: null,
+    notes: "Premien ~44 % gäller om PPI-aktien värderas till substansvärdet per 30 juni 2026. " +
+           "PPI lade samtidigt bud på Origa Care och One Publicus Fastighets.",
+    sources: ["https://efn.se/ppi-vill-kopa-ut-sbb-agt-spotlightbolag-i-kranglig-affar"],
+  },
+  {
+    id: "2026-08-13-evolution",
+    target: "Evolution", targetTicker: "EVO", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "iGaming / B2B",
+    bidder: "Candle Lake (Kenneth Dart)", bidderType: "Storägare", bidderCountry: "KY",
+    bidcoChain: ["Kenneth Dart", "Candle Lake Limited"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 695, currency: "SEK",
+    equityValueMSEK: 131700, evMSEK: null,
+    premiumLastClose: -5.7, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [
+      { name: "Candle Lake (efter köp över 30 %)", capitalPct: 31.6, votesPct: null, committed: true },
+    ],
+    irrevocable: null, freeFloat: null,
+    firstFlagging: "2026-07-24", rumourDate: null,
+    announced: "2026-08-13", acceptStart: null, acceptEnd: "2026-09-15",
+    settlement: null, delisting: null,
+    acceptanceThreshold: null, dueDiligence: false, mandatoryOffer: true,
+    boardRecommended: false, fairnessOpinion: null,
+    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
+    notes: "Budpliktsbud, inte ett försök att köpa bolaget. Priset (695 kr) = högsta pris Dart betalade när 30 % passerades, " +
+           "vilket var under börskursen. Styrelsen avrådde, få aktier lämnades in. Aktien handlades nära 900 kr när budet stängde.",
+    sources: ["https://mb.cision.com/Main/24291/4382739/4217092.pdf"],
+  },
+  {
+    id: "2026-07-08-bahnhof",
+    target: "Bahnhof", targetTicker: "BAHN B", targetIsin: null, targetOrgNr: null,
+    market: "First North Stockholm", sector: "Telekom / Bredband",
+    bidder: "Telenor", bidderType: "Industriell", bidderCountry: "NO",
+    bidcoChain: ["Telenor ASA", "Telenor Sverige AB"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 62, currency: "SEK",
+    equityValueMSEK: null, evMSEK: 6100,
+    premiumLastClose: 22, premium30d: null, premium90d: null,
+    evEbit: 24.1, evSales: 2.6, consideration: "Kontant",
+    preBidOwners: [
+      { name: "Jon Karlung + Andreas Norman (grundare, säljer för 60 kr)", capitalPct: 50.8, votesPct: 86, committed: true },
+      { name: "Öresund Investment", capitalPct: 6.7, votesPct: 1.9, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-07-08", acceptStart: null, acceptEnd: null,
+    settlement: null, delisting: null,
+    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: true,
+    boardRecommended: null, fairnessOpinion: null,
+    outcome: "Pågår", finalAcceptance: null, raisedTo: null,
+    notes: "Ingen bidco — Telenor köper kontrollposten direkt och lägger sedan budpliktsbud på 62 kr. " +
+           "Grundarna har 86 % av rösterna, så ingen kan stoppa affären. Alla myndighetsgodkännanden klara 20 oktober 2026.",
+    sources: ["https://www.telenor.com/media/newsroom/press-releases/telenor-acquires-bahnhof-to-strengthen-position-in-sweden/"],
+  },
+  {
+    id: "2026-02-09-humana",
+    target: "Humana", targetTicker: "HUM", targetIsin: null, targetOrgNr: "556760-8475",
+    market: "Nasdaq Stockholm", sector: "Omsorg",
+    bidder: "Ambea", bidderType: "Industriell", bidderCountry: "SE",
+    bidcoChain: ["Ambea AB (publ)"], bidcoOrgNr: "556468-4354", bidcoRegistered: null,
+    pricePerShare: null, currency: "SEK",
+    equityValueMSEK: 2960, evMSEK: null,
+    premiumLastClose: 26.8, premium30d: 24.0, premium90d: 31.8,
+    evEbit: null, evSales: null, consideration: "Blandat",
+    preBidOwners: [
+      { name: "Impilo Care m.fl.", capitalPct: 41.9, votesPct: null, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-06-29", acceptStart: "2026-08-25", acceptEnd: "2026-09-30",
+    settlement: null, delisting: null,
+    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
+    outcome: "Genomfört", finalAcceptance: 90.84, raisedTo: null,
+    notes: "Vederlag: 20 kr kontant + 0,305 Ambea-aktier per Humana-aktie + CVR kopplat till Humanas skadeståndsprocess mot staten. " +
+           "Ovillkorat 1 oktober 2026 med 90,8 % accept.",
+    sources: ["https://www.inderes.se/en/releases/ambea-ab-publ-offentliggor-slutligt-utfall-i-det-rekommenderade-offentliga-uppkopserbjudandet-till-aktieagarna-i-humana-ab"],
+  },
+  {
+    id: "2026-03-02-vivawine",
+    target: "Viva Wine Group", targetTicker: "VIVA", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Konsument / Dryck",
+    bidder: "Grundarna (Sallnäs, Wittmark, Wistedt)", bidderType: "Grundare", bidderCountry: "SE",
+    bidcoChain: ["Late Harvest Wine Holding 1971 AB + Vin & Vind AB + Legendum Capital AB", "Riesling Ventures AB"],
+    bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 38.5, currency: "SEK",
+    equityValueMSEK: 3451, evMSEK: null,
+    premiumLastClose: 38, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [
+      { name: "Konsortiet (grundarna)", capitalPct: null, votesPct: null, committed: true },
+      { name: "Legendum Capital (John Wistedt)", capitalPct: 10.5, votesPct: 10.5, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-06-29", acceptStart: "2026-07-31", acceptEnd: "2026-08-28",
+    settlement: "2026-09-04", delisting: null,
+    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
+    outcome: "Genomfört", finalAcceptance: 99.6, raisedTo: null,
+    notes: "Grundarna köper ut bolaget till 38,50 kr — klart under noteringskursen 49 kr (2021). Priset höjs inte. " +
+           "96,4 % efter acceptfristen, 99,6 % efter köp utanför erbjudandet.",
+    sources: ["https://mb.cision.com/Main/24272/4368343/4170616.pdf"],
+  },
+  {
+    id: "2026-06-04-formpipe",
+    target: "Formpipe (Lasernet Group)", targetTicker: "FPIP", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Mjukvara",
+    bidder: "Konsortium (Tabellae, Mission Trail, Grenspecialisten)", bidderType: "PE", bidderCountry: "DK",
+    bidcoChain: ["Tabellae HoldCo ApS + Mission Trail Partners LP + AB Grenspecialisten", "Tabellae BidCo ApS"],
+    bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 30, currency: "SEK",
+    equityValueMSEK: null, evMSEK: null,
+    premiumLastClose: 53.8, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [],
+    irrevocable: null, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-06-04", acceptStart: null, acceptEnd: null,
+    settlement: null, delisting: null,
+    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
+    outcome: null, finalAcceptance: null, raisedTo: null,
+    notes: "Bud efter att bolaget avyttrat nästan halva verksamheten hösten 2025. Dansk bidco (ApS) — " +
+           "syns inte i Bolagsverkets register, en blind fläck för registerbevakning.",
+    sources: ["https://mfn.se/all/a/taballaebidco/tabellae-bidco-announces-a-recommended-public-cash-offer-of-sek-30-per-share-to-the-shareholders-of-formpipe"],
+  },
+  {
+    id: "2026-05-11-sleepcycle",
+    target: "Sleep Cycle", targetTicker: "SLEEP", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Konsument / Mjukvara",
+    bidder: "Altor Fund V", bidderType: "PE", bidderCountry: "SE",
+    bidcoChain: ["Altor Fund V", "Snark BidCo AB (tidigare Goldcup 39639 AB)"],
+    bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 24.5, currency: "SEK",
+    equityValueMSEK: null, evMSEK: null,
+    premiumLastClose: 47, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [
+      { name: "Maciej Drejak (h265 AB, MCGA AB) + GLA Invest", capitalPct: 62.9, votesPct: 62.9, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-05-11", acceptStart: "2026-05-26", acceptEnd: "2026-06-17",
+    settlement: null, delisting: null,
+    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
+    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
+    notes: "Skolexempel för BudRadar: bidco:t registrerades som lagerbolaget Goldcup 39639 AB och bytte namn till Snark BidCo. " +
+           "Aktien låg nära årslägsta när budet kom. Altor frånföll acceptnivåvillkoret och fullföljde 3 juli 2026.",
+    sources: ["https://altor.com/news/snark-bidco-ab-announces-a-cash-offer-of-sek-24-50-per-share-to-the-shareholders-of-sleep-cycle-ab-publ"],
+  },
   {
     id: "2026-05-04-nilorngruppen",
     target: "Nilörngruppen", targetTicker: "NIL B", targetIsin: null, targetOrgNr: null,
     market: "Nasdaq Stockholm", sector: "Industri / Etiketter",
-
     bidder: "Trimco Group", bidderType: "PE", bidderCountry: "UK",
     bidcoChain: ["Brookfield", "Trimco Group Holdings Limited", "Trimco Group (UK) Limited"],
     bidcoOrgNr: null, bidcoRegistered: null,
-
     pricePerShare: 77, currency: "SEK",
     equityValueMSEK: 878, evMSEK: null,
     premiumLastClose: 53, premium30d: null, premium90d: null,
     evEbit: 12.9, evSales: 0.9, consideration: "Kontant",
-
     preBidOwners: [
       { name: "AB Traction", capitalPct: 26.3, votesPct: 58.1, committed: true },
       { name: "Protector Forsikring ASA", capitalPct: null, votesPct: null, committed: true },
@@ -30,229 +252,203 @@ export const REGISTRY = [
       { name: "Krister Magnusson (VD)", capitalPct: null, votesPct: null, committed: true },
     ],
     irrevocable: true, freeFloat: null,
-
     firstFlagging: null, rumourDate: null,
     announced: "2026-05-04", acceptStart: "2026-06-19", acceptEnd: "2026-07-10",
     settlement: null, delisting: null,
-
     acceptanceThreshold: 90, dueDiligence: true, mandatoryOffer: false,
     boardRecommended: true, fairnessOpinion: true,
     outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
-
-    notes: "Traction band sig oåterkalleligen även vid högre konkurrerande bud — " +
-           "med 58,1% av rösterna var affären därmed i praktiken avgjord vid offentliggörandet.",
-    sources: [
-      "https://mfn.se/one/a/nilorngruppen/nilorngruppen-offentliggor-styrelsens-uttalande-med-anledning-av-offentligt-uppkopserbjudande-fran-trimco-group-ca9faf4c",
-    ],
+    notes: "Traction band sig oåterkalleligen även vid högre konkurrerande bud — med 58,1 % av rösterna var affären i praktiken avgjord vid offentliggörandet.",
+    sources: ["https://mfn.se/one/a/nilorngruppen/nilorngruppen-offentliggor-styrelsens-uttalande-med-anledning-av-offentligt-uppkopserbjudande-fran-trimco-group-ca9faf4c"],
   },
-
-  {
-    id: "2026-05-11-sleepcycle",
-    target: "Sleep Cycle", targetTicker: "SLEEP", targetIsin: null, targetOrgNr: null,
-    market: "Nasdaq Stockholm", sector: "Konsument / Mjukvara",
-
-    bidder: "Altor Fund V", bidderType: "PE", bidderCountry: "SE",
-    bidcoChain: ["Altor Fund V", "Snark BidCo AB"],
-    bidcoOrgNr: null, bidcoRegistered: null,
-
-    pricePerShare: 24.5, currency: "SEK",
-    equityValueMSEK: null, evMSEK: null,
-    premiumLastClose: 47, premium30d: null, premium90d: null,
-    evEbit: null, evSales: null, consideration: "Kontant",
-
-    preBidOwners: [
-      { name: "Grundare + näst största ägare", capitalPct: 63, votesPct: null, committed: true },
-    ],
-    irrevocable: true, freeFloat: null,
-
-    firstFlagging: null, rumourDate: null,
-    announced: "2026-05-11", acceptStart: null, acceptEnd: null,
-    settlement: null, delisting: null,
-
-    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
-    boardRecommended: true, fairnessOpinion: null,
-    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
-
-    notes: "Aktien handlades nära 52-veckors lägsta (15–16 kr) när budet kom. " +
-           "Klassiskt mönster: budgivaren slår till på nedtryckt kurs, inte på toppen.",
-    sources: [],
-  },
-
   {
     id: "2026-04-27-cint",
     target: "Cint Group", targetTicker: "CINT", targetIsin: null, targetOrgNr: null,
     market: "Nasdaq Stockholm", sector: "Tech / Marknadsundersökning",
-
-    bidder: "Triton Partners + Bolero Holdings", bidderType: "PE", bidderCountry: "Internationell",
-    bidcoChain: ["Triton Partners", "TriCarbs BidCo"],
+    bidder: "Triton Fund 6 + Bolero Holdings", bidderType: "PE", bidderCountry: "Internationell",
+    bidcoChain: ["Triton Fund 6 + Bolero Holdings SARL", "TriCarbs BidCo AB"],
     bidcoOrgNr: null, bidcoRegistered: null,
-
-    pricePerShare: 6.0, currency: "SEK",
-    equityValueMSEK: 2000, evMSEK: null,
-    premiumLastClose: 33, premium30d: null, premium90d: 70,
+    pricePerShare: 5.6, currency: "SEK",
+    equityValueMSEK: 1989, evMSEK: null,
+    premiumLastClose: 33, premium30d: 41, premium90d: 72,
     evEbit: null, evSales: null, consideration: "Kontant",
-
     preBidOwners: [
+      { name: "Bolero Holdings", capitalPct: null, votesPct: null, committed: true },
       { name: "Patrick Comer (VD)", capitalPct: null, votesPct: null, committed: true },
     ],
     irrevocable: null, freeFloat: null,
-
     firstFlagging: null, rumourDate: null,
     announced: "2026-04-27", acceptStart: null, acceptEnd: null,
     settlement: null, delisting: null,
-
-    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
-    boardRecommended: true, fairnessOpinion: null,
+    acceptanceThreshold: 90, dueDiligence: true, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: true,
     outcome: "Höjt bud", finalAcceptance: null, raisedTo: 6.0,
-
-    notes: "Först 5,60 kr. Aktiemarknadsnämnden invände mot att VD satt i budkonsortiet; " +
-           "konsortiet stöptes om och budet höjdes till 6,00. Illustrerar hur management-deltagande " +
-           "kan tvinga fram en höjning.",
-    sources: [],
+    notes: "Aktiemarknadsnämnden (AMN 2026:18) invände mot att VD satt i budkonsortiet; konsortiet stöptes om och budet höjdes 30 juni 2026. " +
+           "Få ägare nappade initialt och acceptfristen förlängdes.",
+    sources: ["https://investors.cint.com/sv/node/673"],
   },
-
   {
-    id: "2026-07-08-bahnhof",
-    target: "Bahnhof", targetTicker: "BAHN B", targetIsin: null, targetOrgNr: null,
-    market: "Nasdaq Stockholm", sector: "Telekom",
-
-    bidder: "Telenor", bidderType: "Industriell", bidderCountry: "NO",
-    bidcoChain: ["Telenor Group"], bidcoOrgNr: null, bidcoRegistered: null,
-
-    pricePerShare: 62, currency: "SEK",
+    id: "2026-02-19-krona",
+    target: "Krona Public Real Estate", targetTicker: "KRONA", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Fastigheter",
+    bidder: "Stenhus Fastigheter + Sterner Stenhus Holding", bidderType: "Storägare", bidderCountry: "SE",
+    bidcoChain: ["Stenhus Fastigheter i Norden AB + Sterner Stenhus Holding AB", "Krona BidCo AB (tidigare Goldcup 38953 AB)"],
+    bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 35.75, currency: "SEK",
     equityValueMSEK: null, evMSEK: null,
-    premiumLastClose: 22, premium30d: null, premium90d: null,
+    premiumLastClose: null, premium30d: null, premium90d: null,
     evEbit: null, evSales: null, consideration: "Kontant",
-
     preBidOwners: [
-      { name: "Jon Karlung + Andreas Norman (grundare)", capitalPct: 50.8, votesPct: 86, committed: true },
-      { name: "Investment AB Öresund", capitalPct: 6.7, votesPct: 1.9, committed: true },
+      { name: "Stenhus + Sterner (konsoliderat i BidCo)", capitalPct: 69.9, votesPct: 69.9, committed: true },
     ],
     irrevocable: true, freeFloat: null,
-
-    firstFlagging: null, rumourDate: null,
-    announced: "2026-07-08", acceptStart: null, acceptEnd: null,
+    firstFlagging: "2026-01-15", rumourDate: null,
+    announced: "2026-02-19", acceptStart: "2026-02-20", acceptEnd: null,
     settlement: null, delisting: null,
-
+    acceptanceThreshold: null, dueDiligence: false, mandatoryOffer: true,
+    boardRecommended: null, fairnessOpinion: null,
+    outcome: null, finalAcceptance: null, raisedTo: null,
+    notes: "Ännu ett Goldcup-skal: Krona BidCo hette Goldcup 38953 AB. Konsolideringen offentliggjordes 15 januari, " +
+           "budplikt utlöstes 11 februari, budet kom 19 februari. Stort obligationslån med förfall i mars hängde över bolaget.",
+    sources: ["https://www.inderes.se/en/releases/krona-public-real-estate-ab-publ-kommentar-fran-styrelsen-i-krona-public-real-estate-ab-angaende-budpliktsbud-fran-krona-bidco-ab"],
+  },
+  {
+    id: "2026-01-09-comintelli",
+    target: "Comintelli", targetTicker: "COMINT", targetIsin: null, targetOrgNr: null,
+    market: "Spotlight", sector: "Mjukvara",
+    bidder: "Dahlgren Capital", bidderType: "Industriell", bidderCountry: "SE",
+    bidcoChain: ["Dahlgren Capital Active Equity AB", "DCAP BIDCO 2 AB (publ)"],
+    bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 3.5, currency: "SEK",
+    equityValueMSEK: 35, evMSEK: null,
+    premiumLastClose: 68, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant eller aktier",
+    preBidOwners: [],
+    irrevocable: null, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2026-01-09", acceptStart: "2026-03-03", acceptEnd: "2026-03-31",
+    settlement: "2026-04-13", delisting: null,
     acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
     boardRecommended: null, fairnessOpinion: null,
-    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
-
-    notes: "Grundarna fick 60 kr/aktie medan Öresund och övriga fick 62 kr. " +
-           "Med 86% av rösterna hos grundarna var utgången given när de bestämt sig.",
-    sources: ["https://efn.se/snalt-bud-darfor-ar-bahnhof-ar-vart-mer"],
+    outcome: null, finalAcceptance: null, raisedTo: null,
+    notes: "Årets första bud. Vederlag: 3,50 kr kontant eller 1 stamaktie i DCAP BIDCO per aktie.",
+    sources: ["https://www.inderes.se/en/releases/comintelli-informerar-om-prospekt-for-uppkopserbjudande-fran-dcap-bidco"],
   },
 
+  // ---------------------------------------------------------- 2025
   {
-    id: "2026-03-02-vivawine",
-    target: "Viva Wine Group", targetTicker: "VIVA", targetIsin: null, targetOrgNr: null,
-    market: "Nasdaq Stockholm", sector: "Konsument / Dryck",
-
-    bidder: "Grundarna", bidderType: "Grundare", bidderCountry: "SE",
-    bidcoChain: ["Riesling Ventures"], bidcoOrgNr: null, bidcoRegistered: null,
-
-    pricePerShare: 38.5, currency: "SEK",
+    id: "2025-11-26-arise",
+    target: "Arise", targetTicker: "ARISE", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Energi / Vindkraft",
+    bidder: "Aneo (TrønderEnergi + HitecVision)", bidderType: "Industriell", bidderCountry: "NO",
+    bidcoChain: ["TrønderEnergi + HitecVision", "Aneo Holding AS", "Aneo BidCo 1 AB"],
+    bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 45, currency: "SEK",
     equityValueMSEK: null, evMSEK: null,
-    premiumLastClose: 38, premium30d: null, premium90d: null,
+    premiumLastClose: null, premium30d: null, premium90d: null,
     evEbit: null, evSales: null, consideration: "Kontant",
-
-    preBidOwners: [], irrevocable: null, freeFloat: null,
-
+    preBidOwners: [
+      { name: "AltoCumulus (Axel Johnson-sfären) m.fl.", capitalPct: null, votesPct: null, committed: true },
+    ],
+    irrevocable: true, freeFloat: null,
     firstFlagging: null, rumourDate: null,
-    announced: "2026-03-02", acceptStart: null, acceptEnd: null,
-    settlement: null, delisting: null,
-
-    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
-    boardRecommended: null, fairnessOpinion: null,
+    announced: "2025-11-26", acceptStart: "2025-12-02", acceptEnd: "2025-12-30",
+    settlement: "2026-01-12", delisting: null,
+    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
     outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
-
-    notes: "Budet låg under noteringskursen 49 kr — premien mäts mot kursen före budet, " +
-           "inte mot IPO-pris eller historisk topp.",
-    sources: [],
+    notes: "Budet kan inte höjas. Åtagandena gällde även vid högre konkurrerande bud.",
+    sources: ["https://www.aneo.com/en/offer-a"],
   },
-
+  {
+    id: "2025-09-16-backaheden",
+    target: "Backaheden Fastighets", targetTicker: null, targetIsin: null, targetOrgNr: null,
+    market: null, sector: "Fastigheter",
+    bidder: "Stenhus Fastigheter", bidderType: "Storägare", bidderCountry: "SE",
+    bidcoChain: ["Stenhus Fastigheter i Norden AB"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 78, currency: "SEK",
+    equityValueMSEK: null, evMSEK: null,
+    premiumLastClose: null, premium30d: null, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [],
+    irrevocable: null, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2025-09-16", acceptStart: "2025-09-17", acceptEnd: "2025-10-15",
+    settlement: null, delisting: null,
+    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: null, fairnessOpinion: null,
+    outcome: null, finalAcceptance: null, raisedTo: null,
+    notes: "Storägaren lägger bud. Samma köpare som senare konsoliderade Krona via ett Goldcup-skal.",
+    sources: ["https://www.placera.se/nyheter/storagaren--lagger-bud-pa-backaheden-2025-09-16"],
+  },
   {
     id: "2026-01-12-biotage",
     target: "Biotage", targetTicker: "BIOT", targetIsin: null, targetOrgNr: null,
     market: "Nasdaq Stockholm", sector: "Life Science",
-
     bidder: "KKR", bidderType: "PE", bidderCountry: "US",
-    bidcoChain: ["KKR"], bidcoOrgNr: null, bidcoRegistered: null,
-
-    pricePerShare: null, currency: "SEK",
-    equityValueMSEK: null, evMSEK: null,
-    premiumLastClose: 60, premium30d: null, premium90d: null,
+    bidcoChain: ["KKR Fonder", "RWK Bidco AB"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 145, currency: "SEK",
+    equityValueMSEK: 11600, evMSEK: null,
+    premiumLastClose: 60.1, premium30d: 49.7, premium90d: 32.4,
     evEbit: null, evSales: null, consideration: "Kontant",
-
-    preBidOwners: [], irrevocable: null, freeFloat: null,
-
+    preBidOwners: [
+      { name: "Gamma Biosciences (KKR)", capitalPct: 17, votesPct: 17, committed: true },
+      { name: "Carnegie Fonder, SEB AM, Coeli (stöd)", capitalPct: 19, votesPct: 19, committed: false },
+    ],
+    irrevocable: null, freeFloat: null,
     firstFlagging: null, rumourDate: null,
-    announced: "2026-01-12", acceptStart: null, acceptEnd: null,
+    announced: "2025-04-22", acceptStart: null, acceptEnd: null,
     settlement: null, delisting: null,
-
-    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
-    boardRecommended: null, fairnessOpinion: null,
+    acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: true,
     outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
-
-    notes: "Aktien steg över 55% på veckan — börsens klart bästa. Högsta premien i registret.",
-    sources: [],
+    notes: "KKR var redan indirekt största ägare via Gamma Biosciences. Aktien var ned 44 % sedan årsskiftet när budet kom.",
+    sources: ["https://www.placera.se/nyheter/kkr-lagger-bud-pa-biotage-2025-04-22"],
   },
-
-  {
-    id: "2026-02-09-humana",
-    target: "Humana", targetTicker: "HUM", targetIsin: null, targetOrgNr: null,
-    market: "Nasdaq Stockholm", sector: "Omsorg",
-
-    bidder: "Ambea", bidderType: "Industriell", bidderCountry: "SE",
-    bidcoChain: ["Ambea AB"], bidcoOrgNr: null, bidcoRegistered: null,
-
-    pricePerShare: null, currency: "SEK",
-    equityValueMSEK: null, evMSEK: null,
-    premiumLastClose: 27, premium30d: null, premium90d: null,
-    evEbit: null, evSales: null, consideration: "Blandat",
-
-    preBidOwners: [], irrevocable: null, freeFloat: null,
-
-    firstFlagging: null, rumourDate: null,
-    announced: "2026-02-09", acceptStart: null, acceptEnd: null,
-    settlement: null, delisting: null,
-
-    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
-    boardRecommended: null, fairnessOpinion: null,
-    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
-
-    notes: "Branschkonsolidering — konkurrenten köpte. Kombinerat kontant- och aktiebud.",
-    sources: [],
-  },
-
   {
     id: "2025-06-16-fortnox",
     target: "Fortnox", targetTicker: "FNOX", targetIsin: null, targetOrgNr: null,
     market: "Nasdaq Stockholm", sector: "Tech / Affärssystem",
-
-    bidder: "Olof Hallrup + EQT", bidderType: "Storägare", bidderCountry: "SE",
-    bidcoChain: ["First Kraft AB"], bidcoOrgNr: null, bidcoRegistered: null,
-
+    bidder: "EQT X + First Kraft (Olof Hallrup)", bidderType: "PE", bidderCountry: "SE",
+    bidcoChain: ["EQT X + First Kraft AB", "Omega II AB"], bidcoOrgNr: null, bidcoRegistered: null,
     pricePerShare: 90, currency: "SEK",
-    equityValueMSEK: null, evMSEK: null,
+    equityValueMSEK: 54900, evMSEK: null,
     premiumLastClose: 38, premium30d: null, premium90d: null,
-    evEbit: null, evSales: null, consideration: "Kontant",
-
+    evEbit: 63, evSales: 28, consideration: "Kontant",
     preBidOwners: [
-      { name: "Olof Hallrup", capitalPct: null, votesPct: null, committed: true },
+      { name: "First Kraft (Olof Hallrup, ordförande)", capitalPct: null, votesPct: null, committed: true },
     ],
-    irrevocable: null, freeFloat: null,
-
+    irrevocable: true, freeFloat: null,
     firstFlagging: null, rumourDate: null,
-    announced: "2025-06-16", acceptStart: null, acceptEnd: null,
-    settlement: null, delisting: null,
-
+    announced: "2025-03-31", acceptStart: "2025-05-12", acceptEnd: "2025-06-10",
+    settlement: "2025-06-18", delisting: null,
     acceptanceThreshold: 90, dueDiligence: null, mandatoryOffer: false,
-    boardRecommended: null, fairnessOpinion: null,
-    outcome: "Genomfört", finalAcceptance: null, raisedTo: null,
+    boardRecommended: true, fairnessOpinion: true,
+    outcome: "Genomfört", finalAcceptance: 90.5, raisedTo: null,
+    notes: "Budet kunde inte höjas. Acceptnivåvillkoret frånföll 12 juni; 90,5 % nåddes först 4 juli 2025 efter två förlängningar.",
+    sources: ["https://news.cision.com/omega-ii-ab/r/eqt-x-and-first-kraft--acting-through-omega-ii-ab--announce-a-recommended-cash-offer-of-sek-90-per-s,c4127762"],
+  },
 
-    notes: "2025 års största bud. Storägare gick ihop med PE — vanligt mönster " +
-           "när en befintlig ägare vill ta hem bolaget men saknar kapital själv.",
-    sources: [],
+  // ---------------------------------------------------------- 2024
+  {
+    id: "2024-08-29-concentric",
+    target: "Concentric", targetTicker: "COIC", targetIsin: null, targetOrgNr: null,
+    market: "Nasdaq Stockholm", sector: "Industri",
+    bidder: "Circle BidCo", bidderType: null, bidderCountry: "DK",
+    bidcoChain: ["Circle BidCo ApS"], bidcoOrgNr: null, bidcoRegistered: null,
+    pricePerShare: 230, currency: "SEK",
+    equityValueMSEK: null, evMSEK: null,
+    premiumLastClose: 61.5, premium30d: 48.7, premium90d: null,
+    evEbit: null, evSales: null, consideration: "Kontant",
+    preBidOwners: [],
+    irrevocable: null, freeFloat: null,
+    firstFlagging: null, rumourDate: null,
+    announced: "2024-08-29", acceptStart: null, acceptEnd: null,
+    settlement: null, delisting: null,
+    acceptanceThreshold: null, dueDiligence: null, mandatoryOffer: false,
+    boardRecommended: true, fairnessOpinion: null,
+    outcome: null, finalAcceptance: null, raisedTo: null,
+    notes: "Dansk bidco (ApS) — ännu ett exempel på skal som inte syns hos Bolagsverket.",
+    sources: ["https://news.cision.com/circle-bidco-aps/r/circle-bidco-announces-a-recommended-public-cash-offer-of-sek-230-per-share-to-the-shareholders-of-c,c4030220"],
   },
 ];
