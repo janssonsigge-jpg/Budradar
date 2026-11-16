@@ -45,13 +45,17 @@ export default async function handler(req, res) {
     if (flags.status === "fulfilled") { mergeFlags(map, flags.value); fetched.flags = `ok (${flags.value.length} rader)`; }
     else fetched.flags = "FEL: " + String(flags.reason).slice(0, 120);
 
-    const companies = [...map.values()].map(scoreCompany)
+    const companies = mergeByIsin(map).map(scoreCompany)
       .filter(c => c.score.composite > 0 || c.detail.insider.length || c.detail.flags.length)
       .sort((a, b) => b.score.composite - a.score.composite);
 
     // Berika med börsvärde/kurs från fundamentals-tabellen (om databas finns).
     // Detta driver storleksfiltret — stora bolag blir sällan uppköpta.
     await enrichWithFundamentals(companies);
+    for (const c of companies) {
+      c.largeCap = (c.mcapMSEK != null && c.mcapMSEK >= 10000) || isKnownLargeCap(c.name);
+      c.lastEvent = lastEventDate(c);
+    }
 
     CACHE = { ts: Date.now(), data: companies };
     res.status(200).json({ source: fresh ? "fresh" : "live", fetched, count: companies.length, companies });
@@ -63,21 +67,81 @@ export default async function handler(req, res) {
 // ---------- helpers ----------
 const UA = "BudRadar/0.1 (+offentlig data)";
 function norm(name) {
+  // "Sandvik Aktiebolag", "Sandvik AB" och "SANDVIK AB (publ)" ska bli samma bolag.
   return (name || "").toLowerCase()
-    .replace(/\s+(ab|asa|oyj|plc|publ|holding|group|\(publ\))\b/g, "")
-    .replace(/[.,]/g, "").replace(/\s+/g, " ").trim();
+    .replace(/&amp;/g, "&")
+    .replace(/\(.*?\)/g, " ")
+    .replace(/\b(aktiebolag|ab|asa|oyj|plc|publ|holding|group|ltd|inc|se)\b/g, " ")
+    .replace(/[.,]/g, " ").replace(/\s+/g, " ").trim();
 }
 function getCo(map, name) {
   const key = norm(name);
   if (!key) return null;
   if (!map.has(key)) {
-    map.set(key, { name, ticker: key.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8),
+    // ticker = intern nyckel (används av snapshots/backtest). symbol = riktig börsticker, sätts i berikningen.
+    map.set(key, { name, ticker: key.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), symbol: null,
       list: null, priceSEK: null, mcapMSEK: null, _insider: [], _flags: [], _shorts: [], _bv: [] });
   }
   return map.get(key);
 }
 function toNum(s) { return Number(String(s == null ? "" : s).replace(/\s/g, "").replace(/\u00a0/g, "").replace(",", ".")) || 0; }
 function dateIn(s) { const m = String(s == null ? "" : s).match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : null; }
+
+// Samma bolag kan dyka upp under olika namn i olika källor. När ISIN finns
+// (från insynsregistret) slår vi ihop posterna på den.
+function mergeByIsin(map) {
+  const byIsin = new Map();
+  const out = [];
+  for (const co of map.values()) {
+    if (!co._isin) { out.push(co); continue; }
+    const prev = byIsin.get(co._isin);
+    if (!prev) { byIsin.set(co._isin, co); out.push(co); continue; }
+    prev._insider.push(...co._insider);
+    prev._flags.push(...co._flags);
+    prev._shorts.push(...co._shorts);
+    prev._bv.push(...co._bv);
+    if (!prev._totalShares && co._totalShares) prev._totalShares = co._totalShares;
+    if (co.name.length < prev.name.length) prev.name = co.name;
+  }
+  // Andra varvet: poster utan ISIN men med samma normaliserade nyckel som en ISIN-post
+  const byKey = new Map(out.filter(c => c._isin).map(c => [norm(c.name), c]));
+  return out.filter(co => {
+    if (co._isin) return true;
+    const twin = byKey.get(norm(co.name));
+    if (!twin || twin === co) return true;
+    twin._insider.push(...co._insider); twin._flags.push(...co._flags);
+    twin._shorts.push(...co._shorts); twin._bv.push(...co._bv);
+    return false;
+  });
+}
+
+// Nasdaq Stockholm Large Cap — blir sällan uppköpta. Används när börsvärde saknas.
+const LARGE_CAP = [
+  "abb", "alfa laval", "assa abloy", "astrazeneca", "atlas copco", "autoliv", "axfood", "beijer ref",
+  "boliden", "castellum", "electrolux", "elekta", "epiroc", "eqt", "telefonaktiebolaget lm ericsson", "ericsson",
+  "essity", "evolution", "fabege", "fastighets balder", "getinge", "hennes & mauritz", "h & m", "svenska handelsbanken",
+  "hexagon", "holmen", "husqvarna", "industrivärden", "indutrade", "investor", "kinnevik", "l e lundbergföretagen",
+  "lifco", "nibe industrier", "nordea bank", "saab", "sagax", "sandvik", "svenska cellulosa", "skandinaviska enskilda banken",
+  "securitas", "skanska", "skf", "ssab", "swedbank", "swedish orphan biovitrum", "tele2", "telia company", "trelleborg",
+  "volvo", "volvo car", "wallenstam", "wihlborgs fastigheter", "addtech", "aak", "avanza bank", "nordnet", "sweco",
+  "thule", "investment latour", "lagercrantz", "hexpol", "loomis", "mycronic", "sectra", "atrium ljungberg",
+  "catena", "hufvudstaden", "dometic", "nolato", "peab", "ncc", "jm", "bravida", "munters", "alleima", "embracer",
+  "industrivarden", "billerud", "sinch", "camurus", "storskogen", "vitec software", "bufab", "beijer alma",
+];
+const LARGE_CAP_KEYS = new Set(LARGE_CAP.map(norm));
+function isKnownLargeCap(name) {
+  const k = norm(name);
+  return LARGE_CAP_KEYS.has(k) || LARGE_CAP_KEYS.has(k.replace(/^ab /, "")) || LARGE_CAP_KEYS.has(k.split(" ")[0] === "ab" ? k.slice(3) : k);
+}
+
+function lastEventDate(c) {
+  const d = [
+    ...c.detail.insider.map(x => x.tx_date),
+    ...c.detail.flags.map(x => x.flag_date),
+    ...c.detail.shorts.map(x => x.position_date),
+  ].filter(Boolean).sort();
+  return d.length ? d[d.length - 1] : null;
+}
 
 // ---------- FI Insynsregistret (UTF-16!) ----------
 async function fetchInsider() {
@@ -257,7 +321,7 @@ function parseFlagHtml(html) {
   let threshold = null;
   if (thNum) { const n = ths.find(x => Math.abs(x - thNum) <= 1); if (n) threshold = n + "%"; }
 
-  const direction = /avyttr|minskn|sålt|överlåt/i.test(reason || "") ? "ner" : "upp";
+  const direction = /avyttr|minsk|sålt|sälj|salj|överlåt|utlån/i.test(reason || "") ? "ner" : "upp";
 
   // Räkna ut bolagets TOTALA antal aktier ur flaggningen.
   // Flaggningen anger innehavarens antal aktier OCH deras andel i procent,
@@ -327,7 +391,9 @@ function scoreCompany(co) {
   const recentIns = co._insider.filter(x => x.tx_date && now - Date.parse(x.tx_date) < d90);
   let netMSEK = 0; const buyers = new Set(), sellers = new Set();
   for (const x of recentIns) {
-    if (/förvärv|forvarv|köp|teckn/i.test(x.tx_type)) { netMSEK += x.amount_sek / 1e6; buyers.add(x.person); }
+    // Teckning i emission väger hälften — det är ofta att delta i en nyemission, inte en marknadsköp.
+    if (/teckn/i.test(x.tx_type)) { netMSEK += x.amount_sek / 2e6; buyers.add(x.person); }
+    else if (/förvärv|forvarv|köp/i.test(x.tx_type)) { netMSEK += x.amount_sek / 1e6; buyers.add(x.person); }
     else if (/avyttr|sälj|salj|avytt/i.test(x.tx_type)) { netMSEK -= x.amount_sek / 1e6; sellers.add(x.person); }
   }
   const insider = clamp(Math.max(0, netMSEK) * 4 + buyers.size * 6 - sellers.size * 5, 0, 100);
@@ -346,7 +412,7 @@ function scoreCompany(co) {
 
   const composite = Math.round(insider * 0.3 + flags * 0.3 + shortSig * 0.2 + bv * 0.2);
   return {
-    ticker: co.ticker, name: co.name, list: co.list, priceSEK: co.priceSEK, mcapMSEK: co.mcapMSEK, isin: co._isin || null, _totalShares: co._totalShares || null,
+    ticker: co.ticker, symbol: co.symbol || null, name: co.name, list: co.list, priceSEK: co.priceSEK, mcapMSEK: co.mcapMSEK, isin: co._isin || null, _totalShares: co._totalShares || null,
     score: { composite, tier: tier(composite), parts: { insider: Math.round(insider), flags: Math.round(flags), shortSig: Math.round(shortSig), bv: Math.round(bv) } },
     detail: {
       insider: recentIns.slice(0, 8),
@@ -370,8 +436,8 @@ async function enrichWithFundamentals(companies) {
     // 1) BÖRSDATA först — bäst täckning, matchar på ISIN (exakt nyckel).
     try {
       const bd = await sql`
-        SELECT isin, lower(name) AS lname, price_sek, market_cap_msek
-        FROM borsdata_instruments WHERE market_cap_msek IS NOT NULL OR price_sek IS NOT NULL`;
+        SELECT isin, lower(name) AS lname, ticker, price_sek, market_cap_msek
+        FROM borsdata_instruments`;
       const byIsin = new Map(), byName = new Map();
       for (const r of bd) {
         if (r.isin) byIsin.set(r.isin, r);
@@ -380,10 +446,18 @@ async function enrichWithFundamentals(companies) {
       for (const c of companies) {
         const hit = (c.isin && byIsin.get(c.isin)) || byName.get((c.name || "").toLowerCase());
         if (!hit) continue;
+        if (hit.ticker && !c.symbol) c.symbol = String(hit.ticker).trim();
         if (hit.market_cap_msek != null) c.mcapMSEK = Number(hit.market_cap_msek);
         if (hit.price_sek != null) c.priceSEK = Number(hit.price_sek);
       }
     } catch { /* tabellen finns kanske inte än */ }
+
+    // 1b) companies-tabellen — riktiga tickers via ISIN
+    try {
+      const rows = await sql`SELECT isin, ticker FROM companies WHERE isin IS NOT NULL AND ticker IS NOT NULL`;
+      const t = new Map(rows.map(r => [r.isin, String(r.ticker).trim()]));
+      for (const c of companies) if (!c.symbol && c.isin && t.get(c.isin)) c.symbol = t.get(c.isin);
+    } catch { /* tabellen finns kanske inte */ }
 
     // 2) Yahoo-tabellen som komplement för det Börsdata missar
     try {
