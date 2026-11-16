@@ -114,30 +114,40 @@ async function downloadAndExtract() {
   fs.mkdirSync(WORK_DIR, { recursive: true });
 
   const zipPath = path.join(WORK_DIR, 'bulkfil.zip');
-  // Bolagsverkets server bryter ibland anslutningen mitt i filen ("other side closed").
-  // curl laddar ner med återupptagning (-C -) och flera försök tills zip:en är hel.
-  console.log('Laddar ner bulkfil...');
-  const MAX_FORSOK = 10;
-  let klar = false;
-  for (let forsok = 1; forsok <= MAX_FORSOK && !klar; forsok++) {
+  // Bolagsverkets server bryter anslutningen från GitHubs servrar mitt i filen.
+  // Därför hämtar Vercel filen i bitar (Range-anrop) och sparar dem i privat
+  // Vercel Blob. Vi anropar speglingen tills alla bitar finns, och sätter sedan
+  // ihop dem till zip-filen här.
+  console.log('Laddar ner bulkfil via Vercel-spegling...');
+  const MIRROR_URL = 'https://budradar.vercel.app/api/system?action=bv-mirror';
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) throw new Error('BLOB_READ_WRITE_TOKEN saknas');
+  let status = null;
+  for (let anrop = 1; anrop <= 60; anrop++) {
+    status = null;
     try {
-      execSync(
-        `curl -fsSL --connect-timeout 30 --speed-limit 1000 --speed-time 60 -C - -A "${UA}" -o "${zipPath}" "${BULK_URL}"`,
-        { stdio: 'inherit' }
-      );
-      execSync(`unzip -tq "${zipPath}"`, { stdio: 'inherit' }); // kontrollerar att zip:en är komplett
-      klar = true;
+      const r = await fetch(MIRROR_URL, { method: 'POST', headers: { authorization: `Bearer ${token}` } });
+      const txt = await r.text();
+      if (r.ok) status = JSON.parse(txt);
+      console.log(`Spegling ${anrop}: HTTP ${r.status} ${status ? `${status.done}/${status.total} delar` : txt.slice(0, 200)}${status?.errors?.length ? ' — ' + status.errors.join('; ') : ''}`);
+      if (status?.complete) break;
     } catch (err) {
-      const storlek = fs.existsSync(zipPath) ? fs.statSync(zipPath).size : 0;
-      console.log(`Försök ${forsok}/${MAX_FORSOK} misslyckades (${(storlek / 1e6).toFixed(1)} MB hittills): ${err.message.split('\n')[0]}`);
-      // Exit 33 = servern stödjer inte återupptagning, 22 = HTTP-fel (t.ex. 416). Börja om från noll då.
-      if (err.status === 33 || err.status === 22 || err.status === 2 || err.status === 3 || err.status === 9) {
-        fs.rmSync(zipPath, { force: true });
-      }
-      if (forsok < MAX_FORSOK) await new Promise((r) => setTimeout(r, 15000 * forsok));
+      console.log(`Spegling ${anrop}: ${err.message}`);
     }
+    await new Promise((r) => setTimeout(r, status && !status.errors?.length ? 2000 : 30000));
   }
-  if (!klar) throw new Error(`Nedladdning misslyckades efter ${MAX_FORSOK} försök`);
+  if (!status?.complete) throw new Error('Speglingen av bulkfilen blev inte klar');
+
+  const { get } = await import('@vercel/blob');
+  const fd = fs.openSync(zipPath, 'w');
+  for (const part of status.parts) {
+    const g = await get(part, { access: 'private', token, useCache: false });
+    if (!g || g.statusCode !== 200) throw new Error('Kunde inte läsa ' + part);
+    fs.writeSync(fd, Buffer.from(await new Response(g.stream).arrayBuffer()));
+  }
+  fs.closeSync(fd);
+  if (fs.statSync(zipPath).size !== status.size) throw new Error(`Fel storlek på ihopsatt fil: ${fs.statSync(zipPath).size} != ${status.size}`);
+  execSync(`unzip -tq "${zipPath}"`, { stdio: 'inherit' }); // kontrollerar att zip:en är komplett
   console.log(`Nedladdad: ${(fs.statSync(zipPath).size / 1e6).toFixed(1)} MB`);
 
   console.log('Packar upp (unzip CLI)...');
