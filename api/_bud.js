@@ -1,62 +1,43 @@
 // ============================================================
-// BUDREGISTER — faktiska bud på svenska börsbolag.
-// Detta är "facit" som backtestet mäter mot.
+// BUDREGISTER — "facit" som backtestet mäter mot.
 //
-// announced = datumet budet blev OFFENTLIGT. Det är nyckelfältet:
-// backtestet går tillbaka N dagar från detta datum och frågar
-// "låg bolaget högt i BudRadar då?".
+// Härleds nu direkt ur _registry-data.js så att det bara finns EN källa
+// till sanning (tidigare låg samma bud med olika datum i två filer).
 //
-// Nya bud fångas automatiskt av /api/detect-bids och hamnar i
-// databastabellen bid_registry. Denna fil är historiskt seed —
-// bud som skedde innan den automatiska detekteringen startade.
-//
-// Källor: MFN-pressmeddelanden, Placera, EFN, Affärsvärlden.
+// `ticker` är BudRadars interna nyckel — samma normalisering som
+// api/companies.js använder — så att backtestet kan matcha mot
+// signal_snapshots. `symbol` är den riktiga börstickern.
 // ============================================================
 
-export const BUD = [
-  // ---- 2026 ----
-  { ticker: "BAHNHOF", company: "Bahnhof", announced: "2026-07-08", bidder: "Telenor",
-    bidco: null, pricePerShare: 62, premiumPct: 22, outcome: "Genomfört",
-    note: "Grundarna Karlung och Norman sålde 50,8% av aktierna / 86% av rösterna." },
+import { REGISTRY } from "./_registry-data.js";
 
-  { ticker: "SLEEP", company: "Sleep Cycle", announced: "2026-05-11", bidder: "Altor Fund V",
-    bidco: "Snark BidCo", pricePerShare: 24.5, premiumPct: 47, outcome: "Genomfört",
-    note: "Aktien handlades nära 52-veckors lägsta (15–16 kr) före budet." },
+function internalKey(name) {
+  return (name || "").toLowerCase()
+    .replace(/\(.*?\)/g, " ")
+    .replace(/\b(aktiebolag|ab|asa|oyj|plc|publ|holding|group|ltd|inc)\b/g, " ")
+    .replace(/[^a-z0-9åäö ]/g, "").replace(/\s+/g, " ").trim()
+    .toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+}
 
-  { ticker: "NILORNGR", company: "Nilörngruppen", announced: "2026-05-04", bidder: "Trimco Group (Brookfield)",
-    bidco: null, pricePerShare: 77, premiumPct: 53, outcome: "Genomfört",
-    note: "Värderade bolaget till 878 Mkr. Traction (26,3% kapital / 58,1% röster) accepterade oåterkalleligen." },
+export const BUD = REGISTRY
+  .filter((r) => r.announced)
+  .map((r) => ({
+    ticker: internalKey(r.target),
+    symbol: r.targetTicker || null,
+    company: r.target,
+    announced: r.announced,
+    bidder: r.bidder,
+    bidco: (r.bidcoChain && r.bidcoChain.length > 1) ? r.bidcoChain[r.bidcoChain.length - 1] : null,
+    pricePerShare: r.pricePerShare,
+    premiumPct: r.premiumLastClose,
+    outcome: r.outcome,
+    note: r.notes,
+  }))
+  .sort((a, b) => b.announced.localeCompare(a.announced));
 
-  { ticker: "CINT", company: "Cint Group", announced: "2026-04-27", bidder: "Triton + Bolero Holdings",
-    bidco: "TriCarbs BidCo", pricePerShare: 6.0, premiumPct: 33, outcome: "Höjt bud",
-    note: "Först 5,60 kr, höjt till 6,00. Värderade Cint till ca 2 mdkr." },
-
-  { ticker: "VIVA", company: "Viva Wine Group", announced: "2026-03-02", bidder: "Grundarna",
-    bidco: "Riesling Ventures", pricePerShare: 38.5, premiumPct: 38, outcome: "Genomfört",
-    note: "Grundarna köpte ut bolaget. Budet låg under noteringskursen 49 kr." },
-
-  { ticker: "HUM", company: "Humana", announced: "2026-02-09", bidder: "Ambea",
-    bidco: null, pricePerShare: null, premiumPct: 27, outcome: "Genomfört",
-    note: "Kombinerat kontant- och aktiebud från branschkollega." },
-
-  { ticker: "BIOT", company: "Biotage", announced: "2026-01-12", bidder: "KKR",
-    bidco: null, pricePerShare: null, premiumPct: 60, outcome: "Genomfört",
-    note: "Aktien steg över 55% på veckan — börsens bästa." },
-
-  // ---- 2025 ----
-  { ticker: "FNOX", company: "Fortnox", announced: "2025-06-16", bidder: "Olof Hallrup + EQT",
-    bidco: "First Kraft AB", pricePerShare: 90, premiumPct: 38, outcome: "Genomfört",
-    note: "Årets största bud 2025." },
-
-  // ---- LÄGG TILL FLER ----
-  // Under 2025 kom 22–30 bud på svenska börsen; H1 2026 gav 12 bud på 11 bolag.
-  // Affärsvärldens Uppköpsguide sammanställer alla. Ju fler rader, desto
-  // starkare backtest. Historiskt snitt för budpremie: ca 33%.
-];
-
-/** Snittpremie för genomförda bud. */
+/** Snittpremie för bud med positiv premie (budpliktsbud under kurs exkluderas). */
 export function avgPremium(rows = BUD) {
-  const done = rows.filter(b => b.premiumPct > 0);
+  const done = rows.filter((b) => b.premiumPct > 0);
   if (!done.length) return null;
   return Math.round(done.reduce((s, b) => s + b.premiumPct, 0) / done.length);
 }
