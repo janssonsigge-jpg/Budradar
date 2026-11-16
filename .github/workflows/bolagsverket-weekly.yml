@@ -6,6 +6,10 @@ on:
     - cron: '0 5 * * 1'
   workflow_dispatch: {}   # gör att du kan trigga den manuellt från GitHub-fliken "Actions"
 
+permissions:
+  contents: read
+  actions: write   # behövs för keepalive-steget nedan
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -20,7 +24,7 @@ jobs:
           node-version: '20'
 
       - name: Säkerställ unzip finns
-        run: which unzip || sudo apt-get update && sudo apt-get install -y unzip
+        run: which unzip || (sudo apt-get update && sudo apt-get install -y unzip)
 
       - name: Installera beroenden
         run: npm install @neondatabase/serverless
@@ -37,15 +41,8 @@ jobs:
           restore-keys: |
             bv-seen-
 
-      - name: Kör Bolagsverket-scan
-        env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
-          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
-          GITHUB_TIMESTAMP_TOKEN: ${{ secrets.GH_TIMESTAMP_TOKEN }}
-          GITHUB_TIMESTAMP_REPO: ${{ secrets.GH_TIMESTAMP_REPO }}
-          GITHUB_TIMESTAMP_PATH: ${{ secrets.GH_TIMESTAMP_PATH }}
-          GITHUB_TIMESTAMP_BRANCH: ${{ secrets.GH_TIMESTAMP_BRANCH }}
-        run: node scripts/bolagsverket-scan.mjs
+      # Watchlist-logiken (namnbyte/adressflytt) ligger inbyggd i bolagsverket-scan.mjs
+      # — inget separat check_watchlist-skript behövs.
       - name: Kör Bolagsverket-scan
         env:
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
@@ -56,7 +53,12 @@ jobs:
           GITHUB_TIMESTAMP_BRANCH: ${{ secrets.GH_TIMESTAMP_BRANCH }}
         run: node scripts/bolagsverket-scan.mjs
 
-      - name: Kolla watchlist för namnbyte/adressflytt
+      # GitHub pausar schemalagda workflows efter 60 dagar utan aktivitet i repot.
+      # Detta återaktiverar workflowen varje vecka så att timern nollställs.
+      - name: Keepalive
+        if: always()
         env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
-        run: node scripts/check_watchlist.mjs
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PUT repos/${{ github.repository }}/actions/workflows/bolagsverket-weekly.yml/enable
+          gh api -X PUT repos/${{ github.repository }}/actions/workflows/main.yml/enable
