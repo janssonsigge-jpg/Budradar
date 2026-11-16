@@ -305,6 +305,72 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------- radar ---------- */
+.rh { display: grid; grid-template-columns: minmax(300px, 440px) 1fr; gap: 40px; align-items: center; padding-top: 40px; }
+.rh-text h1 { font-size: clamp(40px, 5.2vw, 68px); line-height: 1.02; letter-spacing: -.045em; }
+.rh-text .lede { font-size: 17px; }
+.rh-text .cta { justify-content: flex-start; }
+.rh-text .latest { margin-top: 36px; padding: 18px 20px; border-radius: 16px; background: var(--s1); }
+.rh-text .latest .who { font-size: 22px; margin: 4px 0 0; }
+.rh-text .latest .terms { margin-top: 12px; gap: 20px; }
+.rh-text .latest .terms strong { font-size: 18px; }
+.rh-text .latest a { margin-top: 12px; }
+.scope { position: relative; aspect-ratio: 1; width: 100%; max-width: 680px; margin-left: auto; }
+.scope canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.tip { position: absolute; pointer-events: none; transform: translate(-50%, calc(-100% - 14px)); background: rgba(16,18,25,.94); border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.4; white-space: nowrap; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.tip b { display: block; font-size: 14px; font-weight: 600; }
+.tip span { color: var(--slate); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: flex-end; font-size: 12px; color: var(--slate); margin-top: 6px; }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.legend i.ring { background: transparent; box-shadow: inset 0 0 0 1.5px #fff; }
+.ticker { margin-top: 48px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.ticker-in { display: flex; gap: 40px; width: max-content; padding: 14px 0; animation: tick 90s linear infinite; font-size: 14px; color: var(--slate); white-space: nowrap; }
+.ticker:hover .ticker-in { animation-play-state: paused; }
+.ticker-in a { text-decoration: none; }
+.ticker-in b { color: var(--ink); font-weight: 500; }
+.ticker-in em { font-style: normal; margin-right: 8px; color: var(--dim); }
+.ticker-in .k { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; vertical-align: 2px; }
+@keyframes tick { to { transform: translateX(-50%); } }
+
+/* ---------- deckarakter ---------- */
+.cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; margin-bottom: 72px; }
+.case { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px 24px 22px; position: relative; overflow: hidden; }
+.case::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 120px; background: radial-gradient(80% 100% at 0% 0%, rgba(245,196,81,.10), transparent 70%); pointer-events: none; }
+.case-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.case-h b { font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
+.case-h span { font-size: 13px; color: var(--slate); }
+.steps { list-style: none; margin: 22px 0 0; padding: 0; position: relative; }
+.steps::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--s3); }
+.steps::after { content: ""; position: absolute; left: 5px; top: 8px; width: 2px; height: 0; background: linear-gradient(var(--accent), var(--marker)); transition: height 1.4s cubic-bezier(.3,.7,.2,1); }
+.case.in .steps::after { height: calc(100% - 16px); }
+.steps li { position: relative; padding: 0 0 18px 28px; opacity: .25; transform: translateY(6px); transition: opacity .5s, transform .5s; }
+.steps li:last-child { padding-bottom: 0; }
+.case.in .steps li { opacity: 1; transform: none; }
+.case.in .steps li:nth-child(2) { transition-delay: .45s; }
+.case.in .steps li:nth-child(3) { transition-delay: .9s; }
+.steps li::before { content: ""; position: absolute; left: 0; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--accent); }
+.steps li.bid::before { background: var(--marker); box-shadow: 0 0 0 4px rgba(245,196,81,.18); }
+.steps time { display: block; font-size: 12px; color: var(--dim); }
+.steps p { font-size: 15px; line-height: 1.45; }
+.steps p strong { font-weight: 600; }
+.case-f { display: flex; align-items: baseline; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.case-f strong { font-size: 34px; font-weight: 600; letter-spacing: -.04em; color: var(--marker); }
+.case-f span { font-size: 13px; color: var(--slate); }
+.case-f a { margin-left: auto; font-size: 13px; color: var(--accent); text-decoration: none; }
+
+@media (max-width: 1020px) {
+  .rh { grid-template-columns: 1fr; gap: 28px; }
+  .scope { margin: 0 auto; }
+  .legend { justify-content: center; }
+}
+@media (max-width: 720px) {
+  .rh { padding-top: 20px; }
+  .cases { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .steps li, .case .steps::after { opacity: 1; transform: none; height: calc(100% - 16px); }
+}
 </style>
 </head>
 <body>
@@ -324,17 +390,28 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 <main class="wrap">
   <!-- ================= RADAR ================= -->
   <section class="view" id="v-radar">
-    <div class="glow" aria-hidden="true"></div>
-    <div class="hero">
-      <h1>Uppköp lämnar spår innan de blir offentliga.</h1>
-      <p class="lede">BudRadar läser insynsregistret, flaggningar, blankningsregistret och Bolagsverkets nyregistreringar varje dag och visar var på Stockholmsbörsen det rör sig.</p>
-      <div class="cta"><a class="btn pri" href="#ranking">Se rankingen</a><a class="btn" href="#bidco">Så hittar vi skalbolagen</a></div>
-      <p class="facts" id="facts"><span class="sk" style="display:block;width:420px;max-width:80vw;margin:0 auto"></span></p>
-    </div>
-    <div class="showcase"><div class="showcase-in">
-      <aside class="latest" id="latest" aria-label="Senaste budet"><div class="sk" style="height:160px"></div></aside>
-      <div class="mini" id="mini"><div class="mini-h"><span>Högst index just nu</span><span>Index</span></div><div class="sk" style="height:160px;margin:8px"></div></div>
-    </div></div>
+    <section class="rh">
+      <div class="rh-text">
+        <h1>Någon köpte precis ett lagerbolag.</h1>
+        <p class="lede">Om några veckor vet du varför. BudRadar läser insynsköp, flaggningar, blankning och varje nytt skalbolag hos Bolagsverket — och ritar upp var på Stockholmsbörsen det rör sig.</p>
+        <div class="cta"><a class="btn pri" href="#ranking">Se hela listan</a><a class="btn" href="#bidco">Så hittar vi skalen</a></div>
+        <aside class="latest" id="latest" aria-label="Senaste budet"><div class="sk" style="height:96px"></div></aside>
+      </div>
+      <div class="rh-scope">
+        <div class="scope" id="scope">
+          <canvas id="radar" aria-label="Radar över bolag med aktivitet. Ju närmare mitten, desto högre index."></canvas>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#F5C451"></i>Flaggning</span>
+          <span><i style="background:#8C9BFF"></i>Insynsköp</span>
+          <span><i style="background:#4FD1A1"></i>Blankning</span>
+          <span><i class="ring"></i>Nytt skalbolag</span>
+          <span class="muted">Närmare mitten = högre index</span>
+        </div>
+      </div>
+    </section>
+    <div class="ticker" aria-label="Senaste händelserna"><div class="ticker-in" id="ticker"></div></div>
 
     <div class="shells">
       <div class="sec-head">
@@ -380,6 +457,8 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
       <p class="lede">Nästan varje uppköp görs genom ett nyregistrerat bolag — ett bidco. Det registreras hos Bolagsverket veckor innan budet offentliggörs, och registret är öppet för alla. Här är tiden mellan registrering och bud i fall vi har verifierat.</p>
     </div>
     <div class="statline" id="bidcoStats"></div>
+    <div class="sec-head"><h2>Fallen</h2><p>Varje bud nedan började med ett nyregistrerat skal hos Bolagsverket. Scrolla för att se hur det gick till.</p></div>
+    <div class="cases" id="cases"></div>
     <div class="sec-head"><h2>Från registrering till bud</h2><p>Gul sträcka = dagar mellan att skalbolaget registrerades och att budet offentliggjordes.</p></div>
     <div class="lanes" id="lanes"></div>
     <div class="two">
@@ -549,27 +628,122 @@ function renderHero() {
   if (latest) {
     document.getElementById("latest").innerHTML = `
       <small>Senaste budet, ${dLong(latest.announced)}</small>
-      <div class="who">${esc(latest.target)}</div>
-      <div class="by">${esc(latest.bidder)}${latest.mandatoryOffer ? ", budpliktsbud" : ""}</div>
+      <div class="who">${esc(latest.target)} <span class="muted" style="font-size:15px;font-weight:400">av ${esc(latest.bidder)}</span></div>
       <div class="terms">
         ${latest.pricePerShare != null ? `<div><strong>${sek(latest.pricePerShare)}</strong>per aktie</div>` : ""}
         ${latest.premiumLastClose != null ? `<div class="prem"><strong>${pct(latest.premiumLastClose)}</strong>premie</div>` : ""}
-        ${latest.equityValueMSEK ? `<div><strong>${msek(latest.equityValueMSEK)}</strong>värdering</div>` : ""}
       </div>
       <a href="#bud/${latest.id}">Läs hela budet</a>`;
   }
-  if (cs) {
-    const small = cs.filter((c) => !c.largeCap);
-    const active = small.filter((c) => c.lastEvent && ago(c.lastEvent) <= 14 && c.score.composite > 0).length;
-    const top = small[0];
-    const pend = S.wl && S.wl.counts ? S.wl.counts.pending : null;
-    document.getElementById("facts").innerHTML =
-      `Vi följer <b>${nf().format(small.length)} bolag</b> med aktivitet i registren. <b>${active}</b> av dem har haft en händelse de senaste två veckorna, och högst index just nu har <a href="#bolag/${encodeURIComponent(top.ticker)}"><b>${esc(cleanName(top.name))}</b></a> (${top.score.composite}).` +
-      (pend ? ` Hos Bolagsverket bevakar vi <b>${pend} nya skalbolag</b>.` : "");
-    document.getElementById("mini").innerHTML = `<div class="mini-h"><span>Högst index just nu</span><span>Index</span></div>` +
-      small.slice(0, 5).map((c) => `<a href="#bolag/${encodeURIComponent(c.ticker)}"><div><b>${esc(cleanName(c.name))}</b><span>${esc((events(c)[0] || {}).kind || "")}${c.lastEvent ? ", " + dShort(c.lastEvent) : ""}</span></div><div class="bar"><i style="--w:${c.score.composite}%"></i></div><em>${c.score.composite}</em></a>`).join("");
-  }
+  Radar.update();
+  if (cs) renderTicker();
 }
+function renderTicker() {
+  const items = [];
+  for (const c of S.companies.filter((x) => !x.largeCap).slice(0, 60)) {
+    const e = events(c)[0];
+    if (e && ago(e.date) <= 21) items.push({ date: e.date, c, e });
+  }
+  items.sort((a, b) => b.date.localeCompare(a.date));
+  const col = { Flaggning: "#F5C451", Insyn: "#8C9BFF", Blankning: "#4FD1A1", Bolagsverket: "#fff" };
+  const html = items.slice(0, 24).map(({ c, e }) => `<a href="#bolag/${encodeURIComponent(c.ticker)}"><i class="k" style="background:${col[e.kind] || "#fff"}"></i><em>${dShort(e.date)}</em><b>${esc(cleanName(c.name))}</b>: ${esc(e.text)}</a>`).join("");
+  if (html) document.getElementById("ticker").innerHTML = html + html;
+}
+
+// ---------- radarn ----------
+const Radar = (() => {
+  const COL = { flags: [245, 196, 81], insider: [140, 155, 255], shortSig: [79, 209, 161], bv: [255, 255, 255] };
+  let cv, ctx, W = 0, dpr = 1, blips = [], shells = [], hover = null, t0 = performance.now(), raf = null, inited = false;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const SPEED = (Math.PI * 2) / 6000; // ett varv på 6 s
+  function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+  function init() {
+    if (inited) return; inited = true;
+    cv = document.getElementById("radar"); ctx = cv.getContext("2d");
+    const ro = new ResizeObserver(resize); ro.observe(cv);
+    cv.addEventListener("mousemove", (ev) => { const r = cv.getBoundingClientRect(); pick(ev.clientX - r.left, ev.clientY - r.top); });
+    cv.addEventListener("mouseleave", () => { hover = null; showTip(); });
+    cv.addEventListener("click", (ev) => { const r = cv.getBoundingClientRect(); pick(ev.clientX - r.left, ev.clientY - r.top); if (hover) location.hash = hover.href; });
+    resize(); loop();
+  }
+  function resize() { const r = cv.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1); W = r.width; cv.width = W * dpr; cv.height = W * dpr; layout(); }
+  function layout() {
+    const R = W / 2 - 18;
+    blips.forEach((b) => { const d = 0.1 + (1 - b.score / 100) * 0.82; b.x = W / 2 + Math.cos(b.a) * d * R; b.y = W / 2 + Math.sin(b.a) * d * R; });
+    shells.forEach((s) => { const d = 0.94 + s.j * 0.04; s.x = W / 2 + Math.cos(s.a) * d * R; s.y = W / 2 + Math.sin(s.a) * d * R; });
+  }
+  function update() {
+    if (!document.getElementById("radar")) return;
+    init();
+    const cs = (S.companies || []).filter((c) => !c.largeCap && c.score.composite > 0).slice(0, 70);
+    blips = cs.map((c, i) => {
+      const p = c.score.parts; const dom = Object.entries({ flags: p.flags, insider: p.insider, shortSig: p.shortSig, bv: p.bv }).sort((a, b) => b[1] - a[1])[0][0];
+      const e = events(c)[0];
+      return { name: cleanName(c.name), score: c.score.composite, a: hash(c.ticker) * Math.PI * 2, col: COL[dom], r: 2.5 + c.score.composite / 16, label: i < 6, href: "#bolag/" + encodeURIComponent(c.ticker), sub: e ? e.text : "", lit: 0 };
+    });
+    shells = ((S.wl && S.wl.pending) || []).slice().sort((a, b) => b.registered_at.localeCompare(a.registered_at)).slice(0, 18)
+      .map((w) => ({ name: w.original_name, a: hash(w.org_nr) * Math.PI * 2, j: hash(w.org_nr + "j"), href: "#bidco", sub: "Nytt skal, registrerat " + dShort(w.registered_at), shell: true, lit: 0 }));
+    layout();
+  }
+  function angDiff(a, b) { let d = (a - b) % (Math.PI * 2); if (d < 0) d += Math.PI * 2; return d; }
+  function draw(now) {
+    const c = ctx, cx = W / 2, R = W / 2 - 18;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, W);
+    // bakgrund
+    const g = c.createRadialGradient(cx, cx, 0, cx, cx, R); g.addColorStop(0, "rgba(140,155,255,.10)"); g.addColorStop(1, "rgba(140,155,255,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cx, R, 0, Math.PI * 2); c.fill();
+    // ringar + index
+    c.lineWidth = 1; c.font = "11px Geist, system-ui"; c.textAlign = "left";
+    [20, 40, 60, 80].forEach((v) => { const rr = (0.1 + (1 - v / 100) * 0.82) * R; c.strokeStyle = "rgba(255,255,255,.07)"; c.beginPath(); c.arc(cx, cx, rr, 0, Math.PI * 2); c.stroke(); c.fillStyle = "rgba(255,255,255,.28)"; c.fillText(v, cx + 4, cx - rr - 4); });
+    c.strokeStyle = "rgba(255,255,255,.12)"; c.beginPath(); c.arc(cx, cx, R, 0, Math.PI * 2); c.stroke();
+    c.strokeStyle = "rgba(255,255,255,.05)"; c.beginPath(); c.moveTo(cx - R, cx); c.lineTo(cx + R, cx); c.moveTo(cx, cx - R); c.lineTo(cx, cx + R); c.stroke();
+    // svep
+    const ang = reduced ? -Math.PI / 4 : ((now - t0) * SPEED) % (Math.PI * 2);
+    if (!reduced) {
+      const N = 40;
+      for (let i = 0; i < N; i++) { const a0 = ang - (i + 1) * 0.02, a1 = ang - i * 0.02; c.fillStyle = `rgba(140,155,255,${0.16 * (1 - i / N)})`; c.beginPath(); c.moveTo(cx, cx); c.arc(cx, cx, R, a0, a1); c.closePath(); c.fill(); }
+      c.strokeStyle = "rgba(190,200,255,.7)"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(cx, cx); c.lineTo(cx + Math.cos(ang) * R, cx + Math.sin(ang) * R); c.stroke();
+    }
+    // skal (ytterkant)
+    shells.forEach((s) => {
+      const d = angDiff(ang, s.a); if (d < 0.08) s.lit = 1; else s.lit *= 0.985;
+      const blink = reduced ? 0.7 : 0.35 + 0.65 * Math.max(s.lit, 0.5 + 0.5 * Math.sin(now / 400 + s.j * 10));
+      c.strokeStyle = `rgba(255,255,255,${blink})`; c.lineWidth = 1.5; c.beginPath(); c.arc(s.x, s.y, 3.5, 0, Math.PI * 2); c.stroke();
+    });
+    // bolag
+    blips.forEach((b) => {
+      const d = angDiff(ang, b.a); if (d < 0.08) b.lit = 1; else b.lit *= 0.988;
+      const l = reduced ? 1 : 0.35 + 0.65 * b.lit, [r, g2, bl] = b.col;
+      const glow = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 4); glow.addColorStop(0, `rgba(${r},${g2},${bl},${0.45 * l})`); glow.addColorStop(1, `rgba(${r},${g2},${bl},0)`);
+      c.fillStyle = glow; c.beginPath(); c.arc(b.x, b.y, b.r * 4, 0, Math.PI * 2); c.fill();
+      c.fillStyle = `rgba(${r},${g2},${bl},${0.5 + 0.5 * l})`; c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2); c.fill();
+      if (b === hover) { c.strokeStyle = "#fff"; c.lineWidth = 1.5; c.beginPath(); c.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2); c.stroke(); }
+      if (b.label && W > 360) {
+        const txt = b.name.length > 22 ? b.name.slice(0, 21) + "…" : b.name;
+        c.font = "500 12px Geist, system-ui";
+        const tw = c.measureText(txt).width, right = b.x + b.r + 7 + tw < W - 4;
+        c.textAlign = right ? "left" : "right";
+        c.fillStyle = `rgba(243,245,250,${0.55 + 0.45 * l})`;
+        c.fillText(txt, b.x + (right ? b.r + 7 : -b.r - 7), b.y + 4);
+      }
+    });
+    // mitten
+    c.fillStyle = "#F3F5FA"; c.beginPath(); c.arc(cx, cx, 2.5, 0, Math.PI * 2); c.fill();
+  }
+  function loop(now = performance.now()) { draw(now); if (!reduced) raf = requestAnimationFrame(loop); }
+  function pick(x, y) {
+    let best = null, bd = 18;
+    [...blips, ...shells].forEach((b) => { const d = Math.hypot(b.x - x, b.y - y); if (d < bd) { bd = d; best = b; } });
+    hover = best; cv.style.cursor = best ? "pointer" : "crosshair"; showTip(); if (reduced) draw(performance.now());
+  }
+  function showTip() {
+    const tip = document.getElementById("tip");
+    if (!hover) { tip.hidden = true; return; }
+    tip.hidden = false; tip.style.left = hover.x + "px"; tip.style.top = (hover.y - (hover.r || 4)) + "px";
+    tip.innerHTML = `<b>${esc(hover.name)}${hover.score != null ? ` <span style="color:#F5C451">${hover.score}</span>` : ""}</b><span>${esc(hover.sub)}</span>`;
+  }
+  return { update };
+})();
 function renderShells() {
   const el = document.getElementById("shells");
   if (!S.wl) { el.innerHTML = `<div class="shell"><div class="sk"></div></div>`.repeat(4); return; }
@@ -590,10 +764,36 @@ function bidcoCases() {
     const r = reg.find((x) => (x.bidcoChain || []).some((b) => normB(b).startsWith(key) || key.startsWith(normB(b)) && normB(b).length > 4));
     const announced = r ? r.announced : (f.outcome_date || "").slice(0, 10);
     const registered = (f.created_at || "").slice(0, 10);
-    return { bidco: f.company_name.replace(/\s+AB$/i, " AB"), target: r ? r.target : (f.outcome_note || "").replace(/^Bud offentliggjort.*$/, "") || null, registered, announced, d: days(registered, announced), id: r && r.id };
+    return { bidco: f.company_name.replace(/\s+AB$/i, " AB"), target: r ? r.target : ({ nordahlbidco: "Norva24" })[key] || null, registered, announced, d: days(registered, announced), id: r && r.id };
   }).filter((x) => x.registered && x.announced && x.d > 0).sort((a, b) => a.d - b.d);
 }
+function renderCases() {
+  const el = document.getElementById("cases");
+  if (!el) return;
+  const reg = S.registry || [];
+  const cs = bidcoCases().slice().sort((a, b) => b.announced.localeCompare(a.announced));
+  if (!cs.length) { el.innerHTML = `<div class="empty">${S.tr ? "Inga verifierade fall ännu." : "Laddar fallen…"}</div>`; return; }
+  el.innerHTML = cs.map((k) => {
+    const r = reg.find((x) => x.id === k.id);
+    const chain = r ? r.bidcoChain[r.bidcoChain.length - 1] : k.bidco;
+    const gm = /tidigare (Goldcup \d+ AB)/i.exec(chain || "");
+    const nameNow = (chain || k.bidco).replace(/\s*\(tidigare.*?\)/i, "");
+    const bidTxt = r ? `<strong>${esc(r.bidder)}</strong> lägger bud på <strong>${esc(r.target)}</strong>${r.pricePerShare != null ? `: ${sek(r.pricePerShare)} per aktie` : ""}${r.premiumLastClose != null ? `, ${pct(r.premiumLastClose)} premie` : ""}.` : `Budet offentliggörs.`;
+    return `<article class="case">
+      <div class="case-h"><b>${esc(k.target || nameNow)}</b><span>${k.announced.slice(0, 4)}</span></div>
+      <ol class="steps">
+        <li><time>${dLong(k.registered)}</time><p>${gm ? `Lagerbolaget <strong>${esc(gm[1])}</strong> registreras hos Bolagsverket.` : `<strong>${esc(nameNow)}</strong> registreras hos Bolagsverket.`}</p></li>
+        ${gm ? `<li><time>Veckorna efter</time><p>Byter namn till <strong>${esc(nameNow)}</strong>. Fortfarande inget offentligt.</p></li>` : `<li><time>Veckorna efter</time><p>Bolaget ligger tyst i registret. Ingen pressrelease, ingen flaggning.</p></li>`}
+        <li class="bid"><time>${dLong(k.announced)}</time><p>${bidTxt}</p></li>
+      </ol>
+      <div class="case-f"><strong>${k.d} dagar</strong><span>från skal till bud</span>${k.id ? `<a href="#bud/${k.id}">Hela budet</a>` : ""}</div>
+    </article>`;
+  }).join("");
+  const io = new IntersectionObserver((ents) => ents.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.35 });
+  el.querySelectorAll(".case").forEach((c) => io.observe(c));
+}
 function renderBidco() {
+  renderCases();
   const cases = bidcoCases();
   const ds = cases.map((c) => c.d).sort((a, b) => a - b);
   const med = ds.length ? (ds.length % 2 ? ds[(ds.length - 1) / 2] : Math.round((ds[ds.length / 2 - 1] + ds[ds.length / 2]) / 2)) : null;
