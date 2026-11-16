@@ -68,8 +68,8 @@ export default async function handler(req, res) {
       return handleFlaggedTickers(req, res);
     case 'admin-sync-historical':
       return handleAdminSyncHistorical(req, res);
-    case 'bv-probe':
-      return handleBvProbe(req, res);
+    case 'bv-mirror':
+      return handleBvMirror(req, res);
     case 'watchlist-status':
       return handleWatchlistStatus(req, res);
     default:
@@ -622,36 +622,80 @@ async function handleWatchlistStatus(req, res) {
 }
 
 // ============================================================
-// GET ?action=bv-probe  — testar om Vercel når Bolagsverkets bulkfil
-// (stöd för Range/återupptagning + nedladdningshastighet, ~20 s)
+// POST ?action=bv-mirror  — speglar Bolagsverkets bulkfil till privat Vercel Blob
+//
+// Bolagsverkets server bryter långa nedladdningar från GitHubs servrar. Vercel
+// når dem utan problem, så här hämtas filen i bitar om 16 MB (Range-anrop)
+// och varje bit sparas som en egen privat blob. Varje anrop gör så många bitar
+// som hinns inom tidsbudgeten; GitHub-jobbet anropar tills complete=true och
+// sätter sedan ihop bitarna. Gamla versioner av filen städas bort automatiskt.
+// Skyddas med BLOB_READ_WRITE_TOKEN som bearer-token (finns redan i båda miljöerna).
 // ============================================================
-async function handleBvProbe(req, res) {
+async function handleBvMirror(req, res) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token || req.headers['authorization'] !== `Bearer ${token}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const { put, list, del } = await import('@vercel/blob');
   const URL_BV = 'https://vardefulla-datamangder.bolagsverket.se/bolagsverket/bolagsverket_bulkfil.zip';
   const UA = 'BudRadar/0.2 (+offentlig data)';
-  const out = {};
-  try {
-    const h = await fetch(URL_BV, { method: 'HEAD', headers: { 'user-agent': UA } });
-    out.head = { status: h.status, length: h.headers.get('content-length'), acceptRanges: h.headers.get('accept-ranges'), lastModified: h.headers.get('last-modified'), etag: h.headers.get('etag') };
-  } catch (e) { out.headError = String(e); }
-  try {
-    const r = await fetch(URL_BV, { headers: { 'user-agent': UA, range: 'bytes=1000000-1999999' } });
-    const b = Buffer.from(await r.arrayBuffer());
-    out.range = { status: r.status, contentRange: r.headers.get('content-range'), bytes: b.length };
-  } catch (e) { out.rangeError = String(e); }
-  try {
-    const t0 = Date.now();
-    const r = await fetch(URL_BV, { headers: { 'user-agent': UA } });
-    out.full = { status: r.status };
-    let n = 0;
-    const reader = r.body.getReader();
-    while (Date.now() - t0 < 20000) {
-      const { done, value } = await reader.read();
-      if (done) { out.full.done = true; break; }
-      n += value.length;
+  const CHUNK = 16 * 1024 * 1024;
+  const BUDGET_MS = 25000;
+  const t0 = Date.now();
+
+  const h = await fetch(URL_BV, { method: 'HEAD', headers: { 'user-agent': UA } });
+  if (!h.ok) return res.status(200).json({ complete: false, done: 0, total: 0, errors: [`HEAD HTTP ${h.status}`] });
+  const size = Number(h.headers.get('content-length'));
+  const version = (h.headers.get('etag') || h.headers.get('last-modified') || 'okand').replace(/[^a-zA-Z0-9]/g, '');
+  const prefix = `bv-bulk/${version}/`;
+  const total = Math.ceil(size / CHUNK);
+  const partName = (i) => `${prefix}part-${String(i).padStart(3, '0')}.bin`;
+  const expected = (i) => Math.min(CHUNK, size - i * CHUNK);
+
+  const existing = new Map();
+  let cursor;
+  do {
+    const r = await list({ prefix, cursor, limit: 1000 });
+    for (const b of r.blobs) existing.set(b.pathname, b.size);
+    cursor = r.hasMore ? r.cursor : undefined;
+  } while (cursor);
+
+  const isDone = (i) => existing.get(partName(i)) === expected(i);
+  const errors = [];
+  for (let i = 0; i < total; i++) {
+    if (isDone(i)) continue;
+    if (Date.now() - t0 > BUDGET_MS) break;
+    const start = i * CHUNK;
+    const end = start + expected(i) - 1;
+    try {
+      const r = await fetch(URL_BV, { headers: { 'user-agent': UA, range: `bytes=${start}-${end}` } });
+      if (r.status !== 206) throw new Error(`HTTP ${r.status}`);
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length !== expected(i)) throw new Error(`fel storlek ${buf.length}`);
+      await put(partName(i), buf, { access: 'private', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/octet-stream' });
+      existing.set(partName(i), buf.length);
+    } catch (e) {
+      errors.push(`del ${i}: ${e.message}`);
+      break;
     }
-    try { await reader.cancel(); } catch {}
-    out.full.mb = +(n / 1e6).toFixed(1);
-    out.full.mbPerSec = +(n / 1e6 / ((Date.now() - t0) / 1000)).toFixed(2);
-  } catch (e) { out.fullError = String(e); }
-  return res.status(200).json(out);
+  }
+
+  const parts = Array.from({ length: total }, (_, i) => partName(i));
+  const done = parts.filter((_, i) => isDone(i)).length;
+  const complete = done === total;
+
+  if (complete) {
+    try {
+      const old = [];
+      let c;
+      do {
+        const r = await list({ prefix: 'bv-bulk/', cursor: c, limit: 1000 });
+        for (const b of r.blobs) if (!b.pathname.startsWith(prefix)) old.push(b.url);
+        c = r.hasMore ? r.cursor : undefined;
+      } while (c);
+      if (old.length) await del(old);
+    } catch {}
+  }
+
+  return res.status(200).json({ complete, size, version, done, total, parts: complete ? parts : undefined, errors });
 }
