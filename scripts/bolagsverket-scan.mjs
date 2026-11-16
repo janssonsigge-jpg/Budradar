@@ -114,12 +114,31 @@ async function downloadAndExtract() {
   fs.mkdirSync(WORK_DIR, { recursive: true });
 
   const zipPath = path.join(WORK_DIR, 'bulkfil.zip');
+  // Bolagsverkets server bryter ibland anslutningen mitt i filen ("other side closed").
+  // curl laddar ner med återupptagning (-C -) och flera försök tills zip:en är hel.
   console.log('Laddar ner bulkfil...');
-  const res = await fetch(BULK_URL, { headers: { 'user-agent': UA } });
-  if (!res.ok) throw new Error('Nedladdning misslyckades: HTTP ' + res.status);
-  const buf = Buffer.from(await res.arrayBuffer());
-  fs.writeFileSync(zipPath, buf);
-  console.log(`Nedladdad: ${(buf.length / 1e6).toFixed(1)} MB`);
+  const MAX_FORSOK = 10;
+  let klar = false;
+  for (let forsok = 1; forsok <= MAX_FORSOK && !klar; forsok++) {
+    try {
+      execSync(
+        `curl -fsSL --connect-timeout 30 --speed-limit 1000 --speed-time 60 -C - -A "${UA}" -o "${zipPath}" "${BULK_URL}"`,
+        { stdio: 'inherit' }
+      );
+      execSync(`unzip -tq "${zipPath}"`, { stdio: 'inherit' }); // kontrollerar att zip:en är komplett
+      klar = true;
+    } catch (err) {
+      const storlek = fs.existsSync(zipPath) ? fs.statSync(zipPath).size : 0;
+      console.log(`Försök ${forsok}/${MAX_FORSOK} misslyckades (${(storlek / 1e6).toFixed(1)} MB hittills): ${err.message.split('\n')[0]}`);
+      // Exit 33 = servern stödjer inte återupptagning, 22 = HTTP-fel (t.ex. 416). Börja om från noll då.
+      if (err.status === 33 || err.status === 22 || err.status === 2 || err.status === 3 || err.status === 9) {
+        fs.rmSync(zipPath, { force: true });
+      }
+      if (forsok < MAX_FORSOK) await new Promise((r) => setTimeout(r, 15000 * forsok));
+    }
+  }
+  if (!klar) throw new Error(`Nedladdning misslyckades efter ${MAX_FORSOK} försök`);
+  console.log(`Nedladdad: ${(fs.statSync(zipPath).size / 1e6).toFixed(1)} MB`);
 
   console.log('Packar upp (unzip CLI)...');
   execSync(`unzip -o "${zipPath}" -d "${WORK_DIR}"`, { stdio: 'inherit' });
