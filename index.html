@@ -2,930 +2,753 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>BudRadar</title>
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BudRadar — signaler före budet</title>
+<meta name="description" content="BudRadar bevakar insynsköp, flaggningar, blankning och nya skalbolag hos Bolagsverket — spåren som ofta syns innan ett uppköpsbud på Stockholmsbörsen." />
+<link rel="icon" href="budradar-logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
 <style>
-  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
-  body { margin: 0; }
+:root {
+  --paper: #EEF1F4;
+  --sheet: #FFFFFF;
+  --ink: #14213D;
+  --slate: #5E6B7E;
+  --line: #D5DBE3;
+  --marker: #F2C230;
+  --marker-soft: #FBEBB0;
+  --done: #2F7D5B;
+  --warn: #B4442C;
+  --focus: #2457D6;
+  --r-sheet: 18px;
+  --r-ctrl: 999px;
+  --max: 1200px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 16px/1.5 "Schibsted Grotesk", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+.muted { color: var(--slate); }
+.hl { background: linear-gradient(transparent 12%, var(--marker) 12%, var(--marker) 88%, transparent 88%); padding: 0 .12em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.hl-soft { background: linear-gradient(transparent 12%, var(--marker-soft) 12%, var(--marker-soft) 88%, transparent 88%); padding: 0 .12em; }
+
+/* ---------- topp ---------- */
+.top { position: sticky; top: 0; z-index: 20; background: rgba(238,241,244,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+.brand img { width: 28px; height: 28px; border-radius: 7px; }
+.nav { display: flex; gap: 4px; }
+.nav a { text-decoration: none; padding: 8px 14px; border-radius: var(--r-ctrl); font-weight: 500; color: var(--slate); }
+.nav a:hover { color: var(--ink); }
+.nav a[aria-current="page"] { color: var(--ink); background: var(--sheet); box-shadow: inset 0 0 0 1px var(--line); }
+.fresh { margin-left: auto; font-size: 13px; color: var(--slate); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.fresh i { width: 8px; height: 8px; border-radius: 50%; background: var(--done); display: inline-block; }
+.fresh.stale i { background: var(--warn); }
+
+/* ---------- vyer ---------- */
+main { padding: 40px 0 96px; }
+.view[hidden] { display: none; }
+h1, h2, h3 { margin: 0; letter-spacing: -.025em; }
+h1 { font-size: clamp(36px, 5.2vw, 64px); line-height: 1.02; font-weight: 800; }
+h2 { font-size: 26px; line-height: 1.15; font-weight: 750; }
+h3 { font-size: 18px; font-weight: 700; }
+p { margin: 0; }
+.lede { font-size: 18px; line-height: 1.55; color: var(--slate); max-width: 60ch; margin-top: 18px; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: end; }
+.facts { margin-top: 26px; font-size: 15px; color: var(--slate); max-width: 62ch; line-height: 1.7; }
+.facts b { color: var(--ink); font-weight: 700; }
+.latest { background: var(--ink); color: #fff; border-radius: var(--r-sheet); padding: 24px 26px; }
+.latest small { color: #AFC0D6; font-size: 13px; }
+.latest .who { font-size: 28px; font-weight: 800; letter-spacing: -.02em; margin: 6px 0 2px; line-height: 1.1; }
+.latest .by { color: #CFD9E6; }
+.latest .terms { display: flex; gap: 22px; margin-top: 18px; flex-wrap: wrap; }
+.latest .terms div { font-size: 13px; color: #AFC0D6; }
+.latest .terms strong { display: block; font-size: 22px; color: #fff; font-weight: 750; }
+.latest .terms .prem strong { color: var(--marker); }
+.latest a { display: inline-block; margin-top: 18px; color: #fff; font-size: 14px; text-underline-offset: 3px; }
+
+/* skal-remsa */
+.shells { margin-top: 56px; }
+.sec-head { display: flex; align-items: baseline; gap: 16px; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
+.sec-head p { color: var(--slate); font-size: 15px; max-width: 64ch; }
+.shell-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--sheet); border-radius: 12px; overflow: hidden; }
+.shell { padding: 14px 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.shell b { display: block; font-weight: 650; }
+.shell span { font-size: 13px; color: var(--slate); }
+.shell .left { color: var(--ink); }
+
+/* ranking */
+.rank { margin-top: 56px; }
+.tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 4px 0 16px; }
+.search { flex: 1 1 240px; max-width: 340px; position: relative; }
+.search input { width: 100%; height: 42px; border-radius: var(--r-ctrl); border: 1px solid var(--line); background: var(--sheet); padding: 0 16px; font: inherit; color: var(--ink); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { height: 42px; padding: 0 16px; border-radius: var(--r-ctrl); border: 1px solid var(--line); background: var(--sheet); cursor: pointer; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--slate); cursor: pointer; padding: 0 6px; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--ink); }
+select.sort { height: 42px; border-radius: var(--r-ctrl); border: 1px solid var(--line); background: var(--sheet); padding: 0 14px; font: inherit; color: var(--ink); margin-left: auto; }
+
+.table { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: 0 1px 0 var(--line), 0 0 0 1px var(--line); overflow: hidden; }
+.thead, .row { display: grid; grid-template-columns: 44px minmax(220px, 1.6fr) 110px minmax(250px, 1.4fr) minmax(220px, 1.5fr) 24px; gap: 18px; align-items: center; padding: 0 22px; }
+.thead { height: 44px; font-size: 13px; color: var(--slate); border-bottom: 1px solid var(--line); background: #F7F9FB; }
+.row { min-height: 76px; border-bottom: 1px solid var(--line); cursor: pointer; text-decoration: none; }
+.row:last-child { border-bottom: 0; }
+.row:hover { background: #F7F9FB; }
+.row .pos { color: var(--slate); font-size: 14px; }
+.row .nm b { display: block; font-weight: 650; font-size: 16px; line-height: 1.25; }
+.row .nm span { font-size: 13px; color: var(--slate); }
+.idx { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.idx small { display: block; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--slate); margin-top: 4px; }
+.idx.t-HÖG span { background: linear-gradient(transparent 10%, var(--marker) 10%, var(--marker) 90%, transparent 90%); padding: 0 4px; }
+.idx.t-MEDEL span { background: linear-gradient(transparent 62%, var(--marker) 62%, var(--marker) 90%, transparent 90%); padding: 0 2px; }
+.sig { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sig div { font-size: 12px; color: var(--slate); }
+.sig i { display: block; height: 6px; border-radius: 3px; background: #E8ECF1; margin-bottom: 5px; position: relative; overflow: hidden; }
+.sig i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--ink); border-radius: 3px; }
+.sig .on { color: var(--ink); }
+.last { font-size: 14px; line-height: 1.35; }
+.last span { display: block; font-size: 12px; color: var(--slate); margin-top: 2px; }
+.chev { color: var(--slate); font-size: 20px; }
+.note { font-size: 13px; color: var(--slate); margin-top: 12px; }
+.empty { padding: 48px 24px; text-align: center; color: var(--slate); }
+.more { display: block; margin: 16px auto 0; }
+
+/* skeleton */
+.sk { background: linear-gradient(90deg, #E8ECF1 0, #F2F4F7 40%, #E8ECF1 80%); background-size: 400px 100%; animation: sk 1.2s linear infinite; border-radius: 6px; height: 14px; }
+@keyframes sk { from { background-position: -400px 0; } to { background-position: 400px 0; } }
+
+/* sidhuvud för undervyer */
+.page-head { max-width: 760px; }
+.page-head .lede { font-size: 17px; }
+
+/* statistikrad (prosa, inte kort) */
+.statline { display: flex; flex-wrap: wrap; gap: 36px; margin: 32px 0 28px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.statline div { font-size: 14px; color: var(--slate); max-width: 22ch; }
+.statline strong { display: block; font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); line-height: 1.05; margin-bottom: 4px; }
+
+/* bidco-tidslinje */
+.lanes { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: 0 0 0 1px var(--line); padding: 8px 22px 18px; }
+.lane { display: grid; grid-template-columns: minmax(170px, 1fr) 3fr 70px; gap: 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.lane:last-child { border-bottom: 0; }
+.lane b { font-weight: 650; display: block; }
+.lane span { font-size: 13px; color: var(--slate); }
+.track { position: relative; height: 26px; }
+.track::before { content: ""; position: absolute; left: 0; right: 0; top: 12px; height: 2px; background: #E8ECF1; }
+.track .bar { position: absolute; top: 9px; height: 8px; border-radius: 4px; background: var(--marker); }
+.track .dot { position: absolute; top: 6px; width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--ink); background: var(--sheet); transform: translateX(-50%); }
+.track .dot.end { background: var(--ink); }
+.lane .d { font-weight: 800; font-size: 20px; text-align: right; }
+.lane .d small { font-size: 12px; font-weight: 500; color: var(--slate); }
+.axis { display: grid; grid-template-columns: minmax(170px, 1fr) 3fr 70px; gap: 16px; font-size: 12px; color: var(--slate); padding-top: 10px; }
+.axis div:nth-child(2) { display: flex; justify-content: space-between; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 48px; }
+.list { background: var(--sheet); border-radius: var(--r-sheet); box-shadow: 0 0 0 1px var(--line); }
+.li { display: flex; justify-content: space-between; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.li:last-child { border-bottom: 0; }
+.li b { font-weight: 650; }
+.li span { font-size: 13px; color: var(--slate); }
+.li .r { text-align: right; white-space: nowrap; }
+
+/* register */
+.rtable .thead, .rtable .row { grid-template-columns: 92px minmax(170px, 1.2fr) minmax(160px, 1.2fr) minmax(150px, 1.1fr) 80px 84px 112px 24px; }
+.prem { font-weight: 750; }
+.prem.neg { color: var(--warn); }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: var(--r-ctrl); background: #E8ECF1; }
+.badge.ok { background: #DCEFE6; color: var(--done); }
+.badge.live { background: var(--marker-soft); }
+.bars { display: grid; gap: 10px; margin-top: 8px; }
+.bars div { display: grid; grid-template-columns: 110px 1fr 60px; gap: 12px; align-items: center; font-size: 14px; }
+.bars i { height: 10px; border-radius: 5px; background: var(--ink); display: block; width: var(--w); }
+.bars em { font-style: normal; text-align: right; font-weight: 700; }
+
+/* metod */
+.prose { max-width: 68ch; }
+.prose h2 { margin: 44px 0 12px; }
+.prose p, .prose li { font-size: 17px; line-height: 1.65; color: #2A3550; }
+.prose p + p { margin-top: 14px; }
+.prose ul { padding-left: 20px; }
+.weights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 20px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); background: var(--sheet); }
+.weights div { padding: 16px; border-right: 1px solid var(--line); font-size: 14px; color: var(--slate); }
+.weights div:last-child { border-right: 0; }
+.weights strong { display: block; font-size: 28px; color: var(--ink); font-weight: 800; }
+
+/* låda */
+.scrim { position: fixed; inset: 0; background: rgba(20,33,61,.35); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--sheet); z-index: 50; transform: translateX(100%); visibility: hidden; transition: transform .26s cubic-bezier(.2,.8,.2,1), visibility 0s .26s; overflow-y: auto; }
+.drawer.on { transform: none; visibility: visible; transition: transform .26s cubic-bezier(.2,.8,.2,1); box-shadow: -20px 0 60px rgba(20,33,61,.18); }
+.dr-in { padding: 26px 30px 60px; }
+.dr-close { position: sticky; top: 0; display: flex; justify-content: flex-end; padding: 14px 18px 0; background: linear-gradient(var(--sheet) 70%, transparent); }
+.dr-close button { border: 1px solid var(--line); background: var(--sheet); border-radius: var(--r-ctrl); height: 38px; padding: 0 16px; cursor: pointer; }
+.dr-title { font-size: 30px; font-weight: 800; letter-spacing: -.025em; line-height: 1.1; }
+.dr-sub { color: var(--slate); margin-top: 6px; }
+.dr-score { display: flex; align-items: flex-end; gap: 18px; margin: 24px 0 10px; }
+.dr-score .idx { font-size: 56px; }
+.why { font-size: 16px; line-height: 1.55; margin-bottom: 20px; }
+.parts { display: grid; gap: 12px; margin: 10px 0 30px; }
+.parts div { display: grid; grid-template-columns: 158px 1fr 42px; gap: 12px; align-items: center; font-size: 14px; }
+.parts i { height: 8px; border-radius: 4px; background: #E8ECF1; position: relative; overflow: hidden; display: block; }
+.parts i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--ink); }
+.parts em { font-style: normal; text-align: right; font-weight: 700; }
+.dr h3 { margin: 28px 0 10px; }
+.ev { display: grid; grid-template-columns: 64px 1fr; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.45; }
+.ev time { font-size: 13px; color: var(--slate); padding-top: 2px; }
+.ev span { display: block; font-size: 13px; color: var(--slate); }
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; font-size: 15px; }
+.kv dt { color: var(--slate); }
+.kv dd { margin: 0; }
+.chain { display: flex; flex-direction: column; gap: 0; margin: 6px 0; }
+.chain div { padding: 10px 14px; border-left: 3px solid var(--line); font-size: 15px; }
+.chain div:last-child { border-left-color: var(--marker); font-weight: 700; background: #FFFAE6; }
+.disc { margin-top: 36px; font-size: 13px; color: var(--slate); line-height: 1.55; }
+
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 13px; color: var(--slate); }
+footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+/* ---------- responsivt ---------- */
+@media (max-width: 1020px) {
+  .thead { display: none; }
+  .table { background: transparent; box-shadow: none; border-radius: 0; }
+  .row { grid-template-columns: 30px 1fr auto; grid-template-areas: "pos nm idx" ". sig sig" ". last last"; gap: 10px 14px; padding: 16px 18px; background: var(--sheet); border-radius: 14px; border: 1px solid var(--line); margin-bottom: 10px; }
+  .row .pos { grid-area: pos; align-self: start; padding-top: 3px; }
+  .row .nm { grid-area: nm; }
+  .row .idx { grid-area: idx; text-align: right; }
+  .row .sig { grid-area: sig; }
+  .row .last { grid-area: last; }
+  .row .chev { display: none; }
+  .rtable .row { grid-template-columns: 1fr auto; grid-template-areas: "nm prem" "by out"; }
+  .rtable .row > * { display: none; }
+  .rtable .row .c-nm { display: block; grid-area: nm; }
+  .rtable .row .c-prem { display: block; grid-area: prem; text-align: right; }
+  .rtable .row .c-by { display: block; grid-area: by; font-size: 13px; color: var(--slate); }
+  .rtable .row .c-out { display: block; grid-area: out; text-align: right; }
+  .hero, .two { grid-template-columns: 1fr; gap: 28px; }
+}
+@media (max-width: 720px) {
+  .wrap { padding: 0 16px; }
+  .top .wrap { height: 56px; }
+  .fresh span { display: none; }
+  .statline { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .statline strong { font-size: 28px; }
+  .nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--sheet); border-top: 1px solid var(--line); justify-content: space-around; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); z-index: 30; }
+  .nav a { font-size: 14px; padding: 10px 12px; }
+  main { padding: 28px 0 110px; }
+  .lane, .axis { grid-template-columns: 1fr 70px; }
+  .lane .track, .axis div:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+  .axis div:first-child { display: none; }
+  .weights { grid-template-columns: 1fr 1fr; }
+  .weights div:nth-child(2) { border-right: 0; }
+  .weights div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .kv { grid-template-columns: 1fr; gap: 2px; }
+  .kv dd { margin-bottom: 10px; }
+  .dr-in { padding: 18px 20px 60px; }
+  select.sort { margin-left: 0; }
+  footer { padding-bottom: 110px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useEffect, useMemo, useCallback } = React;
-
-const API = "/api/companies";
-
-const DEMO = [
-  { ticker: "NETEL", name: "Netel Holding", list: "Nasdaq Sthlm", priceSEK: 22.1, mcapMSEK: 1100,
-    score: { composite: 78, tier: "HÖG", parts: { insider: 88, flags: 90, shortSig: 32, bv: 50 } },
-    detail: { insider: [{ person: "VD", tx_type: "Förvärv", amount_sek: 4200000, tx_date: "2026-05-26" },
-                        { person: "Styrelseledamot", tx_type: "Förvärv", amount_sek: 1800000, tx_date: "2026-05-20" }],
-      flags: [{ holder: "Aktivistfond X", threshold: "10%", direction: "upp", flag_date: "2026-05-27" },
-              { holder: "Aktivistfond X", threshold: "5%", direction: "upp", flag_date: "2026-05-21" }],
-      shorts: [{ holder: "Fond A", position_pct: 1.2, position_date: "2026-05-27" }],
-      bolagsverket: [{ event_type: "Nytt bolag", note: "★ NewCo, samma c/o-adress som rådgivare", event_date: "2026-05-19" }] } },
-  { ticker: "CINT", name: "Cint Group", list: "Nasdaq Sthlm", priceSEK: 9.7, mcapMSEK: 980,
-    score: { composite: 64, tier: "MEDEL", parts: { insider: 50, flags: 20, shortSig: 43, bv: 50 } },
-    detail: { insider: [{ person: "CFO", tx_type: "Förvärv", amount_sek: 900000, tx_date: "2026-05-24" }],
-      flags: [{ holder: "PE-fond (via SPV)", threshold: "5%", direction: "upp", flag_date: "2026-05-20" }],
-      shorts: [{ holder: "Fond B", position_pct: 0.6, position_date: "2026-05-24" }],
-      bolagsverket: [{ event_type: "Nytt bolag", note: "★ Bidco-liknande SPV registrerad", event_date: "2026-05-23" }] } },
-  { ticker: "VNV", name: "VNV Global", list: "Nasdaq Sthlm", priceSEK: 31.2, mcapMSEK: 2400,
-    score: { composite: 61, tier: "MEDEL", parts: { insider: 72, flags: 35, shortSig: 63, bv: 15 } },
-    detail: { insider: [{ person: "VD", tx_type: "Förvärv", amount_sek: 3100000, tx_date: "2026-05-28" }],
-      flags: [{ holder: "Familjekontor Y", threshold: "10%", direction: "upp", flag_date: "2026-05-25" }],
-      shorts: [{ holder: "Fond C", position_pct: 3.1, position_date: "2026-05-28" }], bolagsverket: [] } },
-  { ticker: "APRTEC", name: "APR Technologies", list: "Spotlight", priceSEK: 15.5, mcapMSEK: 320,
-    score: { composite: 41, tier: "MEDEL", parts: { insider: 47, flags: 35, shortSig: 0, bv: 15 } },
-    detail: { insider: [{ person: "Grundare", tx_type: "Förvärv", amount_sek: 4200000, tx_date: "2026-05-22" }],
-      flags: [{ holder: "Johan Claesson (bolag)", threshold: "10%", direction: "upp", flag_date: "2026-05-18" }],
-      shorts: [], bolagsverket: [] } },
-  { ticker: "SHOT", name: "Scandinavian Health", list: "First North", priceSEK: 44, mcapMSEK: 540,
-    score: { composite: 8, tier: "LÅG", parts: { insider: 7, flags: 0, shortSig: 0, bv: 0 } },
-    detail: { insider: [], flags: [], shorts: [], bolagsverket: [] } },
-  { ticker: "BICO", name: "BICO Group", list: "Nasdaq Sthlm", priceSEK: 18.4, mcapMSEK: 1850,
-    score: { composite: 6, tier: "LÅG", parts: { insider: 1, flags: 0, shortSig: 0, bv: 0 } },
-    detail: { insider: [], flags: [], shorts: [], bolagsverket: [] } },
-];
-
-const HISTORIK = [
-  { name: "Bahnhof", ticker: "BAHN", date: "2026-07-08", bidder: "Telenor", bidco: null,
-    priceSEK: 62, mcapMSEK: null, premiumPct: 22, outcome: "Genomfört",
-    signal: "Kontrollägare sålde",
-    note: "Grundarna Karlung och Norman sålde sitt innehav — 50,8 % av aktierna men 86 % av rösterna. När den som sitter på rösterna vill ut kan ingen stoppa affären." },
-  { name: "Sleep Cycle", ticker: "SLEEP", date: "2026-05-11", bidder: "Altor Fund V", bidco: "Snark BidCo",
-    priceSEK: 24.5, mcapMSEK: 1000, premiumPct: 47, outcome: "Genomfört",
-    signal: "Nära 52v-lägsta",
-    note: "Aktien handlades kring 15–16 kr, nära årslägsta, när budet kom på 24,50. Klassiskt mönster: budgivaren slår till när kursen är nedtryckt." },
-  { name: "Nilörngruppen", ticker: "NIL B", date: "2026-05-04", bidder: "Trimco (Brookfield)", bidco: null,
-    priceSEK: 77, mcapMSEK: 878, premiumPct: 53, outcome: "Genomfört",
-    signal: "Storägare band sig",
-    note: "Traction hade 26,3 % av kapitalet men 58,1 % av rösterna och band sig oåterkalleligen. Litet bolag (878 Mkr), låg värdering mot historiken." },
-  { name: "Cint Group", ticker: "CINT", date: "2026-04-27", bidder: "Triton + Bolero", bidco: "TriCarbs BidCo",
-    priceSEK: 6.0, mcapMSEK: 2000, premiumPct: 33, outcome: "Höjt bud",
-    signal: "VD med i konsortiet",
-    note: "VD Patrick Comer var själv del av budkonsortiet. Först 5,60 kr, höjt till 6,00 efter invändning. Mot 90-dagarssnittet var premien över 70 %." },
-  { name: "Viva Wine Group", ticker: "VIVA", date: "2026-03-02", bidder: "Grundarna", bidco: "Riesling Ventures",
-    priceSEK: 38.5, mcapMSEK: null, premiumPct: 38, outcome: "Genomfört",
-    signal: "Grundarna köpte ut",
-    note: "Grundarna tog hem bolaget via Riesling Ventures. Budet låg ändå under noteringskursen 49 kr — premie mäts mot kursen före budet, inte mot toppen." },
-  { name: "Humana", ticker: "HUM", date: "2026-02-09", bidder: "Ambea", bidco: null,
-    priceSEK: null, mcapMSEK: null, premiumPct: 27, outcome: "Genomfört",
-    signal: "Branschkonsolidering",
-    note: "Konkurrenten Ambea lade ett kombinerat kontant- och aktiebud. Industriell köpare snarare än private equity." },
-  { name: "Biotage", ticker: "BIOT", date: "2026-01-12", bidder: "KKR", bidco: null,
-    priceSEK: null, mcapMSEK: null, premiumPct: 60, outcome: "Genomfört",
-    signal: "Utländsk PE-jätte",
-    note: "Amerikanska KKR bjöd med ~60 % premie. Aktien steg över 55 % på veckan och blev börsens klart bästa." },
-  { name: "Fortnox", ticker: "FNOX", date: "2025-06-16", bidder: "Hallrup + EQT", bidco: "First Kraft AB",
-    priceSEK: 90, mcapMSEK: null, premiumPct: 38, outcome: "Genomfört",
-    signal: "Storägare + PE",
-    note: "2025 års största bud. Storägaren Olof Hallrup gick ihop med EQT för att ta hem bolaget." },
-];
-
-const C = { ink: "#0d1220", paper: "#f6f7fb", card: "#ffffff", line: "#e7e9f0",
-  muted: "#6b7180", accent: "#243c79", accentSoft: "#e8ebf5", gold: "#b9862f", goldSoft: "#faf3e3", green: "#1faa6c", red: "#d64545" };
-const SERIF = "'Times New Roman', Times, Georgia, serif";
-const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
-// Fast tak för Rank-listan, ingen knapp att växla. Stora bolag blir sällan
-// uppköpta (se "Lär dig"-fliken), så de sorteras bort istället för att
-// dränka listan i brus. 10 mdkr är en rimlig generös gräns — höj/sänk här
-// om ni ser att gränsen klipper fel.
-const MCAP_CEILING = 10000;
-
-function addDays(dateStr, n) {
-  const d = new Date(dateStr + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-function fmtMcap(m) {
-  if (m == null) return null;
-  if (m >= 1000) return (m / 1000).toFixed(1).replace(".", ",") + " mdkr";
-  return Math.round(m) + " mkr";
-}
-
-function BudRadar() {
-  const [tab, setTab] = useState("rank");
-  return (
-    <div style={{ background: C.paper, minHeight: "100vh", fontFamily: SANS,
-      backgroundImage: `linear-gradient(${C.line} 1px, transparent 1px), linear-gradient(90deg, ${C.line} 1px, transparent 1px)`,
-      backgroundSize: "46px 46px" }}>
-      <style>{CSS}</style>
-      <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 92, position: "relative", minHeight: "100vh" }}>
-        {tab === "rank" && <RankTab />}
-        {tab === "bidco" && <BidcoTab />}
-        {tab === "historik" && <HistorikTab />}
-        {tab === "lar" && <LarDigTab />}
-        <BottomNav tab={tab} setTab={setTab} />
-      </div>
-    </div>
-  );
-}
-
-function RankTab() {
-  const [filter, setFilter] = useState("ALLA");
-  const [query, setQuery] = useState("");
-  const [sel, setSel] = useState(null);
-  const [mounted, setMounted] = useState(false);
-  const [data, setData] = useState(DEMO);
-  const [status, setStatus] = useState("loading");
-  const [flagged, setFlagged] = useState({}); // ticker -> outcome
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
-  const load = useCallback(async () => {
-    setStatus("loading");
-    try {
-      const r = await fetch(API); if (!r.ok) throw 0;
-      const j = await r.json();
-      if (!j.companies || !j.companies.length) throw 0;
-      setData(j.companies.map(c => ({ ...c, detail: c.detail || { insider: [], flags: [], shorts: [], bolagsverket: [] } })));
-      setStatus("live");
-    } catch { setData(DEMO); setStatus("demo"); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
-  // Hämta vilka tickers som redan har en verifierad bidco-flagg i track record,
-  // så vi kan visa en badge på dem i listan nedan — kopplar ihop appens
-  // generella aktivitetssignal med den starkare, hash-kedjade signalen.
-  useEffect(() => {
-    fetch("/api/system?action=flagged-tickers")
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(j => {
-        const map = {};
-        (j.tickers || []).forEach(t => { map[t.ticker] = t.outcome; });
-        setFlagged(map);
-      })
-      .catch(() => {}); // tyst — badgen är ett extra, inte kritiskt
-  }, []);
-
-  const rows = useMemo(() => {
-    let d = [...data];
-    const q = query.trim().toLowerCase();
-    if (q) {
-      return d
-        .filter((c) => (c.name || "").toLowerCase().includes(q) || (c.ticker || "").toLowerCase().includes(q))
-        .sort((a, b) => b.score.composite - a.score.composite);
-    }
-    // Fast tak, ingen knapp: stora bolag blir sällan uppköpta (se "Lär dig")
-    // så de sorteras bort som brus. MEN bolag med okänt börsvärde släpps
-    // igenom istället för att gömmas — det var det som gjorde listan tunn.
-    d = d.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= MCAP_CEILING);
-    if (filter !== "ALLA") d = d.filter((c) => c.score.tier === filter);
-    return d.sort((a, b) => b.score.composite - a.score.composite);
-  }, [filter, data, query]);
-  const selCo = sel ? data.find((c) => c.ticker === sel) : null;
-  const top = rows.length ? rows[0].score.composite : 0;
-  const high = data.filter((c) => c.score.tier === "HÖG").length;
-  const hiddenLarge = data.length - data.filter((c) => c.mcapMSEK == null || c.mcapMSEK <= MCAP_CEILING).length;
-
-  return (
-    <>
-      <nav style={s.nav}>
-        <img src="budradar-logo.png" alt="BudRadar" style={s.logoImg} />
-        <div style={{ fontSize: 11, color: status==="live"?C.accent:C.muted, fontWeight: 700, letterSpacing: ".04em" }}>{status==="live"?"● live":status==="demo"?"demo":"…"}</div>
-      </nav>
-
-      <header style={{ position: "relative", padding: "36px 22px 26px", overflow: "hidden" }}>
-        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> Signaler före budet</div>
-        <h1 style={s.h1}>Vilka bolag kan bli <span style={{ fontStyle: "italic", color: C.accent }}>uppköpta?</span></h1>
-        <p style={s.sub}>BudRadar bevakar de offentliga spåren ett uppköp lämnar — insynsköp, flaggningar, blankning — och rankar var det rör på sig. Ett spaningsverktyg, inte en garanti.</p>
-        <div style={s.bidcoHint}>
-          <span style={{ fontWeight: 700, color: C.ink }}>Ett tydligt spår:</span> budgivaren registrerar ofta ett nytt skalbolag först. Sleep Cycle köptes via <span style={{ color: C.accent, fontWeight: 600 }}>Snark Bidco</span>, Viva Wine via <span style={{ color: C.accent, fontWeight: 600 }}>Riesling Ventures</span>. Se fliken <span style={{ fontWeight: 600 }}>Bidco-spår</span>.
-        </div>
-        <div style={{ display: "flex", gap: 26, marginTop: 24 }}>
-          <HeroStat n={data.length} l="bevakade bolag" />
-          <HeroStat n={high} l="hög aktivitet" />
-          <HeroStat n={top} l="högsta index" accent />
-        </div>
-        <div style={s.radar} aria-hidden><div style={s.ring} /><div style={s.ring2} /><div style={s.sweep} /><div style={s.blip} /></div>
-      </header>
-
-      <div style={{ padding: "4px 20px 10px", position: "relative" }}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Sök bolag eller ticker…"
-          style={s.search}
-        />
-        {query && (
-          <button onClick={() => setQuery("")} style={s.searchClear} aria-label="Rensa">×</button>
-        )}
-      </div>
-
-      <div style={{ ...s.filterRow, opacity: query ? 0.4 : 1, pointerEvents: query ? "none" : "auto" }}>
-        {["ALLA", "HÖG", "MEDEL", "LÅG"].map((f) => (
-          <button key={f} className="pill" onClick={() => setFilter(f)} style={pill(filter === f)}>{f}</button>
-        ))}
-      </div>
-      {!query && hiddenLarge > 0 && (
-        <div style={{ padding: "0 20px 10px", fontSize: 11, color: C.muted, lineHeight: 1.4 }}>
-          {hiddenLarge} bolag över {fmtMcap(MCAP_CEILING)} döljs — de blir sällan uppköpta.
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
-        {rows.map((c, i) => (
-          <button key={c.ticker} className="card fadein" onClick={() => setSel(c.ticker)}
-            style={{ ...s.co, animationDelay: `${Math.min(i, 8) * 45}ms` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
-              <div style={s.rank}>{String(i + 1).padStart(2, "0")}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-.01em", color: C.ink }}>{c.name}</div>
-                  {flagged[c.ticker] && <FlagBadge outcome={flagged[c.ticker]} />}
-                </div>
-                <div style={s.meta}>{[c.ticker, c.priceSEK != null ? c.priceSEK + " kr" : null, c.mcapMSEK != null ? (c.mcapEstimated ? "~" : "") + fmtMcap(c.mcapMSEK) : null].filter(Boolean).join(" · ")}</div>
-              </div>
-              <Gauge v={c.score.composite} tier={c.score.tier} />
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
-              {[["Insyn", c.score.parts.insider], ["Flagg", c.score.parts.flags], ["Short", c.score.parts.shortSig], ["Bolv", c.score.parts.bv]].map(([l, v]) => (
-                <div key={l} style={{ flex: 1 }}>
-                  <div style={s.track}><div style={{ ...s.fill, width: `${v}%`, background: v >= 60 ? C.accent : C.ink }} /></div>
-                  <div style={s.sparkL}>{l}</div>
-                </div>
-              ))}
-            </div>
-          </button>
-        ))}
-        {!rows.length && <div style={{ textAlign: "center", padding: 40, color: C.muted, fontSize: 13 }}>Inga bolag i den här kategorin.</div>}
-      </div>
-
-      {selCo && <Sheet co={selCo} onClose={() => setSel(null)} />}
-      <footer style={s.foot}>Endast offentlig data · ej investeringsrådgivning · indexet mäter aktivitet, inte sannolikhet för bud.</footer>
-    </>
-  );
-}
-
-function Sheet({ co, onClose }) {
-  const d = co.detail;
-  const [news, setNews] = useState(null);
-  const [newsStatus, setNewsStatus] = useState("loading");
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch("/api/news?company=" + encodeURIComponent(co.name) + "&limit=6");
-        if (!r.ok) throw 0;
-        const j = await r.json();
-        if (!cancelled) { setNews(j.items || []); setNewsStatus("ok"); }
-      } catch { if (!cancelled) setNewsStatus("error"); }
-    })();
-    return () => { cancelled = true; };
-  }, [co.name]);
-  return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
-        <div style={s.grip} />
-        <div style={s.sheetHead}>
-          <div>
-            <div style={{ fontFamily: SERIF, fontSize: 26, letterSpacing: "-.02em", color: C.ink }}>{co.name}</div>
-            <div style={s.meta}>{[co.ticker, co.list, co.mcapMSEK != null ? co.mcapMSEK + " MSEK" : null].filter(Boolean).join(" · ")}</div>
-          </div>
-          <Gauge v={co.score.composite} tier={co.score.tier} />
-        </div>
-        <Sec title="Insynshandel · senaste">
-          {!d.insider.length ? <Empty /> : d.insider.slice(0, 6).map((x, i) => (
-            <Ev key={i} a={`${x.person} · ${x.tx_type}`} b={`${x.amount_sek ? (x.amount_sek / 1e6).toFixed(1) + " MSEK · " : ""}${x.tx_date || ""}`} />))}
-        </Sec>
-        <Sec title="Flaggningar">
-          {!d.flags.length ? <Empty /> : d.flags.map((f, i) => (
-            <Ev key={i}
-              a={f.holder || f.label || "Flaggning"}
-              b={[
-                f.reason,
-                f.threshold ? `passerade ${f.threshold}` : null,
-                f.sharePct != null ? `→ ${f.sharePct}%` : null,
-                f.flag_date,
-              ].filter(Boolean).join(" · ")} />))}
-        </Sec>
-        <Sec title="Korta nettopositioner">
-          {!d.shorts.length ? <Empty /> : <Grid items={[["Senaste", `${d.shorts[0].position_pct}%`], ["Datapunkter", d.shorts.length]]} />}
-        </Sec>
-        <Sec title="Pressmeddelanden">
-          {newsStatus === "loading" && <div style={{ fontSize: 12, color: C.muted }}>Hämtar…</div>}
-          {newsStatus === "error" && <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>Kunde inte hämta flödet</div>}
-          {newsStatus === "ok" && (!news || !news.length) && <Empty />}
-          {newsStatus === "ok" && news && news.map((n, i) => (
-            <a key={i} href={n.url || "#"} target="_blank" rel="noreferrer"
-              style={{ display: "block", textDecoration: "none", padding: "7px 0", borderBottom: i < news.length - 1 ? `1px solid ${C.line}` : "none" }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, color: C.ink, fontWeight: n.weight > 1 ? 700 : 500, lineHeight: 1.4 }}>{n.title}</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{n.date}</div>
-                </div>
-                {n.tags && n.tags.length > 0 && (
-                  <span style={{ ...s.signalTag, flexShrink: 0, fontSize: 9, padding: "2px 8px" }}>{n.tags[0]}</span>
-                )}
-              </div>
-            </a>
-          ))}
-        </Sec>
-
-        <Sec title="Bolagsverket">
-          {!d.bolagsverket.length ? <Empty /> : d.bolagsverket.map((e, i) => (
-            <Ev key={i} a={e.event_type} b={`${e.note} · ${e.event_date}`} />))}
-        </Sec>
-        <Sec title="Så räknas indexet">
-          <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginTop: -2, marginBottom: 12 }}>
-            Ett vägt mått på hur mycket offentlig aktivitet som finns i bolaget just nu. Högt index = mycket händer — inte att ett bud är på väg.
-          </p>
-          {[["Insyn", co.score.parts.insider, "30%"], ["Flaggning", co.score.parts.flags, "30%"], ["Blankning", co.score.parts.shortSig, "20%"], ["Bolagsverket", co.score.parts.bv, "20%"]].map(([l, v, w]) => (
-            <div key={l} style={{ display: "flex", alignItems: "center", gap: 11, padding: "5px 0" }}>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink }}>{l} <span style={{ color: C.muted, fontSize: 11, fontWeight: 400 }}>{w}</span></span>
-              <div style={{ flex: 1.4, height: 6, borderRadius: 999, background: "#eceef4", overflow: "hidden" }}>
-                <div style={{ ...s.fill, width: `${v}%`, background: v >= 60 ? C.accent : C.ink }} /></div>
-              <span style={{ width: 26, textAlign: "right", fontWeight: 700, fontSize: 14, color: C.ink }}>{v}</span>
-            </div>))}
-        </Sec>
-        <button className="book" style={s.closeBtn} onClick={onClose}>Stäng</button>
-      </div>
-    </div>
-  );
-}
-
-function HistorikTab() {
-  const [view, setView] = useState("bud");
-  const done = HISTORIK.filter(h => h.premiumPct > 0);
-  const avg = Math.round(done.reduce((s, h) => s + h.premiumPct, 0) / done.length);
-  const withMcap = HISTORIK.filter(h => h.mcapMSEK);
-  const medMcap = withMcap.length ? Math.round(withMcap.reduce((s,h)=>s+h.mcapMSEK,0)/withMcap.length) : null;
-
-  const [stats, setStats] = useState(null);
-  const [statsStatus, setStatsStatus] = useState("idle");
-  useEffect(() => {
-    if (view !== "analys" || stats) return;
-    setStatsStatus("loading");
-    fetch("/api/registry?stats=1")
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(j => { setStats(j); setStatsStatus("ok"); })
-      .catch(() => setStatsStatus("error"));
-  }, [view, stats]);
-
-  return (
-    <>
-      <SimpleHeader eyebrow="Avslutade bud" title={<>Vad hände <span style={{ fontStyle: "italic", color: C.accent }}>sen?</span></>}
-        sub="Riktiga bud på svenska börsen — premien de gav och vad som gick att se i förväg." />
-      <div style={{ display: "flex", gap: 24, padding: "0 22px 18px" }}>
-        <HeroStat n={`+${avg}%`} l="snittpremie" accent />
-        <HeroStat n={HISTORIK.length} l="bud i registret" />
-        {medMcap && <HeroStat n={fmtMcap(medMcap)} l="snitt börsvärde" />}
-      </div>
-
-      <div style={{ ...s.filterRow, paddingBottom: 12 }}>
-        {[["bud", "Buden"], ["analys", "Analys"]].map(([id, label]) => (
-          <button key={id} className="pill" onClick={() => setView(id)} style={pill(view === id)}>{label}</button>
-        ))}
-      </div>
-
-      {view === "analys" ? <RegistryAnalys stats={stats} status={statsStatus} /> : <>
-
-      <div style={{ ...s.infoBox, margin: "0 18px 16px" }}>
-        <b style={{ color: C.ink }}>Vad de har gemensamt</b>
-        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 7 }}>
-          {[
-            ["Små bolag", "Nilörn värderades till 878 Mkr, Cint till ~2 mdkr. Nästan inga bud sker över 5 mdkr."],
-            ["Nedtryckt kurs", "Sleep Cycle låg nära 52-veckors lägsta. Budgivare slår till när aktien är billig, inte dyr."],
-            ["Kontrollägaren vill ut", "Bahnhof: grundarna sålde. Nilörn: Traction band sig. Cint: VD var med i konsortiet."],
-            ["Bidco registreras först", "Snark BidCo, TriCarbs BidCo, Riesling Ventures, First Kraft — skalet byggs innan budet."],
-          ].map(([t, d]) => (
-            <div key={t} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-              <span style={{ color: C.accent, fontWeight: 700, fontSize: 13, lineHeight: 1.4 }}>·</span>
-              <div><b style={{ color: C.ink, fontSize: 12.5 }}>{t}.</b> <span style={{ fontSize: 12.5 }}>{d}</span></div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
-        {HISTORIK.map((h, i) => {
-          const drog = h.outcome === "Drogs tillbaka";
-          return (
-            <div key={i} style={s.co}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 13 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{h.name} <span style={{ color: C.muted, fontWeight: 400, fontSize: 12 }}>{h.ticker}</span></div>
-                  <div style={s.meta}>{[h.date, h.bidder, h.priceSEK ? h.priceSEK + " kr" : null, fmtMcap(h.mcapMSEK)].filter(Boolean).join(" · ")}</div>
-                  {h.bidco && <div style={{ ...s.meta, marginTop: 3, color: C.accent, fontWeight: 600 }}>via {h.bidco}</div>}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-                  <div style={{ fontFamily: SERIF, fontSize: 28, lineHeight: .85, color: drog ? C.muted : C.green }}>
-                    {h.premiumPct > 0 ? `+${h.premiumPct}%` : "—"}
-                  </div>
-                  <span style={outcomeTag(h.outcome)}>{h.outcome}</span>
-                </div>
-              </div>
-              {h.signal && <div style={{ marginTop: 10 }}><span style={s.signalTag}>{h.signal}</span></div>}
-              <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 9 }}>{h.note}</p>
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
-        <b style={{ color: C.ink }}>Premie</b> = hur mycket budet ligger över kursen innan budet blev känt. Äger du aktien
-        <i> före</i> budet får du skillnaden nästan direkt. Historiskt snitt på svenska börsen ligger kring 33 %.
-      </div>
-      </>}
-      <footer style={s.foot}>Verifierade bud · premie mot senaste kurs före offentliggörandet · ej investeringsrådgivning.</footer>
-    </>
-  );
-}
-
-const LEKTIONER = [
-  { q: "Vad är BudRadar?",
-    a: "BudRadar bevakar svenska börsbolag och letar efter tecken på att ett uppköp kan vara på väg. Appen läser bara offentlig information — sånt som vem som köper aktier, vem som passerar ägargränser och vilka nya bolag som registreras — och rankar bolagen efter hur många signaler som pekar åt samma håll. Ju högre score, desto fler samtidiga tecken." },
-  { q: "Vad är ett uppköp (bud)?",
-    a: "Ett uppköp är när någon — ett annat företag, en riskkapitalfond eller en storägare — vill köpa alla aktier i ett börsbolag. De lägger ett offentligt bud: 'vi betalar X kronor per aktie'. Om tillräckligt många ägare säger ja, tas bolaget över och försvinner ofta från börsen." },
-  { q: "Så går det till, steg för steg",
-    a: "1. Budgivaren bygger i tysthet en position och förbereder. 2. Ofta registreras ett nytt bolag (en 'bidco') som ska äga aktierna. 3. Budet offentliggörs — nästan alltid över gällande aktiekurs. 4. Ägarna accepterar eller inte. 5. Når budgivaren tillräcklig andel går affären igenom. Flera av de här stegen lämnar spår i offentliga register — och det är precis dem BudRadar fångar." },
-  { q: "Varför är det oftast småbolag som köps upp?",
-    a: "Riskkapitalbolag jagar aktivt mindre bolag för att bygga ihop till större koncerner genom 'bolt-on'-förvärv, och stora sammanslagningar mellan jättebolag stoppas oftare av konkurrensmyndigheter — vilket gör mindre bolag till enklare mål. Internationellt står de minsta affärerna för merparten av allt antal uppköp, även om de stora rubrikerna handlar om jättebolag. I BudRadars register hade samtliga kända uppköp hittills börsvärde under 5 mdkr — det matchar det internationella mönstret, inte bara en slump i vårt (ännu lilla) urval." },
-  { q: "Varför tjänar man pengar på det?",
-    a: "Ett bud läggs nästan alltid med en premie — ett pris klart över aktiekursen, ofta 20–40 % högre. Den som redan äger aktien när budet kommer ser kursen hoppa upp mot budnivån mer eller mindre direkt. Äger du för 100 kr och budet är 130 kr, är det +30 % i handen. Poängen med BudRadar är att hjälpa dig titta på bolag där tecknen hopar sig — innan budet blir allmänt känt." },
-  { q: "Vad betyder signalerna?",
-    a: "Insyn: bolagets egna chefer och styrelse köper aktier — de känner bolaget bäst. Flaggning: någon passerar en ägargräns (5/10/15 %), ofta ett tecken på att en köpare bygger position. Blankning: minskande blankning kan betyda att de som spekulerat i nedgång backar. Bolagsverket: en ny 'bidco' eller SPV kan vara skalet som ska genomföra ett köp." },
-  { q: "Hur ska jag INTE använda den?",
-    a: "BudRadar är inget facit och ingen investeringsrådgivning. En hög score betyder inte att ett bud kommer — bud är sällsynta och de flesta högt rankade bolag blir aldrig uppköpta. Scoren är en viktad signal, inte en sannolikhet, och den bygger på öppen data som redan är publik. Använd den som en uppslagslista för egen research, inte som en köpknapp." },
-];
-
-function LarDigTab() {
-  const [open, setOpen] = useState(0);
-  return (
-    <>
-      <SimpleHeader eyebrow="Lär dig" title={<>Så funkar det <span style={{ fontStyle: "italic", color: C.accent }}>egentligen</span></>}
-        sub="Kort om uppköp, varför de gör dig pengar, och vad varje signal i appen faktiskt betyder." />
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "4px 18px" }}>
-        {LEKTIONER.map((l, i) => {
-          const isOpen = open === i;
-          return (
-            <div key={i} style={{ ...s.co, padding: 0, overflow: "hidden" }}>
-              <button className="acc" onClick={() => setOpen(isOpen ? -1 : i)}
-                style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer",
-                  padding: "16px 16px", display: "flex", alignItems: "center", gap: 12, fontFamily: SANS }}>
-                <span style={{ fontFamily: SERIF, fontSize: 15, color: C.accent, width: 22 }}>{String(i + 1).padStart(2, "0")}</span>
-                <span style={{ flex: 1, fontWeight: 700, fontSize: 15.5, color: C.ink }}>{l.q}</span>
-                <span style={{ fontSize: 20, color: C.muted, transform: isOpen ? "rotate(45deg)" : "none", transition: "transform .2s" }}>+</span>
-              </button>
-              {isOpen && <p style={{ fontSize: 13.5, lineHeight: 1.6, color: C.muted, padding: "0 16px 18px 50px", margin: 0 }}>{l.a}</p>}
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
-        <b style={{ color: C.ink }}>Kom ihåg:</b> allt bygger på redan offentlig information. Det är lagligt att läsa och sammanställa
-        publika register — det olagliga är att handla på information som <i>inte</i> är offentlig. BudRadar rör bara det förstnämnda.
-      </div>
-      <footer style={s.foot}>Utbildande material, ej investeringsrådgivning.</footer>
-    </>
-  );
-}
-
-function RegistryAnalys({ stats, status }) {
-  if (status === "loading") return <div style={{ padding: "0 20px", color: C.muted, fontSize: 13 }}>Hämtar registret…</div>;
-  if (status === "error" || !stats) return (
-    <div style={{ ...s.infoBox, margin: "0 18px" }}>
-      Kunde inte hämta registret. Kontrollera att <code>/api/registry</code> är uppladdad.
-    </div>
-  );
-
-  const p = stats.premie || {};
-  const types = Object.entries(stats.perBudgivartyp || {}).sort((a, b) => (b[1].snittPremie ?? 0) - (a[1].snittPremie ?? 0));
-  const sectors = Object.entries(stats.perBransch || {}).sort((a, b) => (b[1].snittPremie ?? 0) - (a[1].snittPremie ?? 0));
-  const maxPrem = Math.max(...types.map(([, v]) => v.snittPremie ?? 0), 1);
-
-  return (
-    <div style={{ padding: "0 18px" }}>
-      <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
-        <div style={s.secT}>Premie · alla bud i registret</div>
-        <div style={{ display: "flex", gap: 22, marginTop: 4 }}>
-          <div><div style={{ fontFamily: SERIF, fontSize: 30, color: C.accent, lineHeight: 1 }}>{p.snitt ?? "—"}%</div>
-            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>snitt</div></div>
-          <div><div style={{ fontFamily: SERIF, fontSize: 30, color: C.ink, lineHeight: 1 }}>{p.median ?? "—"}%</div>
-            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>median</div></div>
-          <div><div style={{ fontFamily: SERIF, fontSize: 30, color: C.ink, lineHeight: 1 }}>{p.lägsta ?? "—"}–{p.högsta ?? "—"}%</div>
-            <div style={{ fontSize: 10.5, color: C.muted, marginTop: 4 }}>spann</div></div>
-        </div>
-      </div>
-
-      <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
-        <div style={s.secT}>Snittpremie per budgivartyp</div>
-        {types.map(([type, v]) => (
-          <div key={type} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.ink }}>{type}
-              <span style={{ color: C.muted, fontWeight: 400, fontSize: 11 }}> · {v.antal} st</span></span>
-            <div style={{ flex: 1.2, height: 7, borderRadius: 999, background: "#eceef4", overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 999, background: C.accent, width: `${((v.snittPremie ?? 0) / maxPrem) * 100}%` }} />
-            </div>
-            <span style={{ width: 44, textAlign: "right", fontWeight: 700, fontSize: 14, color: C.ink }}>{v.snittPremie ?? "—"}%</span>
-          </div>
-        ))}
-        <p style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5, marginTop: 8 }}>
-          Riskkapital betalar systematiskt högre premie än industriella köpare — de räknar på
-          en exit, inte på synergier.
-        </p>
-      </div>
-
-      <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
-        <div style={s.secT}>Per bransch</div>
-        {sectors.slice(0, 8).map(([sec, v]) => (
-          <div key={sec} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13 }}>
-            <span style={{ color: C.ink }}>{sec}</span>
-            <span style={{ color: C.muted }}>{v.antal} st · <b style={{ color: C.ink }}>{v.snittPremie ?? "—"}%</b></span>
-          </div>
-        ))}
-      </div>
-
-      {stats.bidcoTiming && stats.bidcoTiming.n > 0 && (
-        <div style={{ ...s.co, cursor: "default", marginBottom: 12, borderColor: "#c7cdf0" }}>
-          <div style={s.secT}>Bidco → bud · tidsgap</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginTop: 2 }}>
-            <span style={{ fontFamily: SERIF, fontSize: 40, color: C.accent, lineHeight: .9 }}>{stats.bidcoTiming.medianDagar}</span>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>dagars median</span>
-          </div>
-          <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55, marginTop: 9 }}>
-            Tiden mellan att budgivaren registrerar sitt skalbolag och att budet offentliggörs.
-            Spann {stats.bidcoTiming.kortast}–{stats.bidcoTiming.längst} dagar.
-            {" "}{stats.bidcoTiming.andelInom30Dagar}% skedde inom 30 dagar.
-          </p>
-          <p style={{ fontSize: 11.5, color: C.muted, marginTop: 8, fontStyle: "italic" }}>
-            {stats.bidcoTiming.osäkerhet || `Bygger på ${stats.bidcoTiming.n} observationer.`}
-          </p>
-        </div>
-      )}
-
-      {stats.bidco && (
-        <div style={{ ...s.co, cursor: "default", marginBottom: 12 }}>
-          <div style={s.secT}>Bidco-strukturer</div>
-          <div style={{ fontSize: 13, color: C.ink, marginBottom: 8 }}>
-            <b style={{ fontFamily: SERIF, fontSize: 24, color: C.accent }}>{stats.bidco.andelMedKändBidco}%</b>
-            <span style={{ color: C.muted, fontSize: 12 }}> av affärerna har känd bidco-kedja</span>
-          </div>
-          {(stats.bidco.exempel || []).map((b, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12.5 }}>
-              <span style={{ color: C.muted }}>{b.target}</span>
-              <span style={{ color: C.accent, fontWeight: 600 }}>{b.bidco}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {stats.ägarbindning && stats.ägarbindning.antalMedData > 0 && (
-        <div style={{ ...s.infoBox, marginBottom: 12 }}>
-          <b style={{ color: C.ink }}>Ägarbindning före budet.</b> I snitt hade{" "}
-          <b style={{ color: C.accent }}>{stats.ägarbindning.snittBundenRöstandel}%</b> av rösterna
-          bundit sig innan budet offentliggjordes. {stats.ägarbindning.kommentar}
-        </div>
-      )}
-
-      <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "4px 0 0", lineHeight: 1.5 }}>
-        Bygger på {stats.n} bud i registret. Fyll på <code>_registry-data.js</code> för starkare underlag.
-      </div>
-    </div>
-  );
-}
-
-function BidcoTab() {
-  const [flags, setFlags] = useState([]);
-  const [timing, setTiming] = useState(null);
-  const [status, setStatus] = useState("loading");
-  const [watchlist, setWatchlist] = useState([]);
-  const load = useCallback(async () => {
-    setStatus("loading");
-    try {
-      const [trRes, statsRes, wlRes] = await Promise.all([
-        fetch("/api/system?action=track-record"),
-        fetch("/api/registry?stats=1").catch(() => null),
-        fetch("/api/system?action=watchlist-status").catch(() => null),
-      ]);
-      if (!trRes.ok) throw 0;
-      const tr = await trRes.json();
-      setFlags(tr.flags || []);
-      if (statsRes && statsRes.ok) {
-        const st = await statsRes.json();
-        setTiming(st.bidcoTiming || null);
-      }
-      if (wlRes && wlRes.ok) {
-        const wl = await wlRes.json();
-        setWatchlist(wl.pending || []);
-      }
-      setStatus((tr.flags && tr.flags.length) ? "live" : "empty");
-    } catch { setStatus("error"); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  const liveFlags = flags.filter(f => f.source !== "historical_verification");
-  const historicalFlags = flags.filter(f => f.source === "historical_verification");
-
-  return (
-    <>
-      <SimpleHeader eyebrow="Verifierade skalbolag" title={<>Vem bygger ett <span style={{ fontStyle: "italic", color: C.accent }}>bidco?</span></>}
-        sub="Bolag som BudRadar automatiskt flaggat via Bolagsverkets register — namnet ser ut som ett skal OCH adressen matchar en känd M&A-rådgivare. Hash-kedjad och tidsstämplad, inte gissningar." />
-
-      {timing && timing.n > 0 && (
-        <div style={{ ...s.co, cursor: "default", margin: "0 18px 12px" }}>
-          <div style={s.secT}>Historiskt försprång</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 2 }}>
-            <span style={{ fontFamily: SERIF, fontSize: 44, color: C.accent, lineHeight: .9 }}>{timing.medianDagar}</span>
-            <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>dagar</span>
-          </div>
-          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginTop: 10 }}>
-            Så lång tid gick i median mellan att skalbolaget registrerades och att budet blev offentligt.
-            Spann {timing.kortast}–{timing.längst} dagar.
-          </p>
-          {timing.osäkerhet && (
-            <p style={{ fontSize: 11.5, color: C.muted, marginTop: 8, fontStyle: "italic" }}>{timing.osäkerhet}</p>
-          )}
-        </div>
-      )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
-        {status === "loading" && <div style={{ ...s.co, cursor: "default" }}><div style={{ height: 15, background: "#eceef4", borderRadius: 8, width: "60%" }} /></div>}
-        {status === "error" && <div style={{ ...s.infoBox }}>Kunde inte hämta track record just nu. <button onClick={load} style={s.linkBtn}>Försök igen</button></div>}
-        {status !== "loading" && status !== "error" && liveFlags.length === 0 && (
-          <div style={{ ...s.infoBox }}>Inga skalbolag flaggade live än. Bolagsverket-scanningen körs veckovis — kolla igen om några dagar.</div>
-        )}
-        {liveFlags.map((f, i) => (
-          <div key={f.id || i} className="card" style={{ ...s.co, cursor: "default" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{f.company_name}</div>
-                {f.org_nr && <div style={s.meta}>Org.nr {f.org_nr}</div>}
-                <div style={{ ...s.meta, marginTop: 4 }}>
-                  {new Date(f.created_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" })}
-                  {" · score "}{Math.round(Number(f.score))}
-                </div>
-              </div>
-              <span style={trackOutcomeTag(f.outcome)}>{trackOutcomeLabel(f.outcome)}</span>
-            </div>
-            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 10 }}>
-              {(f.flag_reason || "").replace(/_/g, " ").replace(/\+/g, " · ")}
-            </p>
-          </div>
-        ))}
-      </div>
-      <div style={{ ...s.infoBox, margin: "14px 18px 0" }}>
-        <b style={{ color: C.ink }}>Så funkar spåret:</b> varje vecka laddar BudRadar ner Bolagsverkets hela register och
-        jämför mot förra veckan. Nya aktiebolag vars namn matchar bidco-mönster (BidCo, HoldCo, MidCo, TopCo, NewCo, "Goldcup NNNN AB")
-        flaggas automatiskt — tidsstämplat så det inte går att justera i efterhand. Adressmatch mot en känd
-        M&amp;A-rådgivare ger extra poäng men krävs inte.
-      </div>
-
-      {watchlist.length > 0 && (
-        <>
-          <div style={{ padding: "24px 18px 4px" }}>
-            <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: C.muted }}>Under bevakning</div>
-            <div style={{ fontFamily: SERIF, fontSize: 22, color: C.ink, marginTop: 4 }}>Väntar på signal</div>
-            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55, marginTop: 6 }}>
-              {watchlist.length} nyregistrerade skalbolag utan bekräftad bidco-signal ännu. Flaggas automatiskt om de
-              byter namn eller flyttar adress till en känd M&amp;A-rådgivare inom 90 dagar.
-            </p>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
-            {watchlist.map((w) => {
-              const daysLeft = Math.max(0, Math.round((new Date(w.window_expires_at) - new Date()) / 86400000));
-              return (
-                <div key={w.org_nr} className="card" style={{ ...s.co, cursor: "default", opacity: 0.85 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{w.original_name}</div>
-                      <div style={s.meta}>Org.nr {w.org_nr}</div>
-                      <div style={{ ...s.meta, marginTop: 4 }}>
-                        Registrerat {new Date(w.registered_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" })}
-                      </div>
-                    </div>
-                    <span style={{ ...tag("LÅG"), background: "#f0f1f5", color: C.muted, border: `1px solid ${C.line}` }}>
-                      {daysLeft}d kvar
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {historicalFlags.length > 0 && (
-        <>
-          <div style={{ padding: "24px 18px 4px" }}>
-            <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 800, color: C.muted }}>Historik</div>
-            <div style={{ fontFamily: SERIF, fontSize: 22, color: C.ink, marginTop: 4 }}>Bakåtverifierade bud</div>
-            <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55, marginTop: 6 }}>
-              Dessa {historicalFlags.length} bidco var redan kända uppköp när de lades in — inte samma bevis som
-              live-flaggorna ovan, men verifierade Bolagsverket-datum som bekräftar mönstret.
-            </p>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 18px" }}>
-            {historicalFlags.map((f, i) => (
-              <div key={f.id || i} className="card" style={{ ...s.co, cursor: "default", opacity: 0.85 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: C.ink }}>{f.company_name}</div>
-                    {f.org_nr && <div style={s.meta}>Org.nr {f.org_nr}</div>}
-                    <div style={{ ...s.meta, marginTop: 4 }}>
-                      Registrerat {new Date(f.created_at).toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" })}
-                    </div>
-                  </div>
-                  <span style={{ ...tag("MEDEL"), background: "#f0f1f5", color: C.muted, border: `1px solid ${C.line}` }}>Historik</span>
-                </div>
-                {f.outcome_note && <p style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginTop: 10 }}>{f.outcome_note}</p>}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-      <footer style={s.foot}>Bolagsverkets register, veckovis · ej investeringsrådgivning.</footer>
-    </>
-  );
-}
-function trackOutcomeLabel(o) {
-  return o === "hit" ? "Bud kom" : o === "miss" ? "Inget bud" : o === "expired" ? "Utgången" : "Väntar";
-}
-function trackOutcomeTag(o) {
-  const map = { hit: ["#e8f6ef", C.green, "#c9ead9"], miss: ["#fbeaea", C.red, "#f2cccc"] };
-  const [bg, col, br] = map[o] || [C.accentSoft, C.accent, "#c7cdf0"];
-  return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".08em", fontWeight: 700, background: bg, color: col, border: `1px solid ${br}`, flexShrink: 0 };
-}
-
-function BottomNav({ tab, setTab }) {
-  const items = [
-    { id: "rank", label: "Rank", icon: IconRadar },
-    { id: "bidco", label: "Bidco-spår", icon: IconTarget },
-    { id: "historik", label: "Historik", icon: IconClock },
-    { id: "lar", label: "Lär dig", icon: IconBook },
-  ];
-  return (
-    <div style={s.bottomWrap}>
-      <div style={s.bottomNav}>
-        {items.map((it) => {
-          const active = tab === it.id;
-          const Icon = it.icon;
-          return (
-            <button key={it.id} onClick={() => setTab(it.id)} className="pill"
-              style={{ flex: 1, background: "none", border: "none", cursor: "pointer", fontFamily: SANS,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "4px 0" }}>
-              <Icon color={active ? C.accent : C.muted} />
-              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? C.ink : C.muted, letterSpacing: ".02em" }}>{it.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-const IconRadar = ({ color }) => (  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
-    <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 12 L19 7" /></svg>
-);
-const IconClock = ({ color }) => (
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
-    <circle cx="12" cy="12" r="9" /><path d="M12 7 v5 l3 2" /></svg>
-);
-const IconBook = ({ color }) => (
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 5 a2 2 0 0 1 2-2 h5 v16 h-5 a2 2 0 0 0-2 2 z" /><path d="M20 5 a2 2 0 0 0-2-2 h-5 v16 h5 a2 2 0 0 1 2 2 z" /></svg>
-);
-const IconTarget = ({ color }) => (
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
-    <circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /><path d="M12 2 v3 M12 19 v3 M2 12 h3 M19 12 h3" /></svg>
-);
-
-function SimpleHeader({ eyebrow, title, sub }) {
-  return (
-    <>
-      <nav style={s.nav}>
-        <img src="budradar-logo.png" alt="BudRadar" style={s.logoImg} />
-      </nav>
-      <header style={{ padding: "34px 22px 18px" }}>
-        <div style={s.eyebrow}><span style={{ width: 7, height: 7, borderRadius: "50%", background: C.accent }} /> {eyebrow}</div>
-        <h1 style={{ ...s.h1, fontSize: 40, marginTop: 18 }}>{title}</h1>
-        <p style={s.sub}>{sub}</p>
-      </header>
-    </>
-  );
-}
-function Gauge({ v, tier }) {
-  const hot = tier === "HÖG";
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-      <div style={{ fontFamily: SERIF, fontSize: 34, lineHeight: .85, letterSpacing: "-.02em", color: hot ? C.accent : C.ink }}>{v}</div>
-      <span style={tag(tier)}>{tier}</span>
-    </div>
-  );
-}
-const HeroStat = ({ n, l, accent }) => (
-  <div style={{ display: "flex", flexDirection: "column" }}>
-    <div style={{ fontFamily: SERIF, fontSize: 30, lineHeight: 1, color: accent ? C.accent : C.ink }}>{n}</div>
-    <div style={{ fontSize: 11, color: C.muted, marginTop: 5, letterSpacing: ".02em" }}>{l}</div>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#radar"><img src="budradar-logo.png" alt="" />BudRadar</a>
+    <nav class="nav" aria-label="Huvudmeny">
+      <a href="#radar">Radar</a>
+      <a href="#bidco">Bidco-spår</a>
+      <a href="#register">Budregister</a>
+      <a href="#metod">Så funkar det</a>
+    </nav>
+    <div class="fresh" id="fresh"><i></i><span>Hämtar data…</span></div>
   </div>
-);
-const Sec = ({ title, children }) => (
-  <div style={{ borderBottom: `1px solid ${C.line}`, padding: "15px 0" }}>
-    <div style={{ fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", fontWeight: 700, color: C.muted, marginBottom: 11 }}>{title}</div>
-    {children}
-  </div>
-);
-const Grid = ({ items }) => (
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-    {items.map(([l, v]) => (
-      <div key={l} style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 3 }}>
-        <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em" }}>{l}</span>
-        <span style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1, color: C.ink }}>{v}</span>
+</header>
+
+<main class="wrap">
+  <!-- ================= RADAR ================= -->
+  <section class="view" id="v-radar">
+    <div class="hero">
+      <div>
+        <h1>Uppköp lämnar spår innan de blir offentliga.</h1>
+        <p class="lede">BudRadar läser insynsregistret, flaggningar, blankningsregistret och Bolagsverkets nyregistreringar varje dag och visar var på Stockholmsbörsen det rör sig. Ett spaningsverktyg, inte en köprekommendation.</p>
+        <p class="facts" id="facts"><span class="sk" style="display:block;width:80%"></span></p>
       </div>
-    ))}
-  </div>
-);
-const Ev = ({ a, b }) => (
-  <div style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "6px 0", fontSize: 13 }}>
-    <span style={{ fontWeight: 600, color: C.ink }}>{a}</span>
-    <span style={{ fontSize: 11, color: C.muted, textAlign: "right" }}>{b}</span>
-  </div>
-);
-const Empty = () => <div style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>Inga registrerade händelser</div>;
+      <aside class="latest" id="latest" aria-label="Senaste budet"><div class="sk" style="background:#2A3A5C;height:120px"></div></aside>
+    </div>
 
-// Liten badge som visar att bolaget redan har en verifierad bidco-flagg i
-// track record — guld för väntande, grön för bekräftad träff (bud kom).
-const FlagBadge = ({ outcome }) => {
-  const hit = outcome === "hit";
-  return (
-    <span title={hit ? "Bud bekräftat efter flaggning" : "Flaggad i track record, väntar på utfall"}
-      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12, lineHeight: 1, flexShrink: 0 }}>{hit ? "✅" : "🚩"}</span>
-  );
-};
+    <div class="shells">
+      <div class="sec-head">
+        <h2>Nya skalbolag hos Bolagsverket</h2>
+        <p>Budgivare köper ofta ett lagerbolag som "Goldcup 39639 AB" några veckor före budet. Vi bevakar varje nytt i 90 dagar och flaggar när det byter namn eller flyttar till en M&amp;A-rådgivare.</p>
+      </div>
+      <div class="shell-row" id="shells"></div>
+      <p class="note"><a href="#bidco">Hela bevakningslistan och historiska mönster</a></p>
+    </div>
 
-function pill(a) {
-  return { padding: "8px 18px", borderRadius: 999, border: `1px solid ${a ? C.ink : C.line}`,
-    background: a ? C.ink : C.card, color: a ? "#fff" : C.ink, fontSize: 12.5, fontWeight: 600,
-    cursor: "pointer", fontFamily: SANS, letterSpacing: ".03em", transition: "all .15s" };
+    <div class="rank">
+      <div class="sec-head">
+        <h2>Störst rörelse just nu</h2>
+        <p>Index 0–100 vägt av insynsköp, flaggningar, minskad blankning och bolagshändelser senaste 90–120 dagarna. Klicka på ett bolag för att se vad som driver siffran.</p>
+      </div>
+      <div class="tools" role="group" aria-label="Filtrera listan">
+        <label class="search"><span class="sr" hidden>Sök bolag</span><input id="q" type="search" placeholder="Sök bolag eller ticker" autocomplete="off" /></label>
+        <div class="chips" id="tierChips">
+          <button class="chip" data-t="ALLA" aria-pressed="true">Alla</button>
+          <button class="chip" data-t="HÖG" aria-pressed="false">Hög</button>
+          <button class="chip" data-t="MEDEL" aria-pressed="false">Medel</button>
+          <button class="chip" data-t="LÅG" aria-pressed="false">Låg</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="large" />Visa storbolag</label>
+        <select class="sort" id="sort" aria-label="Sortera">
+          <option value="score">Sortera på index</option>
+          <option value="recent">Sortera på senaste händelse</option>
+        </select>
+      </div>
+      <div class="table" id="rankTable">
+        <div class="thead" aria-hidden="true"><div></div><div>Bolag</div><div>Index</div><div>Signaler</div><div>Senaste händelse</div><div></div></div>
+        <div id="rows"></div>
+      </div>
+      <p class="note" id="rankNote"></p>
+    </div>
+  </section>
+
+  <!-- ================= BIDCO ================= -->
+  <section class="view" id="v-bidco" hidden>
+    <div class="page-head">
+      <h1>Skalbolaget kommer först.</h1>
+      <p class="lede">Nästan varje uppköp görs genom ett nyregistrerat bolag — ett bidco. Det registreras hos Bolagsverket veckor innan budet offentliggörs, och registret är öppet för alla. Här är tiden mellan registrering och bud i fall vi har verifierat.</p>
+    </div>
+    <div class="statline" id="bidcoStats"></div>
+    <div class="sec-head"><h2>Från registrering till bud</h2><p>Gul sträcka = dagar mellan att skalbolaget registrerades och att budet offentliggjordes.</p></div>
+    <div class="lanes" id="lanes"></div>
+    <div class="two">
+      <div>
+        <div class="sec-head"><h2>Under bevakning</h2></div>
+        <p class="muted" style="margin:-4px 0 14px;font-size:15px">Lagerbolag och skal registrerade de senaste 90 dagarna. Vi larmar när ett byter namn eller adress.</p>
+        <div class="list" id="watch"></div>
+      </div>
+      <div>
+        <div class="sec-head"><h2>Bidco-omnämnanden i pressflödet</h2></div>
+        <p class="muted" style="margin:-4px 0 14px;font-size:15px">Pressmeddelanden från MFN där ett bidco eller lagerbolag nämns — ofta samma dag som budet.</p>
+        <div class="list" id="mentions"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REGISTER ================= -->
+  <section class="view" id="v-register" hidden>
+    <div class="page-head">
+      <h1>Varje bud, med kedjan bakom.</h1>
+      <p class="lede">Offentliga uppköpserbjudanden på svenska marknadsplatser med budgivare, bidco-struktur, ägare som band sig och utfall. Verifierat mot pressmeddelanden — fält vi inte kunnat bekräfta lämnas tomma.</p>
+    </div>
+    <div class="statline" id="regStats"></div>
+    <div class="two" style="margin-top:0;margin-bottom:40px">
+      <div><h3>Premie per budgivartyp</h3><div class="bars" id="byType"></div></div>
+      <div><h3>Bud per år i registret</h3><div class="bars" id="byYear"></div></div>
+    </div>
+    <div class="tools">
+      <div class="chips" id="yearChips"></div>
+      <label class="toggle"><input type="checkbox" id="mand" checked />Visa budpliktsbud</label>
+    </div>
+    <div class="table rtable">
+      <div class="thead" aria-hidden="true"><div>Datum</div><div>Målbolag</div><div>Budgivare</div><div>Bidco</div><div>Pris</div><div>Premie</div><div>Utfall</div><div></div></div>
+      <div id="regRows"></div>
+    </div>
+  </section>
+
+  <!-- ================= METOD ================= -->
+  <section class="view" id="v-metod" hidden>
+    <div class="prose">
+      <h1>Så räknas indexet.</h1>
+      <p class="lede">Inga hemliga modeller. Fyra offentliga källor, vägda ihop till en siffra mellan 0 och 100.</p>
+      <div class="weights">
+        <div><strong>30 %</strong>Insynsköp</div>
+        <div><strong>30 %</strong>Flaggningar</div>
+        <div><strong>20 %</strong>Minskad blankning</div>
+        <div><strong>20 %</strong>Bolagsverket</div>
+      </div>
+      <h2>Insynsköp</h2>
+      <p>Nettoköp från personer i ledande ställning de senaste 90 dagarna, från Finansinspektionens insynsregister. Fler olika köpare väger tyngre än ett stort köp. Teckning i nyemission räknas till halva värdet — det är oftast att delta i en kapitalanskaffning, inte en signal om bud.</p>
+      <h2>Flaggningar</h2>
+      <p>När någon passerar 5, 10, 15 procent eller högre. En ägare som bygger upp en post är ofta första steget mot kontroll; budplikt utlöses vid 30 procent. Flaggningar nedåt drar ner indexet.</p>
+      <h2>Blankning</h2>
+      <p>När blankare minskar sina korta positioner kan de ha fått kalla fötter. En signal på egen hand är svag; i kombination med köp blir den intressant.</p>
+      <h2>Bolagsverket</h2>
+      <p>Varje måndag och torsdag läser vi hela Bolagsverkets register (cirka 1,5 miljoner aktiebolag) och letar nya skal med bidco-mönster: namn som "BidCo" eller "TopCo", eller lagerbolag från Goldcup och liknande leverantörer. De bevakas i 90 dagar.</p>
+      <h2>Vad indexet inte är</h2>
+      <p>En hög siffra betyder att det händer något som historiskt ofta föregått bud. Det betyder inte att ett bud kommer. Storbolag (Large Cap) döljs som standard eftersom de sällan köps ut. Utländska bidcos (dansk ApS, brittisk Ltd) syns inte i det svenska registret.</p>
+      <h2>Källor</h2>
+      <ul>
+        <li>Finansinspektionen: insynsregistret, blankningsregistret, flaggningar (via MFN)</li>
+        <li>Bolagsverket: värdefulla datamängder, bulkfil</li>
+        <li>Budgivarnas och målbolagens pressmeddelanden för budregistret</li>
+      </ul>
+      <p class="disc">BudRadar är ett informationsverktyg och utgör inte investeringsrådgivning. Gör alltid din egen analys.</p>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>BudRadar bevakar offentliga källor. Ingen investeringsrådgivning.</span><span id="foot"></span></div></footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer dr" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drTitle">
+  <div class="dr-close"><button id="drClose">Stäng</button></div>
+  <div class="dr-in" id="drBody"></div>
+</aside>
+
+<script>
+"use strict";
+const S = { companies: null, registry: null, tr: null, wl: null, bv: null, bidco: null,
+  q: "", tier: "ALLA", large: false, sort: "score", limit: 40, year: "Alla", mand: true, loadedAt: null };
+
+// ---------- format ----------
+const nf = (d = 0) => new Intl.NumberFormat("sv-SE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])).replace(/&amp;amp;/g, "&amp;");
+const MON = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+function dShort(iso) { if (!iso) return ""; const d = new Date(iso.slice(0, 10) + "T12:00:00"); const y = d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : ""; return d.getDate() + " " + MON[d.getMonth()] + y; }
+function dLong(iso) { if (!iso) return "—"; const d = new Date(iso.slice(0, 10) + "T12:00:00"); return d.getDate() + " " + MON[d.getMonth()] + " " + d.getFullYear(); }
+const days = (a, b) => Math.round((Date.parse(b.slice(0, 10)) - Date.parse(a.slice(0, 10))) / 864e5);
+const ago = (iso) => days(iso, new Date().toISOString());
+function msek(m) { if (m == null || !isFinite(m)) return null; if (m >= 1000) return nf(m >= 10000 ? 0 : 1).format(m / 1000) + " mdkr"; return nf(0).format(m) + " Mkr"; }
+function sek(v) { if (v == null) return "—"; return nf(v % 1 ? 2 : 0).format(v) + " kr"; }
+function pct(v, d = 0) { if (v == null) return "—"; return (v > 0 ? "+" : "") + nf(d).format(v) + " %"; }
+function sizeClass(m) { if (m == null) return null; if (m < 250) return "mikrobolag"; if (m < 2000) return "småbolag"; if (m < 10000) return "medelstort"; return "storbolag"; }
+function cleanName(n) { return String(n || "").replace(/&amp;/g, "&").replace(/\s*\(publ\.?\)/ig, "").replace(/\s+/g, " ").trim(); }
+const normB = (s) => String(s || "").toLowerCase().replace(/\(.*?\)/g, "").replace(/\b(ab|aps|ltd|limited|publ)\b/g, "").replace(/[^a-z0-9åäö]/g, "");
+
+async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(url + " " + r.status); return r.json(); }
+
+// ---------- händelser per bolag ----------
+function events(c) {
+  const ev = [];
+  for (const x of c.detail.insider || []) {
+    if (!x.tx_date) continue;
+    const buy = /förvärv|köp|teckn/i.test(x.tx_type), sell = /avyttr|sälj|avytt/i.test(x.tx_type);
+    const amt = x.amount_sek ? msek(x.amount_sek / 1e6) : null;
+    ev.push({ date: x.tx_date, kind: "Insyn", w: buy ? 2 : 1,
+      text: `${cleanName(x.person)} ${buy ? (/teckn/i.test(x.tx_type) ? "tecknade" : "köpte") : sell ? "sålde" : (x.tx_type || "").toLowerCase()}${amt ? " för " + amt : ""}` });
+  }
+  for (const f of c.detail.flags || []) {
+    const pctTxt = f.sharePct ? nf(1).format(f.sharePct) + " %" : f.threshold;
+    ev.push({ date: f.flag_date, kind: "Flaggning", w: 3, url: f.url,
+      text: `${cleanName(f.holder || "Okänd ägare")} ${f.direction === "ner" ? "minskade till" : "ökade till"} ${pctTxt || "ny nivå"}${f.reason ? " (" + f.reason.toLowerCase() + ")" : ""}` });
+  }
+  for (const s of c.detail.shorts || []) {
+    ev.push({ date: s.position_date, kind: "Blankning", w: 1, text: `${cleanName(s.holder)} har ${nf(2).format(s.position_pct)} % kort` });
+  }
+  for (const b of c.detail.bolagsverket || []) ev.push({ date: b.event_date, kind: "Bolagsverket", w: 3, text: b.note || b.event_type });
+  return ev.filter((e) => e.date).sort((a, b) => b.date.localeCompare(a.date) || b.w - a.w);
 }
-function tag(t) {
-  const hot = t === "HÖG";
-  return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".1em", fontWeight: 700,
-    background: hot ? C.accentSoft : "#f0f1f5", color: hot ? C.accent : C.muted, border: `1px solid ${hot ? "#c7cdf0" : C.line}` };
+function why(c) {
+  const p = c.score.parts, ev = events(c), bits = [];
+  const fl = ev.find((e) => e.kind === "Flaggning"), ins = ev.find((e) => e.kind === "Insyn" && e.w === 2);
+  if (p.flags > 0 && fl) bits.push(`${fl.text} den ${dShort(fl.date)}.`);
+  if (p.insider > 0 && ins) bits.push(`${ins.text} den ${dShort(ins.date)}.`);
+  if (p.shortSig > 0) bits.push("Blankarna har minskat sina positioner.");
+  if (p.bv > 0) bits.push("En bolagshändelse hos Bolagsverket väger in.");
+  if (!bits.length) return "Svag aktivitet — inga starka signaler de senaste månaderna.";
+  return bits.join(" ");
 }
-function outcomeTag(o) {
-  const map = { "Genomfört": [C.accentSoft, C.accent, "#c7cdf0"], "Höjt bud": ["#e8f6ef", C.green, "#c9ead9"], "Drogs tillbaka": ["#fbeaea", C.red, "#f2cccc"] };
-  const [bg, col, br] = map[o] || ["#f0f1f5", C.muted, C.line];
-  return { padding: "2px 9px", borderRadius: 999, fontSize: 9, letterSpacing: ".08em", fontWeight: 700, background: bg, color: col, border: `1px solid ${br}` };
+
+// ---------- RADAR ----------
+function visibleCompanies() {
+  let list = (S.companies || []).filter((c) => S.large || !c.largeCap);
+  if (S.tier !== "ALLA") list = list.filter((c) => c.score.tier === S.tier);
+  if (S.q) { const q = S.q.toLowerCase(); list = list.filter((c) => c.name.toLowerCase().includes(q) || (c.symbol || "").toLowerCase().includes(q)); }
+  if (S.sort === "recent") list = [...list].sort((a, b) => (b.lastEvent || "").localeCompare(a.lastEvent || ""));
+  return list;
+}
+function renderRows() {
+  const el = document.getElementById("rows");
+  if (!S.companies) { el.innerHTML = Array.from({ length: 6 }, () => `<div class="row"><div></div><div><div class="sk" style="width:70%"></div></div><div class="sk" style="width:50px;height:26px"></div><div class="sk"></div><div class="sk"></div><div></div></div>`).join(""); return; }
+  const list = visibleCompanies();
+  if (!list.length) { el.innerHTML = `<div class="empty">Inga bolag matchar. Rensa sökningen eller välj “Alla”.</div>`; document.getElementById("rankNote").textContent = ""; return; }
+  const shown = list.slice(0, S.limit);
+  el.innerHTML = shown.map((c, i) => {
+    const p = c.score.parts, ev = events(c)[0];
+    const meta = [c.symbol, c.mcapMSEK != null ? (c.mcapEstimated ? "ca " : "") + msek(c.mcapMSEK) : null].filter(Boolean).join(", ");
+    const sig = [["Insyn", p.insider], ["Flagg", p.flags], ["Blankn.", p.shortSig], ["Bolagsv.", p.bv]]
+      .map(([l, v]) => `<div class="${v > 0 ? "on" : ""}"><i style="--w:${v}%"></i>${l}</div>`).join("");
+    return `<a class="row" href="#bolag/${encodeURIComponent(c.ticker)}">
+      <div class="pos">${i + 1}</div>
+      <div class="nm"><b>${esc(cleanName(c.name))}</b><span>${esc(meta || "Börsvärde saknas")}</span></div>
+      <div class="idx t-${c.score.tier}"><span>${c.score.composite}</span><small>${c.score.tier.charAt(0) + c.score.tier.slice(1).toLowerCase()}</small></div>
+      <div class="sig">${sig}</div>
+      <div class="last">${ev ? esc(ev.text) + `<span>${ev.kind}, ${dShort(ev.date)}</span>` : `<span>Ingen händelse</span>`}</div>
+      <div class="chev" aria-hidden="true">›</div></a>`;
+  }).join("") + (list.length > S.limit ? `<button class="chip more" id="moreBtn">Visa ${Math.min(40, list.length - S.limit)} till</button>` : "");
+  const btn = document.getElementById("moreBtn"); if (btn) btn.onclick = () => { S.limit += 40; renderRows(); };
+  const hidden = (S.companies || []).filter((c) => c.largeCap).length;
+  document.getElementById("rankNote").textContent = `${list.length} bolag${!S.large && hidden ? `. ${hidden} storbolag är dolda — de köps sällan ut.` : "."}`;
+}
+function renderHero() {
+  const reg = S.registry, cs = S.companies;
+  const latest = reg && reg[0];
+  if (latest) {
+    document.getElementById("latest").innerHTML = `
+      <small>Senaste budet, ${dLong(latest.announced)}</small>
+      <div class="who">${esc(latest.target)}</div>
+      <div class="by">${esc(latest.bidder)}${latest.mandatoryOffer ? ", budpliktsbud" : ""}</div>
+      <div class="terms">
+        ${latest.pricePerShare != null ? `<div><strong>${sek(latest.pricePerShare)}</strong>per aktie</div>` : ""}
+        ${latest.premiumLastClose != null ? `<div class="prem"><strong>${pct(latest.premiumLastClose)}</strong>premie</div>` : ""}
+        ${latest.equityValueMSEK ? `<div><strong>${msek(latest.equityValueMSEK)}</strong>värdering</div>` : ""}
+      </div>
+      <a href="#bud/${latest.id}">Läs hela budet</a>`;
+  }
+  if (cs) {
+    const small = cs.filter((c) => !c.largeCap);
+    const active = small.filter((c) => c.lastEvent && ago(c.lastEvent) <= 14 && c.score.composite > 0).length;
+    const top = small[0];
+    const pend = S.wl && S.wl.counts ? S.wl.counts.pending : null;
+    document.getElementById("facts").innerHTML =
+      `Vi följer <b>${nf().format(small.length)} bolag</b> med aktivitet i registren. <b>${active}</b> av dem har haft en händelse de senaste två veckorna, och högst index just nu har <a href="#bolag/${encodeURIComponent(top.ticker)}"><b>${esc(cleanName(top.name))}</b></a> (${top.score.composite}).` +
+      (pend ? ` Hos Bolagsverket bevakar vi <b>${pend} nya skalbolag</b>.` : "");
+  }
+}
+function renderShells() {
+  const el = document.getElementById("shells");
+  if (!S.wl) { el.innerHTML = `<div class="shell"><div class="sk"></div></div>`.repeat(4); return; }
+  const p = (S.wl.pending || []).slice().sort((a, b) => b.registered_at.localeCompare(a.registered_at)).slice(0, 8);
+  if (!p.length) { el.innerHTML = `<div class="shell"><b>Inga nya skal just nu</b><span>Nästa skanning måndag eller torsdag morgon.</span></div>`; return; }
+  el.innerHTML = p.map((w) => {
+    const left = Math.max(0, days(new Date().toISOString(), w.window_expires_at));
+    return `<div class="shell"><b>${esc(w.original_name)}</b><span>Registrerat ${dShort(w.registered_at)}, <span class="left">${left} dagar kvar</span></span></div>`;
+  }).join("");
 }
 
-const s = {
-  nav: { display: "flex", alignItems: "center", justifyContent: "space-between", margin: "14px 14px 0", padding: "12px 16px",
-    background: C.card, border: `1px solid ${C.line}`, borderRadius: 999, boxShadow: "0 6px 24px rgba(13,18,32,.05)" },
-  logoImg: { height: 22, width: "auto", display: "block" },
-  eyebrow: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 13px", background: C.card,
-    border: `1px solid ${C.line}`, borderRadius: 999, fontSize: 12, color: C.muted, fontWeight: 600, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
-  h1: { fontFamily: SERIF, fontSize: 52, lineHeight: .98, fontWeight: 400, letterSpacing: "-.02em", margin: "20px 0 0", maxWidth: 360, color: C.ink },
-  sub: { fontSize: 15, lineHeight: 1.5, color: C.muted, marginTop: 16, maxWidth: 340 },
-  radar: { position: "absolute", top: -30, right: -46, width: 150, height: 150, opacity: .9 },
-  ring: { position: "absolute", inset: 0, border: `1px solid ${C.line}`, borderRadius: "50%" },
-  ring2: { position: "absolute", inset: 34, border: `1px solid ${C.line}`, borderRadius: "50%" },
-  sweep: { position: "absolute", inset: 0, borderRadius: "50%", background: "conic-gradient(from 0deg, rgba(36,60,121,.16), transparent 65%)", animation: "sweep 3.4s linear infinite" },
-  blip: { position: "absolute", top: 44, left: 96, width: 7, height: 7, borderRadius: "50%", background: C.accent, boxShadow: `0 0 0 4px ${C.accentSoft}`, animation: "blink 1.7s infinite" },
-  filterRow: { display: "flex", gap: 8, padding: "6px 20px 12px" },
-  co: { textAlign: "left", background: C.card, border: `1px solid ${C.line}`, borderRadius: 18, padding: "16px 16px 14px", cursor: "pointer", fontFamily: SANS, boxShadow: "0 8px 30px rgba(13,18,32,.05)" },
-  rank: { fontSize: 12, fontWeight: 700, color: C.muted, fontVariantNumeric: "tabular-nums", width: 22 },
-  meta: { fontSize: 11.5, color: C.muted, marginTop: 2 },
-  track: { height: 5, borderRadius: 999, background: "#eceef4", overflow: "hidden" },
-  fill: { height: "100%", borderRadius: 999, transition: "width .9s cubic-bezier(.2,.8,.2,1)" },
-  sparkL: { fontSize: 9, color: C.muted, marginTop: 5, letterSpacing: ".04em", textAlign: "center" },
-  infoBox: { background: C.accentSoft, border: `1px solid #c7cdf0`, borderRadius: 14, padding: "14px 16px", fontSize: 13, lineHeight: 1.55, color: C.muted },
-  bidcoHint: { marginTop: 18, background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: "13px 15px", fontSize: 12.5, lineHeight: 1.55, color: C.muted, boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
-  search: { width: "100%", padding: "11px 36px 11px 14px", borderRadius: 999, border: `1px solid ${C.line}`,
-    background: C.card, fontSize: 14, fontFamily: SANS, color: C.ink, outline: "none",
-    boxShadow: "0 4px 16px rgba(13,18,32,.04)" },
-  searchClear: { position: "absolute", right: 30, top: "50%", transform: "translateY(-50%)",
-    background: "none", border: "none", fontSize: 20, color: C.muted, cursor: "pointer",
-    lineHeight: 1, padding: 0, fontFamily: SANS },
-  linkBtn: { background: "none", border: "none", color: C.accent, fontWeight: 700, cursor: "pointer", fontFamily: SANS, fontSize: 13, padding: 0 },
-  signalTag: { display: "inline-block", background: C.accentSoft, color: C.accent, border: "1px solid #c7cdf0", borderRadius: 999, padding: "3px 11px", fontSize: 10.5, fontWeight: 700, letterSpacing: ".03em" },
-  chipOffer: { background: C.accent, color: "#fff", borderRadius: 999, padding: "2px 9px", fontSize: 9, letterSpacing: ".12em", fontWeight: 700, flexShrink: 0 },
-  overlay: { position: "fixed", inset: 0, background: "rgba(13,18,32,.35)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" },
-  sheet: { background: C.card, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "24px 24px 0 0", padding: "10px 20px 26px", animation: "slideUp .32s cubic-bezier(.2,.8,.2,1)", boxShadow: "0 -10px 50px rgba(13,18,32,.2)" },
-  grip: { width: 42, height: 5, background: C.line, borderRadius: 3, margin: "6px auto 16px" },
-  sheetHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 16, borderBottom: `1px solid ${C.line}`, marginBottom: 4 },
-  closeBtn: { width: "100%", marginTop: 18, padding: "14px", background: C.ink, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: SANS, transition: "transform .15s" },
-  foot: { fontSize: 10.5, color: C.muted, padding: "22px 24px 0", lineHeight: 1.6, textAlign: "center" },
-  bottomWrap: { position: "fixed", bottom: 0, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "0 14px 14px", pointerEvents: "none" },
-  bottomNav: { pointerEvents: "auto", width: "100%", maxWidth: 452, display: "flex", background: C.card, border: `1px solid ${C.line}`,
-    borderRadius: 22, padding: "8px 8px", boxShadow: "0 10px 40px rgba(13,18,32,.14)" },
-};
+// ---------- BIDCO ----------
+function bidcoCases() {
+  const hist = (S.tr && S.tr.flags || []).filter((f) => f.source === "historical_verification");
+  const reg = S.registry || [];
+  return hist.map((f) => {
+    const key = normB(f.company_name);
+    const r = reg.find((x) => (x.bidcoChain || []).some((b) => normB(b).startsWith(key) || key.startsWith(normB(b)) && normB(b).length > 4));
+    const announced = r ? r.announced : (f.outcome_date || "").slice(0, 10);
+    const registered = (f.created_at || "").slice(0, 10);
+    return { bidco: f.company_name.replace(/\s+AB$/i, " AB"), target: r ? r.target : (f.outcome_note || "").replace(/^Bud offentliggjort.*$/, "") || null, registered, announced, d: days(registered, announced), id: r && r.id };
+  }).filter((x) => x.registered && x.announced && x.d > 0).sort((a, b) => a.d - b.d);
+}
+function renderBidco() {
+  const cases = bidcoCases();
+  const ds = cases.map((c) => c.d).sort((a, b) => a - b);
+  const med = ds.length ? (ds.length % 2 ? ds[(ds.length - 1) / 2] : Math.round((ds[ds.length / 2 - 1] + ds[ds.length / 2]) / 2)) : null;
+  const goldcups = (S.registry || []).filter((r) => (r.bidcoChain || []).join(" ").match(/goldcup/i)).length;
+  document.getElementById("bidcoStats").innerHTML = S.tr ? `
+    <div><strong>${med ?? "—"} dagar</strong>median från registrering till bud</div>
+    <div><strong>${ds.length ? ds[0] + "–" + ds[ds.length - 1] : "—"}</strong>dagar, kortast till längst</div>
+    <div><strong>${ds.length}</strong>verifierade fall med känt registreringsdatum</div>
+    <div><strong>${S.wl && S.wl.counts ? S.wl.counts.pending : "—"}</strong>skal under bevakning just nu</div>
+    <div><strong>${goldcups}</strong>bud i registret gjorda via Goldcup-skal</div>` : `<div class="sk" style="width:100%"></div>`;
+  const max = Math.max(60, ...ds);
+  document.getElementById("lanes").innerHTML = cases.length ? cases.map((c) => `
+    <div class="lane">
+      <div><b>${esc(c.bidco)}</b><span>${c.target ? (c.id ? `<a href="#bud/${c.id}">${esc(c.target)}</a>` : esc(c.target)) + ", " : ""}${dShort(c.registered)} till ${dShort(c.announced)}</span></div>
+      <div class="track" aria-label="${c.d} dagar"><div class="bar" style="left:0;width:${c.d / max * 100}%"></div><div class="dot" style="left:0"></div><div class="dot end" style="left:${c.d / max * 100}%"></div></div>
+      <div class="d">${c.d}<small> d</small></div>
+    </div>`).join("") + `<div class="axis"><div></div><div><span>Registrering</span><span>${max} dagar</span></div><div></div></div>`
+    : `<div class="empty">${S.tr ? "Inga verifierade fall ännu." : "Laddar…"}</div>`;
 
-const CSS = `
-  @keyframes sweep { to { transform: rotate(360deg); } }
-  @keyframes blink { 0%,100% { opacity:1;} 50% { opacity:.25;} }
-  @keyframes slideUp { from { transform: translateY(100%);} to { transform: translateY(0);} }
-  @keyframes fadein { from { opacity: 0; transform: translateY(12px);} to { opacity: 1; transform: translateY(0);} }
-  .fadein { animation: fadein .35s cubic-bezier(.2,.8,.2,1) both; }
-  .card:active { transform: translateY(1px) scale(.995) !important; }
-  .pill:active { transform: scale(.96); }
-  .book:hover { transform: translateY(-1px); }
-  .acc:active { opacity:.7; }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
-`;
+  const w = document.getElementById("watch");
+  if (S.wl) {
+    const p = (S.wl.pending || []).slice().sort((a, b) => b.registered_at.localeCompare(a.registered_at));
+    w.innerHTML = p.length ? p.slice(0, 25).map((x) => `<div class="li"><div><b>${esc(x.original_name)}</b><br><span>Org.nr ${esc(x.org_nr)}</span></div><div class="r"><span>Registrerat ${dShort(x.registered_at)}</span><br><span>Bevakas till ${dShort(x.window_expires_at)}</span></div></div>`).join("")
+      + (p.length > 25 ? `<div class="li"><span>och ${p.length - 25} till</span></div>` : "")
+      : `<div class="empty">Inga skal under bevakning.</div>`;
+  }
+  const m = document.getElementById("mentions");
+  if (S.bidco) {
+    const it = S.bidco.items || [];
+    m.innerHTML = it.length ? it.slice(0, 15).map((x) => `<div class="li"><div><b>${esc(x.bidco || x.title)}</b><br><span>${esc(x.issuer || x.title || "")}</span></div><div class="r">${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">Läs</a>` : ""}<br><span>${dShort(x.date)}</span></div></div>`).join("")
+      : `<div class="empty">Inga bidco-omnämnanden i de senaste 500 pressmeddelandena. Flödet kollas var 20:e minut.</div>`;
+  }
+}
 
-ReactDOM.createRoot(document.getElementById("root")).render(<BudRadar />);
+// ---------- REGISTER ----------
+function regFiltered() {
+  return (S.registry || []).filter((r) => (S.year === "Alla" || r.announced.startsWith(S.year)) && (S.mand || !r.mandatoryOffer));
+}
+function renderRegister() {
+  const all = S.registry;
+  if (!all) return;
+  const years = ["Alla", ...[...new Set(all.map((r) => r.announced.slice(0, 4)))].sort().reverse()];
+  const yc = document.getElementById("yearChips");
+  yc.innerHTML = years.map((y) => `<button class="chip" data-y="${y}" aria-pressed="${S.year === y}">${y}</button>`).join("");
+  yc.querySelectorAll("button").forEach((b) => b.onclick = () => { S.year = b.dataset.y; renderRegister(); });
+
+  const vol = all.filter((r) => !r.mandatoryOffer && r.premiumLastClose != null).map((r) => r.premiumLastClose).sort((a, b) => a - b);
+  const med = vol.length ? (vol.length % 2 ? vol[(vol.length - 1) / 2] : (vol[vol.length / 2 - 1] + vol[vol.length / 2]) / 2) : null;
+  const shells = all.filter((r) => (r.bidcoChain || []).some((b) => /bidco|goldcup|ventures|omega/i.test(b))).length;
+  const mand = all.filter((r) => r.mandatoryOffer).length;
+  document.getElementById("regStats").innerHTML = `
+    <div><strong>${all.length}</strong>bud i registret, ${dShort(all[all.length - 1].announced)} till ${dShort(all[0].announced)}</div>
+    <div><strong>${nf(1).format(med)} %</strong>medianpremie för frivilliga bud</div>
+    <div><strong>${Math.round(shells / all.length * 100)} %</strong>gjordes genom ett separat bidco</div>
+    <div><strong>${mand}</strong>budpliktsbud, ofta utan premie</div>`;
+
+  const groups = {};
+  all.filter((r) => !r.mandatoryOffer && r.premiumLastClose != null && r.bidderType).forEach((r) => { (groups[r.bidderType] ||= []).push(r.premiumLastClose); });
+  const gm = Object.entries(groups).map(([k, v]) => [k, v.reduce((a, b) => a + b, 0) / v.length, v.length]).sort((a, b) => b[1] - a[1]);
+  const mx = Math.max(...gm.map((g) => g[1]));
+  document.getElementById("byType").innerHTML = gm.map(([k, v, n]) => `<div><span>${k} (${n})</span><i style="--w:${v / mx * 100}%"></i><em>${nf(0).format(v)} %</em></div>`).join("");
+  const ys = {}; all.forEach((r) => ys[r.announced.slice(0, 4)] = (ys[r.announced.slice(0, 4)] || 0) + 1);
+  const ym = Math.max(...Object.values(ys));
+  document.getElementById("byYear").innerHTML = Object.entries(ys).sort().reverse().map(([y, n]) => `<div><span>${y}</span><i style="--w:${n / ym * 100}%"></i><em>${n}</em></div>`).join("");
+
+  const rows = regFiltered();
+  document.getElementById("regRows").innerHTML = rows.map((r) => {
+    const bidco = (r.bidcoChain || []).length > 1 ? r.bidcoChain[r.bidcoChain.length - 1] : "Direkt";
+    const out = r.outcome === "Genomfört" ? `<span class="badge ok">Genomfört</span>` : r.outcome === "Pågår" ? `<span class="badge live">Pågår</span>` : r.outcome ? `<span class="badge">${esc(r.outcome)}</span>` : `<span class="muted">—</span>`;
+    return `<a class="row" href="#bud/${r.id}">
+      <div class="muted">${dShort(r.announced)}</div>
+      <div class="c-nm"><b style="font-weight:650">${esc(r.target)}</b></div>
+      <div class="c-by">${esc(r.bidder)}</div>
+      <div class="muted" style="font-size:14px">${esc(bidco)}</div>
+      <div>${r.pricePerShare != null ? sek(r.pricePerShare) : "—"}</div>
+      <div class="c-prem prem ${r.premiumLastClose < 0 ? "neg" : ""}">${pct(r.premiumLastClose, r.premiumLastClose % 1 ? 1 : 0)}</div>
+      <div class="c-out">${out}</div><div class="chev" aria-hidden="true">›</div></a>`;
+  }).join("") || `<div class="empty">Inga bud för filtret.</div>`;
+}
+
+// ---------- LÅDOR ----------
+function openDrawer(html) {
+  document.getElementById("drBody").innerHTML = html;
+  document.getElementById("drawer").classList.add("on");
+  document.getElementById("scrim").classList.add("on");
+  document.getElementById("drawer").scrollTop = 0;
+  document.getElementById("drClose").focus();
+}
+function closeDrawer() {
+  document.getElementById("drawer").classList.remove("on");
+  document.getElementById("scrim").classList.remove("on");
+}
+function companyDrawer(c) {
+  const p = c.score.parts, ev = events(c);
+  const meta = [c.symbol, c.mcapMSEK != null ? `${c.mcapEstimated ? "ca " : ""}${msek(c.mcapMSEK)} i börsvärde` : null, sizeClass(c.mcapMSEK)].filter(Boolean).join(", ");
+  const part = (l, v, w) => `<div><span>${l} <span class="muted">${w}</span></span><i style="--w:${v}%"></i><em>${v}</em></div>`;
+  openDrawer(`
+    <div id="drTitle" class="dr-title">${esc(cleanName(c.name))}</div>
+    <div class="dr-sub">${esc(meta || "Börsvärde saknas")}</div>
+    <div class="dr-score"><div class="idx t-${c.score.tier}"><span>${c.score.composite}</span></div><div class="muted" style="padding-bottom:8px">av 100, ${c.score.tier.toLowerCase()} aktivitet</div></div>
+    <p class="why">${esc(why(c))}</p>
+    <div class="parts">${part("Insynsköp", p.insider, "30 %")}${part("Flaggningar", p.flags, "30 %")}${part("Blankning", p.shortSig, "20 %")}${part("Bolagsverket", p.bv, "20 %")}</div>
+    <h3>Händelser</h3>
+    ${ev.length ? ev.slice(0, 20).map((e) => `<div class="ev"><time>${dShort(e.date)}</time><div>${esc(e.text)}${e.url ? ` <a href="${esc(e.url)}" target="_blank" rel="noopener">Källa</a>` : ""}<span>${e.kind}</span></div></div>`).join("") : `<p class="muted">Inga registrerade händelser.</p>`}
+    <h3>Pressmeddelanden</h3>
+    <div id="news"><div class="sk" style="width:80%"></div></div>
+    <p class="disc">Indexet visar aktivitet i offentliga register, inte sannolikheten för ett bud. Ingen investeringsrådgivning.</p>`);
+  getJSON("/api/news?company=" + encodeURIComponent(cleanName(c.name)) + "&limit=6").then((j) => {
+    const el = document.getElementById("news"); if (!el) return;
+    const it = j.items || [];
+    el.innerHTML = it.length ? it.map((n) => `<div class="ev"><time>${dShort(n.date)}</time><div><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a><span>${esc(n.author || "")}</span></div></div>`).join("") : `<p class="muted">Inga färska pressmeddelanden.</p>`;
+  }).catch(() => { const el = document.getElementById("news"); if (el) el.innerHTML = `<p class="muted">Pressflödet svarar inte just nu.</p>`; });
+}
+function budDrawer(r) {
+  const kv = (k, v) => v == null || v === "" ? "" : `<dt>${k}</dt><dd>${v}</dd>`;
+  const yes = (b) => b == null ? null : b ? "Ja" : "Nej";
+  openDrawer(`
+    <div class="muted">${dLong(r.announced)}${r.market ? ", " + esc(r.market) : ""}</div>
+    <div id="drTitle" class="dr-title" style="margin-top:6px">${esc(r.target)}</div>
+    <div class="dr-sub">${esc(r.bidder)}${r.mandatoryOffer ? ", budpliktsbud" : ""}</div>
+    <div class="statline" style="margin:22px 0">
+      ${r.pricePerShare != null ? `<div><strong>${sek(r.pricePerShare)}</strong>per aktie${r.raisedTo ? `, höjt till ${sek(r.raisedTo)}` : ""}</div>` : `<div><strong>${esc(r.consideration || "—")}</strong>vederlag</div>`}
+      <div><strong class="${r.premiumLastClose < 0 ? "prem neg" : ""}">${pct(r.premiumLastClose, r.premiumLastClose % 1 ? 1 : 0)}</strong>premie mot senaste kurs</div>
+      ${r.equityValueMSEK ? `<div><strong>${msek(r.equityValueMSEK)}</strong>värdering</div>` : r.evMSEK ? `<div><strong>${msek(r.evMSEK)}</strong>EV</div>` : ""}
+    </div>
+    ${r.notes ? `<p class="why">${esc(r.notes)}</p>` : ""}
+    <h3>Budstruktur</h3>
+    <div class="chain">${(r.bidcoChain || []).map((b) => `<div>${esc(b)}</div>`).join("")}</div>
+    ${(r.preBidOwners || []).length ? `<h3>Ägare som stödde budet</h3>${r.preBidOwners.map((o) => `<div class="ev"><time>${o.capitalPct != null ? nf(1).format(o.capitalPct) + " %" : ""}</time><div>${esc(o.name)}<span>${o.votesPct != null ? nf(1).format(o.votesPct) + " % av rösterna, " : ""}${o.committed ? "åtagande att acceptera" : "stöd utan åtagande"}</span></div></div>`).join("")}` : ""}
+    <h3>Villkor och tidslinje</h3>
+    <dl class="kv">
+      ${kv("Första flaggning", r.firstFlagging && dLong(r.firstFlagging))}
+      ${kv("Offentliggjort", dLong(r.announced))}
+      ${kv("Acceptfrist", r.acceptStart || r.acceptEnd ? `${r.acceptStart ? dLong(r.acceptStart) : "?"} till ${r.acceptEnd ? dLong(r.acceptEnd) : "?"}` : null)}
+      ${kv("Likvid", r.settlement && dLong(r.settlement))}
+      ${kv("Vederlag", esc(r.consideration))}
+      ${kv("Acceptnivå", r.acceptanceThreshold ? `${r.acceptanceThreshold} %` : null)}
+      ${kv("Slutlig ägarandel", r.finalAcceptance ? nf(1).format(r.finalAcceptance) + " %" : null)}
+      ${kv("Styrelsen rekommenderar", yes(r.boardRecommended))}
+      ${kv("Fairness opinion", yes(r.fairnessOpinion))}
+      ${kv("EV/EBIT", r.evEbit && nf(1).format(r.evEbit) + "x")}
+      ${kv("EV/omsättning", r.evSales && nf(1).format(r.evSales) + "x")}
+      ${kv("Utfall", esc(r.outcome || "Okänt"))}
+    </dl>
+    ${(r.sources || []).length ? `<h3>Källa</h3>${r.sources.map((s) => `<p style="margin-bottom:6px"><a href="${esc(s)}" target="_blank" rel="noopener">${esc(new URL(s).hostname.replace("www.", ""))}</a></p>`).join("")}` : ""}`);
+}
+
+// ---------- routing ----------
+function route() {
+  const h = location.hash.slice(1) || "radar";
+  const [view, arg] = h.split("/");
+  if (view === "bolag" || view === "bud") {
+    if (!document.querySelector(".view:not([hidden])")) show(view === "bud" ? "register" : "radar");
+    if (view === "bolag" && S.companies) { const c = S.companies.find((x) => x.ticker === decodeURIComponent(arg)); if (c) companyDrawer(c); }
+    if (view === "bud" && S.registry) { const r = S.registry.find((x) => x.id === arg); if (r) budDrawer(r); }
+    return;
+  }
+  closeDrawer();
+  show(["radar", "bidco", "register", "metod"].includes(view) ? view : "radar");
+}
+function show(v) {
+  document.querySelectorAll(".view").forEach((s) => s.hidden = s.id !== "v-" + v);
+  document.querySelectorAll(".nav a").forEach((a) => { if (a.getAttribute("href") === "#" + v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  window.scrollTo(0, 0);
+}
+function back() { const v = document.querySelector(".view:not([hidden])"); history.replaceState(null, "", "#" + (v ? v.id.slice(2) : "radar")); closeDrawer(); }
+
+// ---------- händelser ----------
+document.getElementById("q").addEventListener("input", (e) => { S.q = e.target.value.trim(); S.limit = 40; renderRows(); });
+document.querySelectorAll("#tierChips .chip").forEach((b) => b.onclick = () => { S.tier = b.dataset.t; S.limit = 40; document.querySelectorAll("#tierChips .chip").forEach((x) => x.setAttribute("aria-pressed", x === b)); renderRows(); });
+document.getElementById("large").onchange = (e) => { S.large = e.target.checked; renderRows(); };
+document.getElementById("sort").onchange = (e) => { S.sort = e.target.value; renderRows(); };
+document.getElementById("mand").onchange = (e) => { S.mand = e.target.checked; renderRegister(); };
+document.getElementById("scrim").onclick = back;
+document.getElementById("drClose").onclick = back;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.getElementById("drawer").classList.contains("on")) back(); });
+window.addEventListener("hashchange", route);
+
+// ---------- laddning ----------
+function setFresh() {
+  const el = document.getElementById("fresh");
+  const run = S.bv && S.bv.runs && S.bv.runs.find((r) => r.status === "success");
+  const t = new Date();
+  const parts = [`Registren hämtade ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`];
+  if (run) parts.push(`Bolagsverket skannat ${dShort(run.finished_at)}`);
+  el.innerHTML = `<i></i><span>${parts.join(", ")}</span>`;
+  if (run && ago(run.finished_at) > 8) el.classList.add("stale");
+}
+async function load() {
+  renderRows(); renderShells();
+  const jobs = {
+    companies: getJSON("/api/companies").then((j) => { S.companies = j.companies || []; renderRows(); renderHero(); }),
+    registry: getJSON("/api/registry").then((j) => { S.registry = (j.results || []).sort((a, b) => b.announced.localeCompare(a.announced)); renderHero(); renderRegister(); renderBidco(); }),
+    wl: getJSON("/api/system?action=watchlist-status").then((j) => { S.wl = j; renderShells(); renderHero(); renderBidco(); }),
+    tr: getJSON("/api/system?action=track-record").then((j) => { S.tr = j; renderBidco(); }),
+    bidco: getJSON("/api/bidco").then((j) => { S.bidco = j; renderBidco(); }),
+    bv: getJSON("/api/system?action=bolagsverket-status").then((j) => { S.bv = j; setFresh(); }),
+  };
+  const res = await Promise.allSettled(Object.values(jobs));
+  if (res[0].status === "rejected") document.getElementById("rows").innerHTML = `<div class="empty">Kunde inte hämta bolagslistan. Ladda om sidan om en stund.</div>`;
+  if (!S.bv) setFresh();
+  document.getElementById("foot").textContent = `${S.registry ? S.registry.length + " bud i registret. " : ""}Källor: Finansinspektionen, Bolagsverket, MFN.`;
+  route();
+}
+route();
+load();
 </script>
 </body>
 </html>
