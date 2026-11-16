@@ -629,14 +629,19 @@ async function handleWatchlistStatus(req, res) {
 // och varje bit sparas som en egen privat blob. Varje anrop gör så många bitar
 // som hinns inom tidsbudgeten; GitHub-jobbet anropar tills complete=true och
 // sätter sedan ihop bitarna. Gamla versioner av filen städas bort automatiskt.
-// Skyddas med BLOB_READ_WRITE_TOKEN som bearer-token (finns redan i båda miljöerna).
+// Skydd: anroparen skickar en Blob-token som bearer-token. Den godkänns bara om
+// den faktiskt fungerar mot Blob-lagringen (samma token används för alla blob-anrop).
 // ============================================================
 async function handleBvMirror(req, res) {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token || req.headers['authorization'] !== `Bearer ${token}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const auth = req.headers['authorization'] || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
   const { put, list, del } = await import('@vercel/blob');
+  try {
+    await list({ token, prefix: 'bv-bulk/', limit: 1 });
+  } catch (e) {
+    return res.status(401).json({ error: 'Ogiltig Blob-token: ' + e.message });
+  }
   const URL_BV = 'https://vardefulla-datamangder.bolagsverket.se/bolagsverket/bolagsverket_bulkfil.zip';
   const UA = 'BudRadar/0.2 (+offentlig data)';
   const CHUNK = 16 * 1024 * 1024;
@@ -655,7 +660,7 @@ async function handleBvMirror(req, res) {
   const existing = new Map();
   let cursor;
   do {
-    const r = await list({ prefix, cursor, limit: 1000 });
+    const r = await list({ token, prefix, cursor, limit: 1000 });
     for (const b of r.blobs) existing.set(b.pathname, b.size);
     cursor = r.hasMore ? r.cursor : undefined;
   } while (cursor);
@@ -672,7 +677,7 @@ async function handleBvMirror(req, res) {
       if (r.status !== 206) throw new Error(`HTTP ${r.status}`);
       const buf = Buffer.from(await r.arrayBuffer());
       if (buf.length !== expected(i)) throw new Error(`fel storlek ${buf.length}`);
-      await put(partName(i), buf, { access: 'private', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/octet-stream' });
+      await put(partName(i), buf, { token, access: 'private', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/octet-stream' });
       existing.set(partName(i), buf.length);
     } catch (e) {
       errors.push(`del ${i}: ${e.message}`);
@@ -689,11 +694,11 @@ async function handleBvMirror(req, res) {
       const old = [];
       let c;
       do {
-        const r = await list({ prefix: 'bv-bulk/', cursor: c, limit: 1000 });
+        const r = await list({ token, prefix: 'bv-bulk/', cursor: c, limit: 1000 });
         for (const b of r.blobs) if (!b.pathname.startsWith(prefix)) old.push(b.url);
         c = r.hasMore ? r.cursor : undefined;
       } while (c);
-      if (old.length) await del(old);
+      if (old.length) await del(old, { token });
     } catch {}
   }
 
