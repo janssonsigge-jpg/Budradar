@@ -1,7 +1,10 @@
 {
+  "functions": {
+    "api/system.js": { "maxDuration": 60 }
+  },
   "crons": [
-    { "path": "/api/snapshot",       "schedule": "0 18 * * *" },
-    { "path": "/api/detect-bids",    "schedule": "30 18 * * *" },
+    { "path": "/api/snapshot", "schedule": "0 18 * * *" },
+    { "path": "/api/detect-bids", "schedule": "30 18 * * *" },
     { "path": "/api/system?action=daily-scan", "schedule": "0 6 * * *" }
   ]
 }
