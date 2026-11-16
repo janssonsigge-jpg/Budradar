@@ -68,6 +68,8 @@ export default async function handler(req, res) {
       return handleFlaggedTickers(req, res);
     case 'admin-sync-historical':
       return handleAdminSyncHistorical(req, res);
+    case 'bv-probe':
+      return handleBvProbe(req, res);
     case 'watchlist-status':
       return handleWatchlistStatus(req, res);
     default:
@@ -617,4 +619,39 @@ async function handleWatchlistStatus(req, res) {
     console.error('Fel vid hämtning av watchlist-status:', err);
     return res.status(500).json({ error: 'Internt fel', detail: err.message });
   }
+}
+
+// ============================================================
+// GET ?action=bv-probe  — testar om Vercel når Bolagsverkets bulkfil
+// (stöd för Range/återupptagning + nedladdningshastighet, ~20 s)
+// ============================================================
+async function handleBvProbe(req, res) {
+  const URL_BV = 'https://vardefulla-datamangder.bolagsverket.se/bolagsverket/bolagsverket_bulkfil.zip';
+  const UA = 'BudRadar/0.2 (+offentlig data)';
+  const out = {};
+  try {
+    const h = await fetch(URL_BV, { method: 'HEAD', headers: { 'user-agent': UA } });
+    out.head = { status: h.status, length: h.headers.get('content-length'), acceptRanges: h.headers.get('accept-ranges'), lastModified: h.headers.get('last-modified'), etag: h.headers.get('etag') };
+  } catch (e) { out.headError = String(e); }
+  try {
+    const r = await fetch(URL_BV, { headers: { 'user-agent': UA, range: 'bytes=1000000-1999999' } });
+    const b = Buffer.from(await r.arrayBuffer());
+    out.range = { status: r.status, contentRange: r.headers.get('content-range'), bytes: b.length };
+  } catch (e) { out.rangeError = String(e); }
+  try {
+    const t0 = Date.now();
+    const r = await fetch(URL_BV, { headers: { 'user-agent': UA } });
+    out.full = { status: r.status };
+    let n = 0;
+    const reader = r.body.getReader();
+    while (Date.now() - t0 < 20000) {
+      const { done, value } = await reader.read();
+      if (done) { out.full.done = true; break; }
+      n += value.length;
+    }
+    try { await reader.cancel(); } catch {}
+    out.full.mb = +(n / 1e6).toFixed(1);
+    out.full.mbPerSec = +(n / 1e6 / ((Date.now() - t0) / 1000)).toFixed(2);
+  } catch (e) { out.fullError = String(e); }
+  return res.status(200).json(out);
 }
