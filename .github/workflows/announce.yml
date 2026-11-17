@@ -1,0 +1,27 @@
+name: Discord — utskick
+
+on:
+  push:
+    branches: [main]
+    paths: ['announcements/*.md']
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Posta nya utskick via BudRadar-boten
+        env:
+          WEBHOOK: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          files=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- 'announcements/*.md')
+          if [ -z "$files" ]; then echo "Inga nya utskick"; exit 0; fi
+          for f in $files; do
+            echo "Postar $f"
+            jq -Rs '{content: ., username: "BudRadar", allowed_mentions: {parse: ["roles"]}}' < "$f" \
+              | curl -sS --fail -H "Content-Type: application/json" -d @- "$WEBHOOK"
+          done
