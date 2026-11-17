@@ -343,6 +343,8 @@ async function main() {
               new_name: row.name,
               original_address: entry.original_address,
               new_address: row.address,
+              new_description: row.description,
+              registered_at: row.registered_at,
               matchedAdvisor: matchedAdvisor ? matchedAdvisor.name : null,
             },
           });
