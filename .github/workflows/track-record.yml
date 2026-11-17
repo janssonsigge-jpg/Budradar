@@ -1,0 +1,63 @@
+name: Track record — förankring
+
+on:
+  schedule:
+    # Varje dag 05:40 UTC, efter att nattens flaggor skrivits
+    - cron: '40 5 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'anchor = dagens förankring, reseal = försegla om kedjan (bara vid formatbyte)'
+        required: true
+        default: anchor
+        type: choice
+        options: [anchor, reseal]
+      reason:
+        description: 'Anledning (krävs för reseal)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # för att committa track-record/ANCHORS.md
+
+concurrency:
+  group: track-record
+  cancel-in-progress: false
+
+jobs:
+  anchor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installera beroenden
+        run: npm install @neondatabase/serverless @vercel/blob@^2.9.0
+
+      - name: Kör
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          MODE: ${{ github.event.inputs.mode || 'anchor' }}
+          REASON: ${{ github.event.inputs.reason }}
+        run: |
+          if [ "$MODE" = "reseal" ]; then
+            if [ -z "$REASON" ]; then echo "Ange en anledning för reseal"; exit 2; fi
+            node scripts/track-record.mjs reseal "$REASON"
+          else
+            node scripts/track-record.mjs anchor
+          fi
+
+      - name: Committa förankringen
+        if: always()
+        run: |
+          git config user.name "budradar-anchor"
+          git config user.email "actions@users.noreply.github.com"
+          git add track-record/ANCHORS.md || true
+          if git diff --cached --quiet; then echo "Inget att committa"; exit 0; fi
+          git commit -m "Track record: förankring $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
