@@ -72,6 +72,8 @@ export default async function handler(req, res) {
       return handleBvMirror(req, res);
     case 'watchlist-status':
       return handleWatchlistStatus(req, res);
+    case 'shell-flags':
+      return handleShellFlags(req, res);
     default:
       return res.status(400).json({
         error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers | admin-sync-historical | watchlist-status',
@@ -703,4 +705,49 @@ async function handleBvMirror(req, res) {
   }
 
   return res.status(200).json({ complete, size, version, done, total, parts: complete ? parts : undefined, errors });
+}
+
+// ============================================================
+// GET ?action=shell-flags — skal som flaggats (namnbyte, adressbyte eller
+// bidco-namn) med allt vi vet om dem. Frontend matchar mot börsbolag.
+// Omklassificerade felflaggor (augusti 2026) tas inte med.
+// ============================================================
+async function handleShellFlags(req, res) {
+  try {
+    const { rows } = await sql`
+      SELECT t.id, t.company_name, t.org_nr, t.flag_reason, t.score, t.signal_snapshot,
+             t.outcome, t.outcome_note, t.created_at,
+             w.original_name, w.original_address, w.registered_at
+      FROM track_record_log t
+      LEFT JOIN watchlist w ON w.flagged_track_record_id = t.id
+      WHERE t.source = 'live'
+        AND (t.outcome_note IS NULL OR t.outcome_note NOT ILIKE 'Omklassificerad%')
+      ORDER BY t.created_at DESC
+      LIMIT 50
+    `;
+    const items = rows.map((r) => {
+      let s = r.signal_snapshot;
+      if (typeof s === 'string') { try { s = JSON.parse(s); } catch { s = {}; } }
+      s = s || {};
+      return {
+        id: r.id,
+        name: s.new_name || r.company_name,
+        originalName: s.original_name || r.original_name || null,
+        orgNr: r.org_nr,
+        address: s.new_address || s.address || null,
+        originalAddress: s.original_address || r.original_address || null,
+        description: s.description || s.new_description || null,
+        advisor: s.matchedAdvisor || null,
+        reason: r.flag_reason,
+        score: r.score != null ? Number(r.score) : null,
+        outcome: r.outcome,
+        registeredAt: s.registered_at || r.registered_at || null,
+        flaggedAt: r.created_at,
+      };
+    });
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    return res.status(200).json({ count: items.length, items });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internt fel', detail: err.message });
+  }
 }
