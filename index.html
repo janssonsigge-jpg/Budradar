@@ -666,7 +666,7 @@ const Radar = (() => {
     cv.addEventListener("click", (ev) => { const r = cv.getBoundingClientRect(); pick(ev.clientX - r.left, ev.clientY - r.top); if (hover) location.hash = hover.href; });
     resize(); loop();
   }
-  function resize() { const r = cv.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1); W = r.width; cv.width = W * dpr; cv.height = W * dpr; layout(); }
+  function resize() { const r = cv.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1); W = r.width; cv.width = Math.max(1, W * dpr); cv.height = Math.max(1, W * dpr); layout(); if (reduced) draw(performance.now()); }
   function layout() {
     const R = W / 2 - 18;
     blips.forEach((b) => { const d = 0.1 + (1 - b.score / 100) * 0.82; b.x = W / 2 + Math.cos(b.a) * d * R; b.y = W / 2 + Math.sin(b.a) * d * R; });
@@ -688,6 +688,7 @@ const Radar = (() => {
   function angDiff(a, b) { let d = (a - b) % (Math.PI * 2); if (d < 0) d += Math.PI * 2; return d; }
   function draw(now) {
     const c = ctx, cx = W / 2, R = W / 2 - 18;
+    if (W < 60) return;
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, W);
     // bakgrund
     const g = c.createRadialGradient(cx, cx, 0, cx, cx, R); g.addColorStop(0, "rgba(140,155,255,.10)"); g.addColorStop(1, "rgba(140,155,255,0)");
@@ -730,7 +731,7 @@ const Radar = (() => {
     // mitten
     c.fillStyle = "#F3F5FA"; c.beginPath(); c.arc(cx, cx, 2.5, 0, Math.PI * 2); c.fill();
   }
-  function loop(now = performance.now()) { draw(now); if (!reduced) raf = requestAnimationFrame(loop); }
+  function loop(now = performance.now()) { try { draw(now); } catch (e) { console.warn(e); } if (!reduced) raf = requestAnimationFrame(loop); }
   function pick(x, y) {
     let best = null, bd = 18;
     [...blips, ...shells].forEach((b) => { const d = Math.hypot(b.x - x, b.y - y); if (d < bd) { bd = d; best = b; } });
