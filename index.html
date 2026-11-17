@@ -330,6 +330,18 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: flex-end; font-size: 12px; color: var(--slate); margin-top: 6px; }
 .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 .legend i.ring { background: transparent; box-shadow: inset 0 0 0 1.5px #fff; }
+.how { list-style: none; counter-reset: how; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 56px 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--s1); scroll-margin-top: 100px; }
+.how li { counter-increment: how; padding: 24px 26px; position: relative; }
+.how li + li { border-left: 1px solid var(--line); }
+.how li::before { content: counter(how); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--s2); color: var(--marker); font-weight: 700; font-size: 13px; margin-bottom: 14px; }
+.how b { display: block; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.how span { display: block; margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--slate); }
+.how strong { color: var(--ink); font-weight: 600; }
+@media (max-width: 720px) {
+  .how { grid-template-columns: 1fr; margin-top: 36px; }
+  .how li + li { border-left: 0; border-top: 1px solid var(--line); }
+  .how li { padding: 20px; }
+}
 .ticker { margin-top: 48px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .ticker-in { display: flex; gap: 40px; width: max-content; padding: 14px 0; animation: tick 90s linear infinite; font-size: 14px; color: var(--slate); white-space: nowrap; }
 .ticker:hover .ticker-in { animation-play-state: paused; }
@@ -423,7 +435,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
     <a class="brand" href="#radar" aria-label="BudRadar, startsida"><img src="budradar-logo.png" alt="Budradar" /></a>
     <nav class="nav" aria-label="Huvudmeny">
       <a href="#radar" data-s="Radar">Radar</a>
-      <a href="#bidco" data-s="Bidco">Bidco-spår</a>
+      <a href="#bidco" data-s="Skal">Skalbolag</a>
       <a href="#register" data-s="Bud">Budregister</a>
       <a href="#track" data-s="Track">Track record</a>
       <a href="#metod" data-s="Metod">Så funkar det</a>
@@ -437,9 +449,9 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
   <section class="view" id="v-radar">
     <section class="rh">
       <div class="rh-text">
-        <h1>Någon köpte precis ett lagerbolag.</h1>
-        <p class="lede">Om några veckor vet du varför. BudRadar läser insynsköp, flaggningar, blankning och varje nytt skalbolag hos Bolagsverket — och ritar upp var på Stockholmsbörsen det rör sig.</p>
-        <div class="cta"><a class="btn pri" href="#ranking">Se hela listan</a><a class="btn" href="#bidco">Så hittar vi skalen</a></div>
+        <h1>Se uppköpsbuden innan de kommer.</h1>
+        <p class="lede">När någon ska lägga bud på ett börsbolag registrerar de först ett nytt bolag hos Bolagsverket. Det syns, offentligt, ofta veckor innan budet. BudRadar bevakar varje sådant bolag och visar vilka aktier det rör sig i.</p>
+        <div class="cta"><a class="btn pri" href="#ranking">Se dagens signaler</a><a class="btn" href="#how">Hur funkar det?</a></div>
         <aside class="latest" id="latest" aria-label="Senaste budet"><div class="sk" style="height:96px"></div></aside>
       </div>
       <div class="rh-scope">
@@ -456,6 +468,11 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
         </div>
       </div>
     </section>
+    <ol class="how" id="how" aria-label="Så funkar det">
+      <li><b>Köparen startar ett budbolag</b><span>Ofta ett lagerbolag med ett anonymt namn, som "Goldcup 39639 AB".</span></li>
+      <li><b>Vi hittar det</b><span>BudRadar skannar Bolagsverkets register två gånger i veckan och bevakar varje nytt skal i 90 dagar, tillsammans med insynsköp, flaggningar och blankning.</span></li>
+      <li><b>Budet kommer</b><span>I våra verifierade fall kom budet efter en median på <strong>20 dagar</strong>, med en typisk premie på <strong>+44 %</strong>.</span></li>
+    </ol>
     <div class="ticker" aria-label="Senaste händelserna"><div class="ticker-in" id="ticker"></div></div>
 
     <div class="shells">
@@ -1121,7 +1138,7 @@ function route() {
     return;
   }
   closeDrawer();
-  if (view === "ranking") { show("radar"); requestAnimationFrame(() => document.getElementById("ranking").scrollIntoView({ behavior: "smooth" })); return; }
+  if (view === "ranking" || view === "how") { show("radar"); requestAnimationFrame(() => document.getElementById(view).scrollIntoView({ behavior: "smooth", block: view === "how" ? "center" : "start" })); return; }
   show(["radar", "bidco", "register", "track", "metod"].includes(view) ? view : "radar");
 }
 function show(v) {
