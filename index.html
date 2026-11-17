@@ -29,7 +29,7 @@
   --max: 1200px;
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); overflow-x: clip; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font: 400 16px/1.55 "Geist", system-ui, -apple-system, sans-serif;
@@ -70,7 +70,7 @@ p { margin: 0; }
 /* glöd bakom hero */
 .glow { position: absolute; left: 50%; top: -140px; width: 1100px; height: 640px; transform: translateX(-50%); pointer-events: none; z-index: -1;
   background: radial-gradient(closest-side, rgba(140,155,255,.22), transparent 70%), radial-gradient(closest-side at 70% 60%, rgba(245,196,81,.10), transparent 70%); filter: blur(10px); }
-.page-glow { position: absolute; left: 50%; top: -160px; width: 900px; height: 420px; transform: translateX(-50%); pointer-events: none; z-index: -1; background: radial-gradient(closest-side, rgba(140,155,255,.16), transparent 70%); }
+.page-glow { position: absolute; left: 50%; top: -160px; width: min(900px, 100vw); height: 420px; transform: translateX(-50%); pointer-events: none; z-index: -1; background: radial-gradient(closest-side, rgba(140,155,255,.16), transparent 70%); }
 
 /* hero */
 .hero { text-align: center; padding: 72px 0 0; display: flex; flex-direction: column; align-items: center; }
