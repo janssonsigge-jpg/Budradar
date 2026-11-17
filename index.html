@@ -371,6 +371,44 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 @media (prefers-reduced-motion: reduce) {
   .steps li, .case .steps::after { opacity: 1; transform: none; height: calc(100% - 16px); }
 }
+
+/* ---------- spårade skal ---------- */
+.leads { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.lead { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px; }
+.lead-h { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.lead-h b { font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+.lead-h span { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.lead-m { font-size: 13px; color: var(--slate); margin-top: 6px; line-height: 1.5; }
+.cand { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; margin-top: 8px; border-radius: 12px; background: var(--s2); text-decoration: none; }
+.cand:hover { background: var(--s3); }
+.cand b { font-weight: 500; }
+.cand em { font-style: normal; font-weight: 600; color: var(--marker); text-align: right; }
+.cand span { grid-column: 1 / -1; font-size: 12px; color: var(--slate); }
+.cand-h { font-size: 12px; color: var(--dim); margin-top: 16px; }
+.probe { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; margin-bottom: 72px; }
+.probe p { color: var(--slate); font-size: 14px; margin-top: 6px; }
+.probe-f { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; margin-top: 16px; }
+.probe-f input { height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--s2); color: var(--ink); padding: 0 14px; font: inherit; font-size: 14px; }
+.probe-f input::placeholder { color: var(--dim); }
+#pOut { margin-top: 10px; }
+#pOut .muted { font-size: 13px; padding: 10px 2px; }
+.lead p.muted { font-size: 13px; margin-top: 12px; line-height: 1.55; }
+
+/* ---------- track record ---------- */
+.chainbox { display: flex; gap: 18px; align-items: flex-start; padding: 22px 24px; border-radius: var(--r-card); border: 1px solid var(--line); background: var(--s1); }
+.chainbox .ic { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; font-weight: 700; }
+.chainbox.ok .ic { background: rgba(79,209,161,.14); color: var(--done); }
+.chainbox.bad .ic { background: rgba(255,122,107,.14); color: var(--warn); }
+.chainbox b { font-weight: 600; font-size: 16px; }
+.chainbox p { color: var(--slate); font-size: 14px; margin-top: 4px; line-height: 1.6; }
+.chainbox code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--ink); background: var(--s2); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+.chainbox a { color: var(--accent); text-decoration: none; }
+.badge.miss { background: rgba(255,122,107,.12); color: var(--warn); }
+
+@media (max-width: 720px) {
+  .leads { grid-template-columns: 1fr; }
+  .probe-f { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -381,6 +419,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
       <a href="#radar">Radar</a>
       <a href="#bidco">Bidco-spår</a>
       <a href="#register">Budregister</a>
+      <a href="#track">Track record</a>
       <a href="#metod">Så funkar det</a>
     </nav>
     <div class="fresh" id="fresh"><i></i><span>Hämtar data…</span></div>
@@ -457,6 +496,18 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
       <p class="lede">Nästan varje uppköp görs genom ett nyregistrerat bolag — ett bidco. Det registreras hos Bolagsverket veckor innan budet offentliggörs, och registret är öppet för alla. Här är tiden mellan registrering och bud i fall vi har verifierat.</p>
     </div>
     <div class="statline" id="bidcoStats"></div>
+    <div class="sec-head"><h2>Spårade skal</h2><p>När ett bevakat skal byter namn, flyttar till en rådgivare eller registreras med ett bidco-namn letar vi efter det troliga målbolaget: namnlikhet, ägaren bakom c/o-adressen och verksamhetsbeskrivningen.</p></div>
+    <div class="leads" id="leads"><div class="sk" style="height:120px"></div></div>
+    <div class="probe">
+      <h3>Testa ett skalbolag</h3>
+      <p>Klistra in namn, adress eller verksamhetsbeskrivning från ett nyregistrerat bolag så letar vi efter börsbolag som passar.</p>
+      <div class="probe-f">
+        <input id="pName" placeholder="Namn, t.ex. Krona BidCo AB" autocomplete="off" />
+        <input id="pAddr" placeholder="Adress, t.ex. c/o Stenhus Fastigheter, Box 1" autocomplete="off" />
+        <input id="pDesc" placeholder="Verksamhet (valfritt)" autocomplete="off" />
+      </div>
+      <div id="pOut"></div>
+    </div>
     <div class="sec-head"><h2>Fallen</h2><p>Varje bud nedan började med ett nyregistrerat skal hos Bolagsverket. Scrolla för att se hur det gick till.</p></div>
     <div class="cases" id="cases"></div>
     <div class="sec-head"><h2>Från registrering till bud</h2><p>Gul sträcka = dagar mellan att skalbolaget registrerades och att budet offentliggjordes.</p></div>
@@ -495,6 +546,21 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
       <div class="thead" aria-hidden="true"><div>Datum</div><div>Målbolag</div><div>Budgivare</div><div>Bidco</div><div>Pris</div><div>Premie</div><div>Utfall</div><div></div></div>
       <div id="regRows"></div>
     </div>
+  </section>
+
+  <!-- ================= TRACK RECORD ================= -->
+  <section class="view" id="v-track" hidden>
+    <div class="page-glow" aria-hidden="true"></div>
+    <div class="page-head">
+      <h1>Allt vi flaggar, med tidsstämpel.</h1>
+      <p class="lede">Varje flagga skrivs in i en hash-kedjad logg när den görs, och kedjans senaste hash publiceras varje dygn i ett öppet GitHub-repo. Ingen flagga kan ändras, tas bort eller backdateras utan att det syns.</p>
+    </div>
+    <div class="statline" id="trStats"></div>
+    <div class="chainbox" id="chainBox"><div class="sk" style="height:60px"></div></div>
+    <div class="sec-head" style="margin-top:56px"><h2>Live-flaggor</h2><p>Gjorda innan utfallet var känt. Bara dessa räknas i träffsäkerheten.</p></div>
+    <div class="list" id="trLive"></div>
+    <div class="sec-head" style="margin-top:56px"><h2>Historisk verifiering</h2><p>Kända bud där vi i efterhand bekräftat att skalet fanns i registret före budet. Visar att metoden fungerar, men räknas inte som träffar.</p></div>
+    <div class="list" id="trHist"></div>
   </section>
 
   <!-- ================= METOD ================= -->
@@ -942,6 +1008,102 @@ function budDrawer(r) {
     ${(r.sources || []).length ? `<h3>Källa</h3>${r.sources.map((s) => `<p style="margin-bottom:6px"><a href="${esc(s)}" target="_blank" rel="noopener">${esc(new URL(s).hostname.replace("www.", ""))}</a></p>`).join("")}` : ""}`);
 }
 
+// ---------- skal → troligt målbolag ----------
+const GENERIC = new Set("bidco holdco topco midco newco aps ltd limited publ ventures venture holding holdings invest investment investments capital acquisition acquisitions sweden sverige svenska nordic nordics group partners management equity fund fonder fond the and och sub aktiebolag company corp".split(" "));
+const LAW = ["vinge", "mannheimer", "swartling", "cederquist", "roschier", "delphi", "lindahl", "setterwalls", "white & case", "baker mckenzie", "snellman", "gernandt", "wigge", "kanter", "schjødt", "kirkland", "latham", "linklaters", "advokat", "law"];
+const tok = (s) => String(s || "").toLowerCase().replace(/&amp;/g, "&").replace(/\(.*?\)/g, " ")
+  .split(/[^a-z0-9åäöæøü]+/).filter((t) => t.length >= 3 && !GENERIC.has(t) && !/^\d+$/.test(t) && t !== "ab");
+function coOwner(addr) { const m = /c\/o\s+([^,]+)/i.exec(addr || ""); return m ? m[1].trim() : null; }
+function matchShell({ name, address, description }) {
+  const nt = tok(name), owner = coOwner(address), ownerL = (owner || "").toLowerCase();
+  const isLaw = !!owner && LAW.some((l) => ownerL.includes(l));
+  const ot = owner && !isLaw ? tok(owner) : [];
+  const desc = String(description || "").toLowerCase();
+  const out = [];
+  for (const c of S.companies || []) {
+    const cn = cleanName(c.name), ct = tok(cn), reasons = [];
+    let sc = 0;
+    const hit = nt.find((t) => ct.some((x) => x === t || (t.length >= 5 && x.length >= 5 && (x.startsWith(t) || t.startsWith(x)))));
+    if (hit) { sc += 55; reasons.push(`namnet innehåller "${hit}"`); }
+    if (ot.length) {
+      const holders = [...(c.detail.flags || []).map((f) => ({ n: f.holder, p: f.sharePct })), ...(c.detail.insider || []).map((i) => ({ n: i.person }))];
+      const h = holders.find((x) => { const xt = tok(x.n); return ot.some((t) => t.length >= 4 && xt.includes(t)); });
+      if (h) { sc += 40; reasons.push(`${cleanName(h.n)} står bakom adressen${h.p ? " och äger " + nf(1).format(h.p) + " %" : " och finns i ägarregistren"}`); }
+    }
+    const key = cn.toLowerCase().replace(/\b(ab|aktiebolag|publ|group|holding)\b/g, "").replace(/\s+/g, " ").trim();
+    if (desc && key.length >= 5 && desc.includes(key)) { sc += 60; reasons.push("nämns i verksamhetsbeskrivningen"); }
+    if (sc > 0) { sc += Math.round(c.score.composite / 4); out.push({ c, sc: Math.min(95, sc), reasons }); }
+  }
+  out.sort((a, b) => b.sc - a.sc);
+  return { candidates: out.slice(0, 3), advisor: isLaw ? owner : null, owner: isLaw ? null : owner };
+}
+function candHtml(m) {
+  if (!m.candidates.length) return `<p class="muted">Inget börsbolag matchar ännu. Skalet kan gälla ett onoterat bolag, ett bolag utan aktivitet i registren, eller så avslöjas målet först vid nästa namn- eller adressbyte.</p>`;
+  return `<div class="cand-h">Troliga mål</div>` + m.candidates.map((x) => `<a class="cand" href="#bolag/${encodeURIComponent(x.c.ticker)}"><b>${esc(cleanName(x.c.name))}</b><em>${x.sc} %</em><span>${esc(x.reasons.join(", ").replace(/^./, (ch) => ch.toUpperCase()))}. Index ${x.c.score.composite}.</span></a>`).join("");
+}
+const REASON = (r) => String(r || "").replace(/^watchlist_/, "").split("+").map((p) =>
+  p === "namnbyte_fran_goldcup" ? "bytte namn från lagerbolag" :
+  p.startsWith("adressbyte_advokat_") ? "flyttade till " + p.slice(19).replace(/_/g, " ") :
+  p === "adressbyte_okand" ? "bytte adress" :
+  p === "beskrivning_andrad_holding" ? "ny holdingbeskrivning" :
+  p === "bidco_namnmonster" ? "bidco-namn" :
+  p.startsWith("advokatadress_") ? "adress hos " + p.slice(14).replace(/_/g, " ") :
+  p === "bolagsverket_bulk_registrering" ? "nyregistrerat" : p.replace(/^watchlist_/, "").replace(/_/g, " ")).join(", ");
+function renderLeads() {
+  const el = document.getElementById("leads");
+  if (!el || !S.shells) return;
+  const items = S.shells.items || [];
+  if (!items.length) { el.innerHTML = `<div class="lead"><b>Inga skal har avslöjat sig ännu</b><p class="lead-m">Vi bevakar ${S.wl && S.wl.counts ? S.wl.counts.pending : "alla"} nya skal. Så fort ett byter namn eller flyttar till en rådgivare dyker det upp här med troliga målbolag. Skanningen körs måndag och torsdag morgon.</p></div>`; return; }
+  if (!S.companies) return;
+  el.innerHTML = items.slice(0, 12).map((s) => {
+    const m = matchShell(s);
+    return `<article class="lead">
+      <div class="lead-h"><b>${esc(s.name)}</b><span>${dShort(s.flaggedAt)}</span></div>
+      <p class="lead-m">${s.originalName && s.originalName !== s.name ? `Hette ${esc(s.originalName)}. ` : ""}${esc(REASON(s.reason).replace(/^./, (c) => c.toUpperCase()))}.${s.address ? ` Adress: ${esc(s.address)}.` : ""}${m.advisor ? ` Advokatbyrå: ${esc(m.advisor)}.` : ""}</p>
+      ${candHtml(m)}
+    </article>`;
+  }).join("");
+}
+function runProbe() {
+  const v = { name: document.getElementById("pName").value, address: document.getElementById("pAddr").value, description: document.getElementById("pDesc").value };
+  const out = document.getElementById("pOut");
+  if (!v.name.trim() && !v.address.trim() && !v.description.trim()) { out.innerHTML = ""; return; }
+  if (!S.companies) { out.innerHTML = `<p class="muted">Bolagslistan laddas fortfarande…</p>`; return; }
+  const m = matchShell(v);
+  out.innerHTML = (m.advisor ? `<p class="muted">c/o ${esc(m.advisor)} är en advokatbyrå — typiskt för ett bud, men säger inget om vilket bolag.</p>` : "") + candHtml(m);
+}
+
+// ---------- track record ----------
+const ANCHORS_URL = "https://github.com/janssonsigge-jpg/budradar/blob/main/track-record/ANCHORS.md";
+function renderTrack() {
+  if (!S.tr) return;
+  const live = S.tr.flags.filter((f) => f.source !== "historical_verification");
+  const recl = live.filter((f) => /^Omklassificerad/i.test(f.outcome_note || ""));
+  const real = live.filter((f) => !recl.includes(f));
+  const hits = real.filter((f) => f.outcome === "hit").length, misses = real.filter((f) => f.outcome === "miss" || f.outcome === "expired").length;
+  const pend = real.filter((f) => f.outcome === "pending").length;
+  const hist = S.tr.flags.filter((f) => f.source === "historical_verification");
+  document.getElementById("trStats").innerHTML = `
+    <div><strong>${real.length}</strong>live-flaggor sedan starten</div>
+    <div><strong>${hits + misses ? Math.round(hits / (hits + misses) * 100) + " %" : "—"}</strong>träffsäkerhet${hits + misses ? ` (${hits} av ${hits + misses})` : ", inga avgjorda än"}</div>
+    <div><strong>${pend}</strong>väntar på utfall</div>
+    <div><strong>${hist.length}</strong>historiskt verifierade bud</div>`;
+  const v = S.verify, box = document.getElementById("chainBox");
+  if (v) {
+    const reseal = (v.reseals || []).map((r) => `<br>Omförseglad ${dLong(r.resealed_at)}: ${esc(r.reason)}`).join("");
+    box.className = "chainbox " + (v.valid ? "ok" : "bad");
+    box.innerHTML = v.valid
+      ? `<div class="ic">✓</div><div><b>Kedjan är intakt</b><p>${v.totalRows} rader, senaste hash <code>${esc((v.head || "").slice(0, 16))}…</code>. Topp-hashen publiceras varje dygn i <a href="${ANCHORS_URL}" target="_blank" rel="noopener">ANCHORS.md</a> — git-historiken är den externa tidsstämpeln.${reseal}</p></div>`
+      : `<div class="ic">!</div><div><b>Kedjan är bruten vid rad ${esc(v.brokenAtId)}</b><p>${esc(v.reason || "")}. Vi visar det öppet hellre än att dölja det. Se <a href="${ANCHORS_URL}" target="_blank" rel="noopener">förankringsloggen</a>.${reseal}</p></div>`;
+  }
+  const badge = (f) => f.outcome === "hit" ? `<span class="badge ok">Träff</span>` : f.outcome === "miss" || f.outcome === "expired" ? `<span class="badge miss">${f.outcome === "miss" ? "Miss" : "Utgått"}</span>` : `<span class="badge live">Väntar</span>`;
+  document.getElementById("trLive").innerHTML = real.map((f) => `<div class="li"><div><b>${esc(f.company_name)}</b><br><span>${esc(REASON(f.flag_reason).replace(/^./, (c) => c.toUpperCase()))}${f.outcome_note ? ". " + esc(f.outcome_note) : ""}</span></div><div class="r">${badge(f)}<br><span>${dLong(f.created_at)}</span></div></div>`).join("")
+    + (recl.length ? `<div class="li"><div><b>${recl.length} omklassificerade flaggor</b><br><span>${dLong(recl[recl.length - 1].created_at)}: en bugg flaggade råa lagerbolagsnamn direkt vid registrering. De ligger kvar i loggen, som är append-only, men räknas inte.</span></div><div class="r"><span class="badge">Exkluderade</span></div></div>` : "")
+    || `<div class="empty">Inga live-flaggor ännu.</div>`;
+  const reg = S.registry || [];
+  document.getElementById("trHist").innerHTML = bidcoCases().map((k) => `<div class="li"><div><b>${esc(k.bidco)}</b><br><span>${k.target ? esc(k.target) + ", " : ""}registrerat ${dLong(k.registered)}, bud ${dLong(k.announced)}</span></div><div class="r"><span class="badge ok">${k.d} dagar före</span></div></div>`).join("") || `<div class="empty">Laddar…</div>`;
+}
+
 // ---------- routing ----------
 function route() {
   const h = location.hash.slice(1) || "radar";
@@ -954,7 +1116,7 @@ function route() {
   }
   closeDrawer();
   if (view === "ranking") { show("radar"); requestAnimationFrame(() => document.getElementById("ranking").scrollIntoView({ behavior: "smooth" })); return; }
-  show(["radar", "bidco", "register", "metod"].includes(view) ? view : "radar");
+  show(["radar", "bidco", "register", "track", "metod"].includes(view) ? view : "radar");
 }
 function show(v) {
   document.querySelectorAll(".view").forEach((s) => s.hidden = s.id !== "v-" + v);
@@ -969,6 +1131,7 @@ document.querySelectorAll("#tierChips .chip").forEach((b) => b.onclick = () => {
 document.getElementById("large").onchange = (e) => { S.large = e.target.checked; renderRows(); };
 document.getElementById("sort").onchange = (e) => { S.sort = e.target.value; renderRows(); };
 document.getElementById("mand").onchange = (e) => { S.mand = e.target.checked; renderRegister(); };
+["pName", "pAddr", "pDesc"].forEach((id) => document.getElementById(id).addEventListener("input", runProbe));
 document.getElementById("scrim").onclick = back;
 document.getElementById("drClose").onclick = back;
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.getElementById("drawer").classList.contains("on")) back(); });
@@ -987,10 +1150,12 @@ function setFresh() {
 async function load() {
   renderRows(); renderShells();
   const jobs = {
-    companies: getJSON("/api/companies").then((j) => { S.companies = j.companies || []; renderRows(); renderHero(); }),
-    registry: getJSON("/api/registry").then((j) => { S.registry = (j.results || []).sort((a, b) => b.announced.localeCompare(a.announced)); renderHero(); renderRegister(); renderBidco(); }),
+    companies: getJSON("/api/companies").then((j) => { S.companies = j.companies || []; renderRows(); renderHero(); renderLeads(); runProbe(); }),
+    registry: getJSON("/api/registry").then((j) => { S.registry = (j.results || []).sort((a, b) => b.announced.localeCompare(a.announced)); renderHero(); renderRegister(); renderBidco(); renderTrack(); }),
     wl: getJSON("/api/system?action=watchlist-status").then((j) => { S.wl = j; renderShells(); renderHero(); renderBidco(); }),
-    tr: getJSON("/api/system?action=track-record").then((j) => { S.tr = j; renderBidco(); }),
+    tr: getJSON("/api/system?action=track-record").then((j) => { S.tr = j; renderBidco(); renderTrack(); }),
+    verify: getJSON("/api/system?action=verify").then((j) => { S.verify = j; renderTrack(); }),
+    shells: getJSON("/api/system?action=shell-flags").then((j) => { S.shells = j; renderLeads(); }),
     bidco: getJSON("/api/bidco").then((j) => { S.bidco = j; renderBidco(); }),
     bv: getJSON("/api/system?action=bolagsverket-status").then((j) => { S.bv = j; setFresh(); }),
   };
