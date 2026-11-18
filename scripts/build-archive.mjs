@@ -103,8 +103,29 @@ function save(name, rows) {
 }
 
 const what = process.argv[2] || "all";
-if (what === "all" || what === "flags") save("flag-archive", await flagArchive());
+if (what === "all" || what === "flags" || what === "update") save("flag-archive", await flagArchive());
 if (what === "all" || what === "insider") save("insider-archive", await insiderArchive(Number(process.env.INSIDER_FROM || 2023)));
+if (what === "update") {
+  // Daglig körning: hämta bara de senaste 150 dagarnas insynsaffärer och ersätt dem i arkivet.
+  const { readFileSync, existsSync } = await import("node:fs");
+  const f = "data/insider-archive.json.gz";
+  const old = existsSync(f) ? JSON.parse(zlib.gunzipSync(readFileSync(f)).toString()) : [];
+  const from = new Date(Date.now() - 150 * 864e5);
+  const fresh = [];
+  for (let d = from; d < new Date(); d = new Date(d.getTime() + 15 * 864e5)) {
+    const end = new Date(Math.min(d.getTime() + 14 * 864e5, Date.now()));
+    for (const x of await insiderSpan(d, end)) fresh.push({
+      d: (String(x["Transaktionsdatum"] || "").match(/\d{4}-\d{2}-\d{2}/) || [null])[0],
+      p: (String(x["Publiceringsdatum"] || "").match(/\d{4}-\d{2}-\d{2}/) || [null])[0],
+      i: x["Emittent"] || null, isin: x["ISIN"] || null,
+      who: x["Person i ledande ställning"] || null, role: x["Befattning"] || null,
+      k: x["Karaktär"] || null, v: x["Volym"] || null, px: x["Pris"] || null, cur: x["Valuta"] || null,
+    });
+  }
+  const cut = from.toISOString().slice(0, 10);
+  if (fresh.length) save("insider-archive", old.filter((x) => (x.d || "") < cut).concat(fresh));
+  else console.log("Inga nya insynsrader hämtades — behåller arkivet orört");
+}
 
 // ---------- tolkning (kopierad från api/companies.js, plus org.nr) ----------
 function parseFlagHtml(html) {
