@@ -1,17 +1,24 @@
-name: Bygg historikarkiv
+name: Bygg historikarkiv och uppköpslista
 
 on:
+  schedule:
+    # Varje natt 04:20 UTC: flaggningar + senaste insynsaffärer, sedan ny uppköpslista
+    - cron: '20 4 * * *'
   workflow_dispatch:
     inputs:
       what:
-        description: 'all, flags eller insider'
+        description: 'update (daglig), all (hela historiken), flags eller insider'
         required: true
-        default: all
+        default: update
         type: choice
-        options: [all, flags, insider]
+        options: [update, all, flags, insider]
 
 permissions:
   contents: write
+
+concurrency:
+  group: build-archive
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -25,14 +32,17 @@ jobs:
           node-version: '20'
 
       - name: Hämta arkiven
-        run: node scripts/build-archive.mjs ${{ github.event.inputs.what }}
+        run: node scripts/build-archive.mjs ${{ github.event.inputs.what || 'update' }}
+
+      - name: Räkna fram uppköpslistan
+        run: node scripts/takeover-rank.mjs
 
       - name: Committa
         run: |
           git config user.name "budradar-archive"
           git config user.email "actions@users.noreply.github.com"
-          git add data/*.json.gz
+          git add data/*.json.gz data/takeover.json
           if git diff --cached --quiet; then echo "Inget nytt"; exit 0; fi
-          git commit -m "Historikarkiv: $(date -u +%Y-%m-%d)"
+          git commit -m "Uppköpslista och arkiv: $(date -u +%Y-%m-%d)"
           git pull --rebase
           git push
