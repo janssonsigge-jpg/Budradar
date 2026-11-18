@@ -1,0 +1,885 @@
+{
+ "generated": "2026-11-18T17:07:43.707Z",
+ "universe": 383,
+ "method": "Poäng 0–100 från FI:s flaggningar och insynsregister: en aktiv storägare på 10–50 %, private equity bland ägarna, ägare som ökat över 10 % senaste året, insiders som köpt och många flaggningar senaste halvåret. Bara publicerade data används.",
+ "backtest": {
+  "daysBefore": 30,
+  "tested": 12,
+  "total": 18,
+  "top10": 2,
+  "top25": 5,
+  "random10": 1.2,
+  "random25": 3,
+  "rows": [
+   {
+    "target": "Qliro",
+    "announced": "2026-11-09",
+    "premium": 85,
+    "rank": 4,
+    "of": 384,
+    "topPct": 1,
+    "score": 62
+   },
+   {
+    "target": "Triona",
+    "announced": "2026-10-01",
+    "premium": 30.7,
+    "rank": null,
+    "of": 379,
+    "topPct": null,
+    "score": null
+   },
+   {
+    "target": "Preservium Property",
+    "announced": "2026-09-29",
+    "premium": 44,
+    "rank": null,
+    "of": 378,
+    "topPct": null,
+    "score": null
+   },
+   {
+    "target": "Evolution",
+    "announced": "2026-08-13",
+    "premium": -5.7,
+    "rank": 95,
+    "of": 376,
+    "topPct": 25,
+    "score": 37
+   },
+   {
+    "target": "Bahnhof",
+    "announced": "2026-07-08",
+    "premium": 22,
+    "rank": null,
+    "of": 375,
+    "topPct": null,
+    "score": null
+   },
+   {
+    "target": "Humana",
+    "announced": "2026-06-29",
+    "premium": 26.8,
+    "rank": 19,
+    "of": 373,
+    "topPct": 5,
+    "score": 55
+   },
+   {
+    "target": "Viva Wine Group",
+    "announced": "2026-06-29",
+    "premium": 38,
+    "rank": 221,
+    "of": 373,
+    "topPct": 59,
+    "score": 12
+   },
+   {
+    "target": "Formpipe (Lasernet Group)",
+    "announced": "2026-06-04",
+    "premium": 53.8,
+    "rank": 157,
+    "of": 368,
+    "topPct": 43,
+    "score": 22
+   },
+   {
+    "target": "Sleep Cycle",
+    "announced": "2026-05-11",
+    "premium": 47,
+    "rank": 116,
+    "of": 364,
+    "topPct": 32,
+    "score": 30
+   },
+   {
+    "target": "Nilörngruppen",
+    "announced": "2026-05-04",
+    "premium": 53,
+    "rank": 275,
+    "of": 364,
+    "topPct": 76,
+    "score": 4
+   },
+   {
+    "target": "Cint Group",
+    "announced": "2026-04-27",
+    "premium": 33,
+    "rank": 41,
+    "of": 363,
+    "topPct": 11,
+    "score": 48
+   },
+   {
+    "target": "Krona Public Real Estate",
+    "announced": "2026-02-19",
+    "premium": null,
+    "rank": null,
+    "of": 361,
+    "topPct": null,
+    "score": null
+   },
+   {
+    "target": "Comintelli",
+    "announced": "2026-01-09",
+    "premium": 68,
+    "rank": null,
+    "of": 357,
+    "topPct": null,
+    "score": null
+   },
+   {
+    "target": "Arise",
+    "announced": "2025-11-26",
+    "premium": null,
+    "rank": 47,
+    "of": 358,
+    "topPct": 13,
+    "score": 44
+   },
+   {
+    "target": "Backaheden Fastighets",
+    "announced": "2025-09-16",
+    "premium": null,
+    "rank": null,
+    "of": 356,
+    "topPct": null,
+    "score": null
+   },
+   {
+    "target": "Biotage",
+    "announced": "2025-04-22",
+    "premium": 60.1,
+    "rank": 126,
+    "of": 364,
+    "topPct": 35,
+    "score": 30
+   },
+   {
+    "target": "Fortnox",
+    "announced": "2025-03-31",
+    "premium": 38,
+    "rank": 133,
+    "of": 366,
+    "topPct": 36,
+    "score": 30
+   },
+   {
+    "target": "Concentric",
+    "announced": "2024-08-29",
+    "premium": 61.5,
+    "rank": 338,
+    "of": 359,
+    "topPct": 94,
+    "score": 0
+   }
+  ]
+ },
+ "list": [
+  {
+   "rank": 1,
+   "name": "Pierce Group AB",
+   "score": 67,
+   "why": [
+    "PCI V Co-Investment AB har flaggat 24.9 %",
+    "private equity bland ägarna: Verdane Advisors Holding AS",
+    "7 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "PCI V Co-Investment AB",
+    "pct": 24.9
+   },
+   "pe": {
+    "name": "Verdane Advisors Holding AS",
+    "pct": 24.9
+   },
+   "buyers": 1,
+   "accum": 0
+  },
+  {
+   "rank": 2,
+   "name": "Logistea AB",
+   "score": 66,
+   "why": [
+    "Slättö Value Add I AB har flaggat 21.8 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "4 flaggningar senaste halvåret",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "Slättö Value Add I AB",
+    "pct": 21.8
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 2
+  },
+  {
+   "rank": 3,
+   "name": "Morrow Bank AB",
+   "score": 62,
+   "why": [
+    "Kistefos AS har flaggat 20 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Kistefos AS",
+    "pct": 20
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 2
+  },
+  {
+   "rank": 4,
+   "name": "Norion Bank AB",
+   "score": 62,
+   "why": [
+    "Erik Selin har flaggat 37.5 %",
+    "3 ägare har ökat över 10 % senaste året",
+    "4 insiders har köpt"
+   ],
+   "top": {
+    "name": "Erik Selin",
+    "pct": 37.5
+   },
+   "pe": null,
+   "buyers": 4,
+   "accum": 3
+  },
+  {
+   "rank": 5,
+   "name": "Scandinavian Astor Group AB",
+   "score": 62,
+   "why": [
+    "Hässle Holding AB har flaggat 21.1 %",
+    "4 ägare har ökat över 10 % senaste året",
+    "5 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Hässle Holding AB",
+    "pct": 21.1
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 4
+  },
+  {
+   "rank": 6,
+   "name": "Bong AB",
+   "score": 62,
+   "why": [
+    "Bengt Stillström har flaggat 23 %",
+    "5 ägare har ökat över 10 % senaste året",
+    "7 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Bengt Stillström",
+    "pct": 23
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 5
+  },
+  {
+   "rank": 7,
+   "name": "HANZA AB",
+   "score": 62,
+   "why": [
+    "Färna Invest, Färna Invest ab har flaggat 20.5 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "4 insiders har köpt"
+   ],
+   "top": {
+    "name": "Färna Invest",
+    "pct": 20.5
+   },
+   "pe": null,
+   "buyers": 4,
+   "accum": 2
+  },
+  {
+   "rank": 8,
+   "name": "Bulten AB",
+   "score": 60,
+   "why": [
+    "Volito AB har flaggat 25.1 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "7 flaggningar senaste halvåret",
+    "4 insiders har köpt"
+   ],
+   "top": {
+    "name": "Volito AB",
+    "pct": 25.1
+   },
+   "pe": null,
+   "buyers": 4,
+   "accum": 1
+  },
+  {
+   "rank": 9,
+   "name": "Asker Healthcare Group AB",
+   "score": 60,
+   "why": [
+    "Interogo Foundation har flaggat 40.2 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret",
+    "5 insiders har köpt"
+   ],
+   "top": {
+    "name": "Interogo Foundation",
+    "pct": 40.2
+   },
+   "pe": null,
+   "buyers": 5,
+   "accum": 1
+  },
+  {
+   "rank": 10,
+   "name": "KDventures AB",
+   "score": 58,
+   "why": [
+    "invoX Pharma Limited har flaggat 20 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "invoX Pharma Limited",
+    "pct": 20
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 2
+  },
+  {
+   "rank": 11,
+   "name": "Coor Service Management Holding AB",
+   "score": 58,
+   "why": [
+    "Michael Wisser har flaggat 30 %",
+    "6 ägare har ökat över 10 % senaste året",
+    "14 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "Michael Wisser",
+    "pct": 30
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 6
+  },
+  {
+   "rank": 12,
+   "name": "Eastnine AB",
+   "score": 58,
+   "why": [
+    "Peter Elam Håkansson har flaggat 20 %",
+    "3 ägare har ökat över 10 % senaste året",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "Peter Elam Håkansson",
+    "pct": 20
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 3
+  },
+  {
+   "rank": 13,
+   "name": "Wise Group AB",
+   "score": 58,
+   "why": [
+    "Dahlgren Capital Active Equity AB har flaggat 27.9 %",
+    "5 ägare har ökat över 10 % senaste året",
+    "7 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "Dahlgren Capital Active Equity AB",
+    "pct": 27.9
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 5
+  },
+  {
+   "rank": 14,
+   "name": "AcadeMedia AB",
+   "score": 57,
+   "why": [
+    "TFS Limited as Trustee on behalf of the Bolero Trust har flaggat 10 %",
+    "private equity bland ägarna: Triton Administration (Jersey) Limited as Trustee of the Bolero Trust.",
+    "1 ägare har ökat över 10 % senaste året",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "TFS Limited as Trustee on behalf of the Bolero Trust",
+    "pct": 10
+   },
+   "pe": {
+    "name": "Triton Administration (Jersey) Limited as Trustee of the Bolero Trust.",
+    "pct": 5.3
+   },
+   "buyers": 1,
+   "accum": 1
+  },
+  {
+   "rank": 15,
+   "name": "Studsvik AB",
+   "score": 56,
+   "why": [
+    "Daniel Simon Aegerter har flaggat 30.4 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "5 flaggningar senaste halvåret",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "Daniel Simon Aegerter",
+    "pct": 30.4
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 1
+  },
+  {
+   "rank": 16,
+   "name": "Modern Times Group MTG AB",
+   "score": 54,
+   "why": [
+    "EHM Holding GmbH har flaggat 15.3 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "EHM Holding GmbH",
+    "pct": 15.3
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 2
+  },
+  {
+   "rank": 17,
+   "name": "Stenhus Fastigheter i Norden AB",
+   "score": 54,
+   "why": [
+    "Sterner Stenhus Holding AB har flaggat 27.1 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Sterner Stenhus Holding AB",
+    "pct": 27.1
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 2
+  },
+  {
+   "rank": 18,
+   "name": "Nordisk Bergteknik AB",
+   "score": 52,
+   "why": [
+    "Navigo Invest AB (publ) har flaggat 28.2 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "5 insiders har köpt"
+   ],
+   "top": {
+    "name": "Navigo Invest AB (publ)",
+    "pct": 28.2
+   },
+   "pe": null,
+   "buyers": 5,
+   "accum": 1
+  },
+  {
+   "rank": 19,
+   "name": "Eniro Group AB",
+   "score": 52,
+   "why": [
+    "Kommstart 4068 AB unä Flavus Invest har flaggat 26.1 %",
+    "3 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "Kommstart 4068 AB unä Flavus Invest",
+    "pct": 26.1
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 3
+  },
+  {
+   "rank": 20,
+   "name": "Green Landscaping Group AB",
+   "score": 52,
+   "why": [
+    "Saléninvest AB har flaggat 20 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "4 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Saléninvest AB",
+    "pct": 20
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 1
+  },
+  {
+   "rank": 21,
+   "name": "Scandi Standard AB",
+   "score": 52,
+   "why": [
+    "Grupo Lusiaves SGPS, S.A. har flaggat 20 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "5 insiders har köpt"
+   ],
+   "top": {
+    "name": "Grupo Lusiaves SGPS",
+    "pct": 20
+   },
+   "pe": null,
+   "buyers": 5,
+   "accum": 1
+  },
+  {
+   "rank": 22,
+   "name": "RVRC Holding AB",
+   "score": 52,
+   "why": [
+    "Wealins SA har flaggat 35.3 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "Wealins SA",
+    "pct": 35.3
+   },
+   "pe": null,
+   "buyers": 3,
+   "accum": 1
+  },
+  {
+   "rank": 23,
+   "name": "Midsummer AB",
+   "score": 52,
+   "why": [
+    "H.Waldaeus AB har flaggat 47.7 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "H.Waldaeus AB",
+    "pct": 47.7
+   },
+   "pe": null,
+   "buyers": 3,
+   "accum": 1
+  },
+  {
+   "rank": 24,
+   "name": "BHG Group AB",
+   "score": 51,
+   "why": [
+    "FERD AS har flaggat 18.2 %",
+    "private equity bland ägarna: EQT Fund Management S.á.r.l. and EQT Public Value (General Partner) S.á.r.l.",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "FERD AS",
+    "pct": 18.2
+   },
+   "pe": {
+    "name": "EQT Fund Management S.á.r.l. and EQT Public Value (General Partner) S.á.r.l.",
+    "pct": 14.9
+   },
+   "buyers": 2,
+   "accum": 0
+  },
+  {
+   "rank": 25,
+   "name": "Alligator Bioscience AB",
+   "score": 50,
+   "why": [
+    "Mangold Fondkommission AB har flaggat 14.9 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "8 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Mangold Fondkommission AB",
+    "pct": 14.9
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 2
+  },
+  {
+   "rank": 26,
+   "name": "Sdiptech AB",
+   "score": 50,
+   "why": [
+    "Ashkan Pouya har flaggat 15.3 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "Ashkan Pouya",
+    "pct": 15.3
+   },
+   "pe": null,
+   "buyers": 3,
+   "accum": 2
+  },
+  {
+   "rank": 27,
+   "name": "Fasadgruppen Group AB",
+   "score": 50,
+   "why": [
+    "Hauser Brothers GmbH har flaggat 15.1 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "Hauser Brothers GmbH",
+    "pct": 15.1
+   },
+   "pe": null,
+   "buyers": 3,
+   "accum": 2
+  },
+  {
+   "rank": 28,
+   "name": "Ellos Holding AB",
+   "score": 50,
+   "why": [
+    "Surfside Holding AS har flaggat 11.6 %",
+    "4 ägare har ökat över 10 % senaste året",
+    "5 flaggningar senaste halvåret",
+    "1 insiders har köpt"
+   ],
+   "top": {
+    "name": "Surfside Holding AS",
+    "pct": 11.6
+   },
+   "pe": null,
+   "buyers": 1,
+   "accum": 4
+  },
+  {
+   "rank": 29,
+   "name": "Balco Group AB",
+   "score": 50,
+   "why": [
+    "Ringvägen Venture AB har flaggat 15.1 %",
+    "2 ägare har ökat över 10 % senaste året",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "Ringvägen Venture AB",
+    "pct": 15.1
+   },
+   "pe": null,
+   "buyers": 3,
+   "accum": 2
+  },
+  {
+   "rank": 30,
+   "name": "Maha Capital AB",
+   "score": 50,
+   "why": [
+    "Keo Aggregator LP har flaggat 40.1 %",
+    "3 ägare har ökat över 10 % senaste året"
+   ],
+   "top": {
+    "name": "Keo Aggregator LP",
+    "pct": 40.1
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 3
+  },
+  {
+   "rank": 31,
+   "name": "Hoist Finance AB",
+   "score": 50,
+   "why": [
+    "Per Arwidsson har flaggat 20.8 %",
+    "2 ägare har ökat över 10 % senaste året"
+   ],
+   "top": {
+    "name": "Per Arwidsson",
+    "pct": 20.8
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 2
+  },
+  {
+   "rank": 32,
+   "name": "Aktiebolaget Industrivärden",
+   "score": 50,
+   "why": [
+    "Fredrik Lundberg har flaggat 27.8 %",
+    "2 ägare har ökat över 10 % senaste året"
+   ],
+   "top": {
+    "name": "Fredrik Lundberg",
+    "pct": 27.8
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 2
+  },
+  {
+   "rank": 33,
+   "name": "Netel Holding AB",
+   "score": 48,
+   "why": [
+    "4 ägare har ökat över 10 % senaste året",
+    "10 flaggningar senaste halvåret",
+    "4 insiders har köpt"
+   ],
+   "top": {
+    "name": "Ambergate Invest Sverige AB",
+    "pct": 87.6
+   },
+   "pe": null,
+   "buyers": 4,
+   "accum": 4
+  },
+  {
+   "rank": 34,
+   "name": "Intrum AB",
+   "score": 48,
+   "why": [
+    "Nordic Capital VII Limited har flaggat 20 %",
+    "private equity bland ägarna: Nordic Capital VII Limited",
+    "1 ägare har ökat över 10 % senaste året",
+    "58 flaggningar senaste halvåret",
+    "storbolag, köps sällan upp"
+   ],
+   "top": {
+    "name": "Nordic Capital VII Limited",
+    "pct": 20
+   },
+   "pe": {
+    "name": "Nordic Capital VII Limited",
+    "pct": 20
+   },
+   "buyers": 0,
+   "accum": 1
+  },
+  {
+   "rank": 35,
+   "name": "CellaVision AB",
+   "score": 48,
+   "why": [
+    "William Demant Invest A/S har flaggat 20.2 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "William Demant Invest A/S",
+    "pct": 20.2
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 1
+  },
+  {
+   "rank": 36,
+   "name": "Vivesto AB",
+   "score": 48,
+   "why": [
+    "Per Arwidsson har flaggat 39.6 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "7 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "Per Arwidsson",
+    "pct": 39.6
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 1
+  },
+  {
+   "rank": 37,
+   "name": "Gentoo Media Inc.",
+   "score": 48,
+   "why": [
+    "MJ FOUNDATION FUNDACJA RODZINNA har flaggat 20.1 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "MJ FOUNDATION FUNDACJA RODZINNA",
+    "pct": 20.1
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 1
+  },
+  {
+   "rank": 38,
+   "name": "BE Group AB",
+   "score": 48,
+   "why": [
+    "Svedulf Förvaltning AB har flaggat 25 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "Svedulf Förvaltning AB",
+    "pct": 25
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 1
+  },
+  {
+   "rank": 39,
+   "name": "mySafety Group AB",
+   "score": 48,
+   "why": [
+    "Marcus Pettersson Berver har flaggat 17.1 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "4 flaggningar senaste halvåret",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "Marcus Pettersson Berver",
+    "pct": 17.1
+   },
+   "pe": null,
+   "buyers": 3,
+   "accum": 1
+  },
+  {
+   "rank": 40,
+   "name": "Gruvaktiebolaget Viscaria",
+   "score": 48,
+   "why": [
+    "Tomenterprise Public Capital AB har flaggat 20 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "5 flaggningar senaste halvåret"
+   ],
+   "top": {
+    "name": "Tomenterprise Public Capital AB",
+    "pct": 20
+   },
+   "pe": null,
+   "buyers": 0,
+   "accum": 1
+  }
+ ]
+}
