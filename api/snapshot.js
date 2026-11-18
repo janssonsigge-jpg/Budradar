@@ -44,42 +44,46 @@ export default async function handler(req, res) {
     if (!companies.length) throw new Error("inga bolag returnerades");
 
     const day = new Date().toISOString().slice(0, 10);
-    let saved = 0;
 
+    // Allt i två batch-anrop i stället för ett anrop per bolag — de gamla ~300
+    // sekventiella INSERT:arna slog i Vercels tidsgräns, så historiken stannade 2026-07-18.
+    const T = [], N = [], C = [], PI = [], PF = [], PS = [], PB = [], TI = [];
+    const seen = new Set(); // samma ticker två gånger i en batch får ON CONFLICT DO UPDATE att krascha
     for (const c of companies) {
+      if (seen.has(c.ticker)) continue;
+      seen.add(c.ticker);
       const p = c.score.parts;
-      await sql`
-        INSERT INTO signal_history
-          (snapshot_date, ticker, name, composite, part_insider, part_flags, part_short, part_bv, tier)
-        VALUES
-          (${day}, ${c.ticker}, ${c.name}, ${c.score.composite},
-           ${p.insider}, ${p.flags}, ${p.shortSig}, ${p.bv}, ${c.score.tier})
-        ON CONFLICT (snapshot_date, ticker) DO UPDATE SET
-          composite = EXCLUDED.composite,
-          part_insider = EXCLUDED.part_insider,
-          part_flags = EXCLUDED.part_flags,
-          part_short = EXCLUDED.part_short,
-          part_bv = EXCLUDED.part_bv,
-          tier = EXCLUDED.tier,
-          name = EXCLUDED.name
-      `;
-      saved++;
+      T.push(c.ticker); N.push(c.name); C.push(c.score.composite);
+      PI.push(p.insider); PF.push(p.flags); PS.push(p.shortSig); PB.push(p.bv); TI.push(c.score.tier);
     }
+    await sql`
+      INSERT INTO signal_history
+        (snapshot_date, ticker, name, composite, part_insider, part_flags, part_short, part_bv, tier)
+      SELECT ${day}::date, * FROM unnest(
+        ${T}::text[], ${N}::text[], ${C}::int[], ${PI}::int[], ${PF}::int[], ${PS}::int[], ${PB}::int[], ${TI}::text[])
+      ON CONFLICT (snapshot_date, ticker) DO UPDATE SET
+        composite = EXCLUDED.composite, part_insider = EXCLUDED.part_insider, part_flags = EXCLUDED.part_flags,
+        part_short = EXCLUDED.part_short, part_bv = EXCLUDED.part_bv, tier = EXCLUDED.tier, name = EXCLUDED.name
+    `;
+    const saved = T.length;
 
     // Spara även råa flaggningar (de är historiskt värdefulla i sig)
-    let flagsSaved = 0;
+    const FD = [], FT = [], FC = [], FH = [], FTh = [], FP = [], FR = [];
     for (const c of companies) {
       for (const f of (c.detail && c.detail.flags) || []) {
         if (!f.flag_date) continue;
-        await sql`
-          INSERT INTO flag_history (flag_date, ticker, company, holder, threshold, share_pct, reason)
-          VALUES (${f.flag_date}, ${c.ticker}, ${c.name}, ${f.holder || null},
-                  ${f.threshold || null}, ${f.sharePct != null ? f.sharePct : null}, ${f.reason || null})
-          ON CONFLICT DO NOTHING
-        `;
-        flagsSaved++;
+        FD.push(f.flag_date); FT.push(c.ticker); FC.push(c.name); FH.push(f.holder || null);
+        FTh.push(f.threshold || null); FP.push(f.sharePct != null ? f.sharePct : null); FR.push(f.reason || null);
       }
     }
+    if (FD.length) {
+      await sql`
+        INSERT INTO flag_history (flag_date, ticker, company, holder, threshold, share_pct, reason)
+        SELECT * FROM unnest(${FD}::date[], ${FT}::text[], ${FC}::text[], ${FH}::text[], ${FTh}::text[], ${FP}::numeric[], ${FR}::text[])
+        ON CONFLICT DO NOTHING
+      `;
+    }
+    const flagsSaved = FD.length;
 
     const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM signal_history`;
     const [{ days }] = await sql`SELECT COUNT(DISTINCT snapshot_date)::int AS days FROM signal_history`;
