@@ -109,6 +109,23 @@ p { margin: 0; }
 
 /* skal-remsa */
 .shells { margin-top: 110px; }
+.tko { margin-top: 110px; }
+.tko-list { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; }
+.tko-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 120px; gap: 6px 18px; align-items: center; padding: 16px 22px; border-bottom: 1px solid var(--line); }
+.tko-row:last-child { border-bottom: 0; }
+.tko-row .n { color: var(--dim); font-size: 13px; }
+.tko-row b { font-weight: 500; font-size: 16px; }
+.tko-row .why { grid-column: 2 / -1; font-size: 13px; color: var(--slate); line-height: 1.5; }
+.tko-meter { display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-weight: 600; }
+.tko-meter i { display: block; width: 64px; height: 6px; border-radius: 3px; background: var(--s2); overflow: hidden; }
+.tko-meter i::after { content: ""; display: block; height: 100%; width: var(--w); background: linear-gradient(90deg, var(--accent), var(--marker)); }
+.tko-foot { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+.tko-foot .note { margin: 0; max-width: 70ch; }
+@media (max-width: 720px) {
+  .tko { margin-top: 72px; }
+  .tko-row { grid-template-columns: 26px minmax(0, 1fr) auto; padding: 14px 16px; }
+  .tko-meter i { width: 40px; }
+}
 .sec-head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 24px; }
 .sec-head p { color: var(--slate); font-size: 15px; max-width: 56ch; }
 .shell-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
@@ -474,6 +491,15 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
       <li><b>Budet kommer</b><span>I våra verifierade fall kom budet efter en median på <strong>20 dagar</strong>, med en typisk premie på <strong>+44 %</strong>.</span></li>
     </ol>
     <div class="ticker" aria-label="Senaste händelserna"><div class="ticker-in" id="ticker"></div></div>
+
+    <div class="tko" id="kandidater">
+      <div class="sec-head">
+        <h2>Uppköpskandidater</h2>
+        <p>Bolag vars ägarbild ser ut som den brukar göra före ett bud: en stor ägare på 10–50 %, private equity bland ägarna, ägare som köper på sig och insiders som köper. Uppdateras varje natt från FI:s flaggningar och insynsregister.</p>
+      </div>
+      <div class="tko-list" id="tko"><div class="sk" style="height:220px"></div></div>
+      <div class="tko-foot"><button class="btn" id="tkoMore" hidden>Visa alla</button><p class="note" id="tkoTest"></p></div>
+    </div>
 
     <div class="shells">
       <div class="sec-head">
@@ -1127,6 +1153,29 @@ function renderTrack() {
   document.getElementById("trHist").innerHTML = bidcoCases().map((k) => `<div class="li"><div><b>${esc(k.bidco)}</b><br><span>${k.target ? esc(k.target) + ", " : ""}registrerat ${dLong(k.registered)}, bud ${dLong(k.announced)}</span></div><div class="r"><span class="badge ok">${k.d} dagar före</span></div></div>`).join("") || `<div class="empty">Laddar…</div>`;
 }
 
+// ---------- uppköpskandidater ----------
+let TKO_ALL = false;
+function renderTko() {
+  const el = document.getElementById("tko");
+  if (!el) return;
+  if (!S.tko) { el.innerHTML = `<div class="empty">Listan uppdateras i natt.</div>`; return; }
+  const list = S.tko.list || [];
+  const shown = TKO_ALL ? list : list.slice(0, 10);
+  el.innerHTML = shown.map((x) => `<div class="tko-row">
+      <span class="n">${x.rank}</span>
+      <b>${esc(cleanName(x.name))}</b>
+      <span class="tko-meter"><i style="--w:${x.score}%"></i>${x.score}</span>
+      <span class="why">${esc(x.why.filter((w) => !/storbolag/.test(w)).slice(0, 3).join(". ").replace(/^./, (c) => c.toUpperCase()))}.</span>
+    </div>`).join("") || `<div class="empty">Inga kandidater just nu.</div>`;
+  const more = document.getElementById("tkoMore");
+  more.hidden = list.length <= 10;
+  more.textContent = TKO_ALL ? "Visa topp 10" : `Visa alla ${list.length}`;
+  const b = S.tko.backtest;
+  document.getElementById("tkoTest").textContent = b
+    ? `Testat bakåt: av ${b.tested} tidigare bud med ägarhistorik låg ${b.top25} bland de 25 % högst rankade en månad före budet (slumpen skulle ge ${b.random25}). Det här är en sannolikhet, inte ett tips. Uppdaterad ${dShort(S.tko.generated)}.`
+    : "";
+}
+
 // ---------- routing ----------
 function route() {
   const h = location.hash.slice(1) || "radar";
@@ -1138,7 +1187,7 @@ function route() {
     return;
   }
   closeDrawer();
-  if (view === "ranking" || view === "how") { show("radar"); requestAnimationFrame(() => document.getElementById(view).scrollIntoView({ behavior: "smooth", block: view === "how" ? "center" : "start" })); return; }
+  if (view === "ranking" || view === "how" || view === "kandidater") { show("radar"); requestAnimationFrame(() => document.getElementById(view).scrollIntoView({ behavior: "smooth", block: view === "how" ? "center" : "start" })); return; }
   show(["radar", "bidco", "register", "track", "metod"].includes(view) ? view : "radar");
 }
 function show(v) {
@@ -1154,6 +1203,7 @@ document.querySelectorAll("#tierChips .chip").forEach((b) => b.onclick = () => {
 document.getElementById("large").onchange = (e) => { S.large = e.target.checked; renderRows(); };
 document.getElementById("sort").onchange = (e) => { S.sort = e.target.value; renderRows(); };
 document.getElementById("mand").onchange = (e) => { S.mand = e.target.checked; renderRegister(); };
+document.getElementById("tkoMore").onclick = () => { TKO_ALL = !TKO_ALL; renderTko(); };
 ["pName", "pAddr", "pDesc"].forEach((id) => document.getElementById(id).addEventListener("input", runProbe));
 document.getElementById("scrim").onclick = back;
 document.getElementById("drClose").onclick = back;
@@ -1181,6 +1231,7 @@ async function load() {
     shells: getJSON("/api/system?action=shell-flags").then((j) => { S.shells = j; renderLeads(); }),
     bidco: getJSON("/api/bidco").then((j) => { S.bidco = j; renderBidco(); }),
     bv: getJSON("/api/system?action=bolagsverket-status").then((j) => { S.bv = j; setFresh(); }),
+    tko: getJSON("/data/takeover.json").then((j) => { S.tko = j; renderTko(); }).catch((e) => { renderTko(); throw e; }),
   };
   const res = await Promise.allSettled(Object.values(jobs));
   if (res[0].status === "rejected") document.getElementById("rows").innerHTML = `<div class="empty">Kunde inte hämta bolagslistan. Ladda om sidan om en stund.</div>`;
