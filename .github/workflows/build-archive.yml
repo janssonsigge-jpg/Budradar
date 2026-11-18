@@ -1,0 +1,38 @@
+name: Bygg historikarkiv
+
+on:
+  workflow_dispatch:
+    inputs:
+      what:
+        description: 'all, flags eller insider'
+        required: true
+        default: all
+        type: choice
+        options: [all, flags, insider]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Hämta arkiven
+        run: node scripts/build-archive.mjs ${{ github.event.inputs.what }}
+
+      - name: Committa
+        run: |
+          git config user.name "budradar-archive"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/*.json.gz
+          if git diff --cached --quiet; then echo "Inget nytt"; exit 0; fi
+          git commit -m "Historikarkiv: $(date -u +%Y-%m-%d)"
+          git pull --rebase
+          git push
