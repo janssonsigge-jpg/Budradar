@@ -29,6 +29,12 @@ import { appendFlag, verifyChain, recordOutcome } from '../lib/trackRecordLog.js
 import { recordHealthCheck, getAllHealth } from '../lib/healthCheck.js';
 import { archiveRawSnapshot, todaysRunId } from '../lib/archiveSnapshot.js';
 import { REGISTRY } from './_registry-data.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import {
+  DELAY_DAYS, PLANS, ensureTables, createKey, listKeys, revokeKey, authenticate,
+  isSealed, sealTrackRow, addToWaitlist, listWaitlist,
+} from '../lib/access.js';
 
 // Enkel bearer-token-koll för admin-actions. Sätt ADMIN_SECRET i Vercel env vars.
 function requireAdmin(req, res) {
@@ -74,9 +80,17 @@ export default async function handler(req, res) {
       return handleWatchlistStatus(req, res);
     case 'shell-flags':
       return handleShellFlags(req, res);
+    case 'waitlist':
+      return handleWaitlist(req, res);
+    case 'v1':
+      return handleV1(req, res);
+    case 'admin-keys':
+      return handleAdminKeys(req, res);
+    case 'admin-waitlist':
+      return handleAdminWaitlist(req, res);
     default:
       return res.status(400).json({
-        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers | admin-sync-historical | watchlist-status',
+        error: 'Okänd eller saknad ?action=. Giltiga värden: track-record | verify | health | flag | daily-scan | bolagsverket-status | admin-add-advisor | admin-outcome | flagged-tickers | admin-sync-historical | watchlist-status | shell-flags | waitlist | v1 | admin-keys | admin-waitlist',
       });
   }
 }
@@ -98,7 +112,6 @@ async function handleTrackRecord(req, res) {
       ORDER BY created_at DESC
     `;
 
-    const total = rows.length;
     const liveRows = rows.filter((r) => r.source !== 'historical_verification');
     const historicalRows = rows.filter((r) => r.source === 'historical_verification');
 
@@ -117,8 +130,12 @@ async function handleTrackRecord(req, res) {
         // så den ska aldrig blandas in i träffsäkerhetsmåttet.
         hitRate: liveRows.length > pending ? hits / (liveRows.length - pending) : null,
         historicalVerified: historicalRows.length,
+        sealed: rows.filter((r) => isSealed(r)).length,
+        delayDays: DELAY_DAYS,
       },
-      flags: rows,
+      // Publik vy: live-flaggor yngre än DELAY_DAYS är förseglade (bara hash + tid).
+      // Fullständig data i realtid finns via /v1/flags med API-nyckel.
+      flags: rows.map(sealTrackRow),
       githubRepo: process.env.GITHUB_TIMESTAMP_REPO || null,
     });
   } catch (err) {
@@ -484,13 +501,19 @@ async function handleFlaggedTickers(req, res) {
   }
   try {
     const { rows } = await sql`
-      SELECT DISTINCT ticker, outcome
+      SELECT ticker, outcome, source, created_at
       FROM track_record_log
       WHERE ticker IS NOT NULL AND ticker != ''
     `;
+    const seen = new Set();
+    const open = rows.filter((r) => !isSealed(r)).filter((r) => {
+      const k = r.ticker + '|' + r.outcome;
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300');
     return res.status(200).json({
-      tickers: rows.map((r) => ({ ticker: r.ticker, outcome: r.outcome })),
+      tickers: open.map((r) => ({ ticker: r.ticker, outcome: r.outcome })),
     });
   } catch (err) {
     console.error('Fel vid hämtning av flaggade tickers:', err);
@@ -599,10 +622,18 @@ async function handleWatchlistStatus(req, res) {
       SELECT status, COUNT(*)::int AS count FROM watchlist GROUP BY status
     `;
     const { rows: recentlyFlagged } = await sql`
-      SELECT org_nr, original_name, score, last_checked_at, flagged_track_record_id
-      FROM watchlist WHERE status = 'flagged'
-      ORDER BY last_checked_at DESC LIMIT 10
+      SELECT w.org_nr, w.original_name, w.score, w.last_checked_at, w.flagged_track_record_id,
+             t.created_at, t.outcome, t.source
+      FROM watchlist w
+      LEFT JOIN track_record_log t ON t.id = w.flagged_track_record_id
+      WHERE w.status = 'flagged'
+      ORDER BY w.last_checked_at DESC LIMIT 10
     `;
+    for (const r of recentlyFlagged) {
+      const sealed = r.created_at && isSealed({ created_at: r.created_at, outcome: r.outcome, source: r.source || 'live' });
+      if (sealed) { r.org_nr = null; r.original_name = `Förseglad flagga #${r.flagged_track_record_id}`; r.sealed = true; }
+      delete r.created_at; delete r.outcome; delete r.source;
+    }
     // NYTT: faktiska bolag under bevakning, inte bara ett antal.
     // Nyast registrerade först -- det är de som fortfarande har längst kvar
     // av sitt 90-dagarsfönster och är mest relevanta att hålla koll på.
@@ -726,6 +757,15 @@ async function handleShellFlags(req, res) {
       LIMIT 50
     `;
     const items = rows.map((r) => {
+      if (isSealed({ ...r, source: 'live' })) {
+        return {
+          id: r.id, name: `Förseglad flagga #${r.id}`, originalName: null, orgNr: null,
+          address: null, originalAddress: null, description: null, advisor: null,
+          reason: r.flag_reason, score: r.score != null ? Number(r.score) : null,
+          outcome: r.outcome, registeredAt: null, flaggedAt: r.created_at,
+          sealed: true, revealAt: sealTrackRow({ ...r, source: 'live' }).reveal_at,
+        };
+      }
       let s = r.signal_snapshot;
       if (typeof s === 'string') { try { s = JSON.parse(s); } catch { s = {}; } }
       s = s || {};
@@ -746,8 +786,202 @@ async function handleShellFlags(req, res) {
       };
     });
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-    return res.status(200).json({ count: items.length, items });
+    return res.status(200).json({ count: items.length, sealed: items.filter((i) => i.sealed).length, delayDays: DELAY_DAYS, items });
   } catch (err) {
     return res.status(500).json({ error: 'Internt fel', detail: err.message });
+  }
+}
+
+// =====================================================================
+// BETALVÄGG: väntelista, nyckeladmin och API v1
+// =====================================================================
+
+// POST /api/system?action=waitlist   { email, interest: free|pro|api, company?, message? }
+async function handleWaitlist(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Endast POST tillåtet' });
+  try {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    if (body.website) return res.status(200).json({ ok: true }); // honeypot mot botar
+    await addToWaitlist(body);
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+// GET  /api/system?action=admin-keys                     lista nycklar
+// POST /api/system?action=admin-keys  { owner, email?, plan?, note?, daily_quota? }  skapa nyckel
+// POST /api/system?action=admin-keys  { revoke: <id> }   spärra nyckel
+async function handleAdminKeys(req, res) {
+  if (!requireAdmin(req, res)) return;
+  try {
+    if (req.method === 'GET') return res.status(200).json({ plans: PLANS, keys: await listKeys() });
+    if (req.method !== 'POST') return res.status(405).json({ error: 'GET eller POST' });
+    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    if (body.revoke) {
+      await revokeKey(Number(body.revoke));
+      return res.status(200).json({ ok: true, revoked: Number(body.revoke) });
+    }
+    const created = await createKey(body);
+    return res.status(201).json({
+      ...created,
+      warning: 'Spara nyckeln nu — den visas aldrig igen. Bara hashen lagras.',
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+}
+
+// GET /api/system?action=admin-waitlist
+async function handleAdminWaitlist(req, res) {
+  if (!requireAdmin(req, res)) return;
+  try {
+    return res.status(200).json({ signups: await listWaitlist() });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// ---------------------------------------------------------------------
+// API v1 — nås via vercel.json-rewrite: /v1/<route>  →  ?action=v1&route=<route>
+// Allt i realtid, ingen försegling. Kräver API-nyckel.
+// ---------------------------------------------------------------------
+const V1_ROUTES = ['me', 'flags', 'flags/{id}', 'watchlist', 'bids', 'candidates', 'verify'];
+
+function parseSnapshot(s) {
+  if (typeof s === 'string') { try { return JSON.parse(s); } catch { return {}; } }
+  return s || {};
+}
+
+function v1Flag(r) {
+  const s = parseSnapshot(r.signal_snapshot);
+  return {
+    id: Number(r.id),
+    name: s.new_name || r.company_name,
+    original_name: s.original_name || r.original_name || null,
+    org_nr: r.org_nr || null,
+    ticker: r.ticker || null,
+    reason: r.flag_reason,
+    score: r.score != null ? Number(r.score) : null,
+    address: s.new_address || s.address || null,
+    original_address: s.original_address || r.original_address || null,
+    description: s.description || s.new_description || null,
+    advisor: s.matchedAdvisor || null,
+    registered_at: s.registered_at || r.registered_at || null,
+    flagged_at: r.created_at,
+    source: r.source,
+    outcome: r.outcome,
+    outcome_date: r.outcome_date || null,
+    outcome_note: r.outcome_note || null,
+    proof: { row_hash: r.row_hash, prev_hash: r.prev_hash, github_commit_sha: r.github_commit_sha || null },
+  };
+}
+
+let _candidates = null;
+function loadCandidates() {
+  if (!_candidates) _candidates = JSON.parse(readFileSync(join(process.cwd(), 'data', 'takeover.json'), 'utf8'));
+  return _candidates;
+}
+
+async function handleV1(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-API-Key, Content-Type');
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Endast GET' });
+
+  const route = [].concat(req.query.route || '').join('/').replace(/^\/+|\/+$/g, '');
+  const auth = await authenticate(req);
+  if (auth.error) return res.status(auth.status).json({ error: auth.error });
+  const { key, used } = auth;
+  res.setHeader('X-RateLimit-Limit', String(key.daily_quota));
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, key.daily_quota - used)));
+
+  const q = req.query;
+  const limit = Math.min(Math.max(parseInt(q.limit, 10) || 100, 1), 500);
+
+  try {
+    // GET /v1/me
+    if (route === 'me' || route === '') {
+      return res.status(200).json({
+        owner: key.owner, plan: key.plan, daily_quota: key.daily_quota, used_today: used,
+        routes: V1_ROUTES.map((r) => '/v1/' + r),
+      });
+    }
+
+    // GET /v1/flags?since=2026-11-01&limit=100&historical=1&outcome=pending
+    if (route === 'flags') {
+      const since = q.since ? new Date(q.since) : new Date(0);
+      if (isNaN(since)) return res.status(400).json({ error: 'Ogiltigt since-datum (ISO 8601)' });
+      const withHist = q.historical === '1' || q.historical === 'true';
+      const outcome = q.outcome || null;
+      const { rows } = await sql`
+        SELECT t.*, w.original_name, w.original_address, w.registered_at
+        FROM track_record_log t
+        LEFT JOIN watchlist w ON w.flagged_track_record_id = t.id
+        WHERE t.created_at >= ${since.toISOString()}
+          AND (${withHist} OR t.source = 'live')
+          AND (${outcome}::text IS NULL OR t.outcome = ${outcome})
+          AND (t.outcome_note IS NULL OR t.outcome_note NOT ILIKE 'Omklassificerad%')
+        ORDER BY t.created_at DESC
+        LIMIT ${limit}`;
+      return res.status(200).json({ count: rows.length, data: rows.map(v1Flag) });
+    }
+
+    // GET /v1/flags/123
+    const m = route.match(/^flags\/(\d+)$/);
+    if (m) {
+      const { rows } = await sql`
+        SELECT t.*, w.original_name, w.original_address, w.registered_at
+        FROM track_record_log t
+        LEFT JOIN watchlist w ON w.flagged_track_record_id = t.id
+        WHERE t.id = ${Number(m[1])}`;
+      if (!rows.length) return res.status(404).json({ error: 'Flaggan finns inte' });
+      return res.status(200).json({ data: v1Flag(rows[0]) });
+    }
+
+    // GET /v1/watchlist?status=pending|flagged|expired&limit=100
+    if (route === 'watchlist') {
+      const status = ['pending', 'flagged', 'expired'].includes(q.status) ? q.status : 'pending';
+      const { rows } = await sql`
+        SELECT org_nr, original_name, original_address, original_description, registered_at,
+               status, score, window_expires_at, last_checked_at, flagged_track_record_id
+        FROM watchlist WHERE status = ${status}
+        ORDER BY registered_at DESC LIMIT ${limit}`;
+      const { rows: counts } = await sql`SELECT status, COUNT(*)::int AS count FROM watchlist GROUP BY status`;
+      return res.status(200).json({
+        counts: Object.fromEntries(counts.map((c) => [c.status, c.count])),
+        count: rows.length, data: rows,
+      });
+    }
+
+    // GET /v1/bids?from=2025-01-01&bidderType=PE
+    if (route === 'bids') {
+      let data = REGISTRY;
+      if (q.from) data = data.filter((b) => (b.announced || '') >= q.from);
+      if (q.to) data = data.filter((b) => (b.announced || '') <= q.to);
+      if (q.bidderType) data = data.filter((b) => (b.bidderType || '').toLowerCase() === String(q.bidderType).toLowerCase());
+      if (q.hasBidco === '1') data = data.filter((b) => b.bidcoRegistered);
+      return res.status(200).json({ count: data.length, data });
+    }
+
+    // GET /v1/candidates — hela uppköpslistan med poäng och motivering
+    if (route === 'candidates') {
+      const c = loadCandidates();
+      return res.status(200).json({
+        generated: c.generated, universe: c.universe, method: c.method,
+        backtest: c.backtest, count: c.list.length, data: c.list,
+      });
+    }
+
+    // GET /v1/verify
+    if (route === 'verify') {
+      return res.status(200).json(await verifyChain());
+    }
+
+    return res.status(404).json({ error: `Okänd route /v1/${route}`, routes: V1_ROUTES.map((r) => '/v1/' + r) });
+  } catch (err) {
+    console.error('[v1]', route, err);
+    return res.status(500).json({ error: 'Internt fel' });
   }
 }
