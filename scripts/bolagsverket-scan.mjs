@@ -185,8 +185,11 @@ function clean(str) {
 }
 
 // ---------- Watchlist: poängsätt förändringar mot sparad baseline ----------
-// Tröskel 40 för att flaggas — se sql/006_watchlist.sql för tabellen.
-const WATCHLIST_FLAG_THRESHOLD = 40;
+// Tröskel 60 (höjd från 40, 2026-11-19): ett namnbyte från Goldcup ensamt (40) eller
+// med okänd adress (45) är för svagt för track record — de flesta lagerbolag säljs
+// till vanliga köpare. Krävs nu i praktiken namnbyte + adress hos känd M&A-rådgivare.
+// Svagare förändringar sparas som poäng på watchlist-raden (internt, ej i loggen).
+const WATCHLIST_FLAG_THRESHOLD = 60;
 
 function scoreWatchlistChange(entry, row, advisors) {
   let score = 0;
@@ -357,7 +360,11 @@ async function main() {
           watchlistFlagged++;
           console.log(`WATCHLIST-FLAGG: ${entry.original_name} → ${row.name} (${row.org_nr}), score ${wScore}`);
         } else {
-          await sql`UPDATE watchlist SET last_checked_at = now() WHERE org_nr = ${row.org_nr}`;
+          await sql`
+            UPDATE watchlist SET last_checked_at = now(),
+              score = GREATEST(COALESCE(score, 0), ${wScore})
+            WHERE org_nr = ${row.org_nr}
+          `;
         }
         watchlistMap.delete(row.org_nr); // klar för denna körning
       }
