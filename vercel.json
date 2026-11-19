@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/system.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "data/takeover.json"
     },
     "api/snapshot.js": {
       "maxDuration": 60
@@ -19,6 +20,24 @@
     {
       "path": "/api/system?action=daily-scan",
       "schedule": "0 6 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/v1/:route*",
+      "destination": "/api/system?action=v1&route=:route*"
+    },
+    {
+      "source": "/v1",
+      "destination": "/api/system?action=v1&route=me"
+    },
+    {
+      "source": "/track-record",
+      "destination": "/track.html"
+    },
+    {
+      "source": "/api-docs",
+      "destination": "/api.html"
     }
   ]
 }
