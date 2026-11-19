@@ -77,6 +77,14 @@ pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding
 .tier{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:20px}
 .tier b{font-size:18px}.tier .p{font-size:26px;font-weight:600;margin:6px 0}.tier ul{margin:8px 0 0;padding-left:18px;color:var(--slate);font-size:14px}
 textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);border-radius:12px;padding:13px 16px;color:var(--ink);font:inherit;resize:vertical}
+.tier .go{width:100%;margin-top:14px}
+.tier.hl{border-color:rgba(245,196,81,.35)}
+.modal{position:fixed;inset:0;background:rgba(8,9,13,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;place-items:center;z-index:50;padding:24px}
+.modal.on{display:grid}
+.modal .box{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-card);padding:28px;max-width:420px;width:100%;text-align:center}
+.modal .box .ic{font-size:30px;margin-bottom:8px}
+.modal .box h3{margin:0 0 6px;font-size:20px;letter-spacing:-.02em}
+.modal .box p{color:var(--slate);margin:0 0 18px;font-size:15px}
 @media (max-width:760px){.tiers{grid-template-columns:1fr}}
 </style>
 </head>
@@ -95,9 +103,9 @@ textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);b
   <p class="lede">Varje nytt bidco-bolag hos Bolagsverket, varje skal som byter namn eller flyttar till en M&amp;A-rådgivare, och hela det svenska budregistret. JSON, i realtid, med hashbevis på varje rad.</p>
 
   <section class="tiers">
-    <div class="tier"><b>Gratis</b><div class="p">0 kr</div><ul><li>Flaggor efter 30 dagar</li><li>Topp 10 uppköpskandidater</li><li>Publik track record</li></ul></div>
-    <div class="tier"><b>Pro</b><div class="p">249 kr/mån</div><ul><li>Flaggor samma dag</li><li>Hela watchlisten</li><li>500 API-anrop/dygn</li></ul></div>
-    <div class="tier"><b>Fond / rådgivare</b><div class="p">Offert</div><ul><li>Allt i Pro</li><li>20 000 anrop/dygn</li><li>Historiskt dataset och webhook</li></ul></div>
+    <div class="tier"><b>Gratis</b><div class="p">0 kr</div><ul><li>Flaggor efter 30 dagar</li><li>Topp 10 uppköpskandidater</li><li>Publik track record</li></ul><a class="go" href="/track-record" style="display:block;text-align:center;text-decoration:none;background:var(--s3);color:var(--ink)">Se track record</a></div>
+    <div class="tier hl"><b>Pro</b><div class="p">249 kr/mån</div><ul><li>Flaggor samma dag</li><li>Hela watchlisten</li><li>500 API-anrop/dygn</li></ul><button class="go unlock" type="button">Starta Pro</button></div>
+    <div class="tier"><b>Fond / rådgivare</b><div class="p">Offert</div><ul><li>Allt i Pro</li><li>20 000 anrop/dygn</li><li>Historiskt dataset och webhook</li></ul><button class="go unlock" type="button" style="background:var(--s3);color:var(--ink)">Kontakta oss</button></div>
   </section>
 
   <section class="card">
@@ -145,9 +153,24 @@ textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);b
   </section>
 </main>
 
+<div class="modal" id="soon" role="dialog" aria-modal="true" aria-labelledby="soonT">
+  <div class="box">
+    <div class="ic">🔒</div>
+    <h3 id="soonT">Denna funktionen kommer i framtiden</h3>
+    <p>Ansök om API-nyckel längre ner så hör vi av oss när det öppnar.</p>
+    <button class="go" id="soonClose" type="button">Okej</button>
+  </div>
+</div>
+
 <footer class="wrap">Data från offentliga källor: Bolagsverket, Finansinspektionen och pressmeddelanden. Inget här är investeringsrådgivning.</footer>
 
 <script>
+const soon = document.getElementById("soon");
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".unlock")) { e.preventDefault(); soon.classList.add("on"); }
+  if (e.target.closest("#soonClose") || e.target === soon) soon.classList.remove("on");
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") soon.classList.remove("on"); });
 document.getElementById("wl").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = new FormData(e.target), msg = document.getElementById("wlMsg");
