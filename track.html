@@ -66,6 +66,12 @@ button.go{background:var(--ink);color:var(--bg);border:0;border-radius:12px;padd
 .ok-msg{color:var(--done);font-size:14px;min-height:20px}
 footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 .scroll{overflow-x:auto}
+.kicker{color:var(--marker);font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:64px 0 0}
+.kicker + h1{margin-top:14px}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:28px 0 0}
+.legend div{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:16px 18px;font-size:14px;color:var(--slate)}
+.legend b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+@media (max-width:760px){.legend{grid-template-columns:1fr}.kicker{margin-top:40px}}
 .lk{width:12px;height:12px;flex:none;display:inline-block;vertical-align:-1px}
 .bar{display:inline-block;height:10px;border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.10),rgba(255,255,255,.18),rgba(255,255,255,.10));vertical-align:middle}
 .lockcell{display:flex;flex-direction:column;gap:6px}
@@ -117,28 +123,34 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 </div></header>
 
 <main class="wrap">
-  <h1>Varje flagga är låst innan budet.</h1>
-  <p class="lede">BudRadar hashar och tidsstämplar varje signal i samma sekund som den uppstår. Ingen flagga kan ändras, tas bort eller backdateras i efterhand. Här är hela loggen, även flaggorna vi inte avslöjat än.</p>
+  <p class="kicker">Track record</p>
+  <h1>Vad vi flaggade, och när.</h1>
+  <p class="lede">En flagga betyder att vi tror att ett bolag kan vara inblandat i ett kommande uppköp. Varje flagga stämplas med tid och ett digitalt fingeravtryck i samma sekund som den skapas. Vi kan inte ändra, radera eller backdatera något i efterhand. När budet kommer kan vem som helst kontrollera att vi var först.</p>
+  <div class="legend">
+    <div><b>Låsta flaggor</b>Nya signaler. Typ och styrka syns, bolaget avslöjas efter 30 dagar.</div>
+    <div><b>Avslöjade flaggor</b>Äldre signaler med bolagsnamn. Här ser du om det blev ett bud.</div>
+    <div><b>Historiska bud</b>Kända uppköp där budbolaget fanns i registret innan budet.</div>
+  </div>
 
   <section class="stats" id="stats">
-    <div class="stat"><strong>—</strong><span>live-flaggor</span></div>
-    <div class="stat"><strong>—</strong><span>förseglade just nu</span></div>
+    <div class="stat"><strong>—</strong><span>flaggor sedan start</span></div>
+    <div class="stat"><strong>—</strong><span>låsta just nu</span></div>
     <div class="stat"><strong>—</strong><span>träffsäkerhet</span></div>
     <div class="stat"><strong>—</strong><span>median dagar före budet</span></div>
   </section>
 
   <section class="card">
-    <div class="chain" id="chain"><div class="ic">…</div><div><b>Kontrollerar kedjan…</b></div></div>
+    <div class="chain" id="chain"><div class="ic">…</div><div><b>Kontrollerar att ingen flagga har ändrats…</b></div></div>
     <div class="how">
-      <div><b>1. Flaggan hashas</b>Bolag, org.nr, skäl och poäng blir en SHA-256-hash som också innehåller föregående rads hash.</div>
-      <div><b>2. Hashen förankras</b>Kedjans topp-hash publiceras varje dygn i <a href="https://github.com/janssonsigge-jpg/budradar/blob/main/track-record/ANCHORS.md" target="_blank" rel="noopener">git</a>, en tidsstämpel vi inte kan ändra.</div>
-      <div><b>3. Innehållet avslöjas</b>Efter <span id="delayTxt">30</span> dagar, eller när budet kommer, visas bolaget och vem som helst kan räkna om hashen.</div>
+      <div><b>1. Vi hittar en signal</b>Bolaget, org.nr och skälet blir ett digitalt fingeravtryck (en hash). Ändras en enda bokstav blir fingeravtrycket ett helt annat.</div>
+      <div><b>2. Den stämplas offentligt</b>Varje dygn publiceras det senaste fingeravtrycket i ett <a href="https://github.com/janssonsigge-jpg/budradar/blob/main/track-record/ANCHORS.md" target="_blank" rel="noopener">öppet register</a> som vi inte kan ändra i efterhand.</div>
+      <div><b>3. Bolaget avslöjas</b>Efter <span id="delayTxt">30</span> dagar, eller när budet kommer, visas bolaget och vem som helst kan kontrollera att det stämmer.</div>
     </div>
   </section>
 
   <section class="card">
-    <h2>Flagglogg</h2>
-    <p class="sub">Låsta rader visar signalens typ och styrka. Bolaget avslöjas efter 30 dagar, eller direkt för Pro.</p>
+    <h2>Alla flaggor</h2>
+    <p class="sub">Nyast först. Låsta rader visar vad som hände och hur stark signalen är. Bolaget avslöjas efter 30 dagar, eller direkt för Pro.</p>
     <div class="wall" id="wall" hidden>
       <div>
         <div class="eyebrow"><svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>BudRadar Pro</div>
@@ -161,7 +173,7 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
       <button data-f="hist">Historiska bud</button>
     </div>
     <div class="scroll"><table>
-      <thead><tr><th>#</th><th>Flaggad</th><th>Bolag</th><th class="hide-m">Poäng</th><th>Status</th><th class="hide-m">Hash</th></tr></thead>
+      <thead><tr><th>#</th><th>Datum</th><th>Bolag och signal</th><th class="hide-m">Poäng</th><th>Status</th><th class="hide-m">Fingeravtryck</th></tr></thead>
       <tbody id="rows"><tr><td colspan="6" class="sub">Laddar…</td></tr></tbody>
     </table></div>
   </section>
@@ -327,7 +339,7 @@ async function load() {
     const x = v.value;
     c.className = "chain " + (x.valid ? "ok" : "bad");
     c.innerHTML = x.valid
-      ? `<div class="ic">✓</div><div><b>Kedjan är intakt</b><p>${x.totalRows} rader verifierade just nu. Senaste hash <code>${esc((x.head || "").slice(0, 20))}…</code>. <a href="/api/system?action=verify" target="_blank" rel="noopener">Kör verifieringen själv</a>.</p></div>`
+      ? `<div class="ic">✓</div><div><b>Ingen flagga har ändrats</b><p>Vi kontrollerade alla ${x.totalRows} rader just nu och fingeravtrycken stämmer. Senaste hash <code>${esc((x.head || "").slice(0, 20))}…</code>. <a href="/api/system?action=verify" target="_blank" rel="noopener">Kör verifieringen själv</a>.</p></div>`
       : `<div class="ic">!</div><div><b>Kedjan är bruten vid rad ${esc(x.brokenAtId)}</b><p>${esc(x.reason || "")}. Vi visar det öppet hellre än att dölja det.</p></div>`;
   } else {
     c.innerHTML = `<div class="ic">?</div><div><b>Verifieringen svarade inte</b><p>Försök igen om en stund.</p></div>`;
