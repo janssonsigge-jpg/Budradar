@@ -66,6 +66,19 @@ button.go{background:var(--ink);color:var(--bg);border:0;border-radius:12px;padd
 .ok-msg{color:var(--done);font-size:14px;min-height:20px}
 footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 .scroll{overflow-x:auto}
+.blur{filter:blur(5px);user-select:none;color:var(--ink)}
+.unlock{background:rgba(245,196,81,.12);color:var(--marker);border:1px solid rgba(245,196,81,.3);border-radius:var(--r-ctrl);padding:3px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;white-space:nowrap}
+.unlock:hover{background:rgba(245,196,81,.2)}
+.wall{display:flex;align-items:center;gap:20px;justify-content:space-between;background:linear-gradient(135deg,rgba(245,196,81,.10),rgba(140,155,255,.08));border:1px solid rgba(245,196,81,.25);border-radius:16px;padding:18px 20px;margin:14px 0}
+.wall b{font-size:17px}.wall p{margin:2px 0 0;color:var(--slate);font-size:14px}
+.wall .go{white-space:nowrap}
+.modal{position:fixed;inset:0;background:rgba(8,9,13,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;place-items:center;z-index:50;padding:24px}
+.modal.on{display:grid}
+.modal .box{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-card);padding:28px;max-width:420px;width:100%;text-align:center}
+.modal .box .ic{font-size:30px;margin-bottom:8px}
+.modal .box h3{margin:0 0 6px;font-size:20px;letter-spacing:-.02em}
+.modal .box p{color:var(--slate);margin:0 0 18px;font-size:15px}
+@media (max-width:760px){.wall{flex-direction:column;align-items:flex-start}}
 @media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.how,.cta{grid-template-columns:1fr}.nav a.hide-m{display:none}th.hide-m,td.hide-m{display:none}h1{margin-top:40px}}
 </style>
 </head>
@@ -102,6 +115,10 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
   <section class="card">
     <h2>Flagglogg</h2>
     <p class="sub">Förseglade rader visas med hash och tid. Prenumeranter och API-kunder ser innehållet direkt.</p>
+    <div class="wall" id="wall" hidden>
+      <div><b id="wallTitle">🔒 Låsta flaggor</b><p>Se bolagen, org.nr och rådgivare samma dag som de flaggas. I snitt tre veckor före budet.</p></div>
+      <button class="go unlock-all" type="button">Lås upp med Pro · 249 kr/mån</button>
+    </div>
     <div class="filters" id="filters">
       <button data-f="all" class="on">Alla</button>
       <button data-f="sealed">Förseglade</button>
@@ -133,6 +150,15 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
   </section>
 </main>
 
+<div class="modal" id="soon" role="dialog" aria-modal="true" aria-labelledby="soonT">
+  <div class="box">
+    <div class="ic">🔒</div>
+    <h3 id="soonT">Denna funktionen kommer i framtiden</h3>
+    <p>Ställ dig i kön längre ner så hör vi av oss när Pro öppnar.</p>
+    <button class="go" id="soonClose" type="button">Okej</button>
+  </div>
+</div>
+
 <footer class="wrap">BudRadar bygger enbart på offentliga källor: Bolagsverket, Finansinspektionen och pressmeddelanden. Inget här är investeringsrådgivning.</footer>
 
 <script>
@@ -144,6 +170,8 @@ const median = (a) => { if (!a.length) return null; const s = a.slice().sort((x,
 const getJSON = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
 
 let FLAGS = [], FILTER = "all";
+const FAKE = ["Nordvik Holding AB", "Alster Industri AB", "Kvarnby Bidco AB", "Selma Förvaltning AB", "Tallholmen TopCo AB", "Brovik Invest AB", "Ekudden MidCo AB"];
+const fake = (id) => FAKE[Number(id) % FAKE.length];
 
 function status(f) {
   if (f.source === "historical_verification") return `<span class="badge hit">Bekräftat bud</span>`;
@@ -164,7 +192,7 @@ function renderRows() {
     <tr class="${f.sealed ? "sealed" : ""}">
       <td class="mono">${esc(f.id)}</td>
       <td>${d(f.created_at)}</td>
-      <td class="name">${f.sealed ? "Förseglad" : `<b>${esc(f.company_name)}</b>${f.org_nr ? `<div class="sub">${esc(f.org_nr)}</div>` : ""}`}</td>
+      <td class="name">${f.sealed ? `<span class="blur">${fake(f.id)}</span><button class="unlock" type="button">Lås upp</button>` : `<b>${esc(f.company_name)}</b>${f.org_nr ? `<div class="sub">${esc(f.org_nr)}</div>` : ""}`}</td>
       <td class="hide-m">${f.score != null ? Math.round(Number(f.score)) : "—"}</td>
       <td>${status(f)}</td>
       <td class="hide-m"><span class="hash mono" title="Klicka för att kopiera hela hashen" data-h="${esc(f.row_hash)}">${esc((f.row_hash || "").slice(0, 12))}…</span></td>
@@ -214,6 +242,8 @@ async function load() {
     s[3].querySelector("strong").textContent = leadVal ?? "—";
     s[3].querySelector("span").textContent = leadLabel;
     renderRows();
+    const nSealed = live.filter((f) => f.sealed).length;
+    if (nSealed) { $("#wall").hidden = false; $("#wallTitle").textContent = `🔒 ${nSealed} flaggor är låsta just nu`; }
   } else {
     $("#rows").innerHTML = `<tr><td colspan="6" class="sub">Kunde inte hämta loggen just nu.</td></tr>`;
   }
@@ -243,6 +273,12 @@ $("#wl").addEventListener("submit", async (e) => {
     e.target.reset();
   } catch (err) { msg.style.color = "var(--warn)"; msg.textContent = err.message; }
 });
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".unlock, .unlock-all")) { e.preventDefault(); $("#soon").classList.add("on"); }
+  if (e.target.closest("#soonClose") || e.target.id === "soon") $("#soon").classList.remove("on");
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#soon").classList.remove("on"); });
 
 load();
 </script>
