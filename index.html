@@ -353,6 +353,28 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 .how li::before { content: counter(how); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--s2); color: var(--marker); font-weight: 700; font-size: 13px; margin-bottom: 14px; }
 .how b { display: block; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
 .how span { display: block; margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--slate); }
+.what { margin: 88px 0 0; scroll-margin-top: 100px; }
+.kicker { color: var(--marker); font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 14px; }
+.what-h { font-size: clamp(34px, 4.6vw, 58px); line-height: 1.04; letter-spacing: -.045em; font-weight: 600; max-width: 20ch; margin: 0; }
+.what-sub { font-size: 19px; line-height: 1.6; color: var(--slate); max-width: 62ch; margin: 22px 0 0; }
+.what-sub strong { color: var(--ink); font-weight: 600; }
+.what-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 36px; }
+.what-grid > div { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; }
+.what-grid .lbl { display: block; color: var(--dim); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+.what-grid b { display: block; font-size: 19px; letter-spacing: -.015em; line-height: 1.3; }
+.what-grid p { margin: 10px 0 0; color: var(--slate); font-size: 15px; line-height: 1.55; }
+.what-grid > div.hl { border-color: rgba(245,196,81,.3); background: linear-gradient(160deg, rgba(245,196,81,.07), var(--s1) 70%); }
+.what-sees { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 14px; border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; }
+.what-sees a { display: block; padding: 18px 20px; text-decoration: none; color: inherit; background: var(--s1); transition: background .15s; }
+.what-sees a + a { border-left: 1px solid var(--line); }
+.what-sees a:hover { background: var(--s2); }
+.what-sees b { display: block; font-size: 15px; }
+.what-sees span { display: block; margin-top: 4px; color: var(--slate); font-size: 13px; line-height: 1.5; }
+.what-sees i { font-style: normal; color: var(--accent); font-size: 13px; margin-top: 8px; display: block; }
+.how-h { font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--marker); margin: 72px 0 0; }
+.how-h + .how { margin-top: 16px; }
+.sec-head .see { color: var(--ink); font-weight: 600; }
+@media (max-width: 860px) { .what-grid { grid-template-columns: 1fr; } .what-sees { grid-template-columns: 1fr 1fr; } .what-sees a:nth-child(3) { border-left: 0; } .what-sees a:nth-child(n+3) { border-top: 1px solid var(--line); } }
 .how strong { color: var(--ink); font-weight: 600; }
 @media (max-width: 720px) {
   .how { grid-template-columns: 1fr; margin-top: 36px; }
@@ -468,8 +490,8 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
     <section class="rh">
       <div class="rh-text">
         <h1>Se uppköpsbuden innan de kommer.</h1>
-        <p class="lede">När någon ska lägga bud på ett börsbolag registrerar de först ett nytt bolag hos Bolagsverket. Det syns, offentligt, ofta veckor innan budet. BudRadar bevakar varje sådant bolag och visar vilka aktier det rör sig i.</p>
-        <div class="cta"><a class="btn pri" href="#ranking">Se dagens signaler</a><a class="btn" href="#how">Hur funkar det?</a></div>
+        <p class="lede">BudRadar visar vilka svenska börsbolag som kan vara på väg att bli uppköpta, innan budet blir offentligt. Vi läser Bolagsverkets och Finansinspektionens register varje vecka och plockar ut spåren som köpare lämnar efter sig.</p>
+        <div class="cta"><a class="btn pri" href="#ranking">Se dagens signaler</a><a class="btn" href="#what">Vad är BudRadar?</a></div>
         <aside class="latest" id="latest" aria-label="Senaste budet"><div class="sk" style="height:96px"></div></aside>
       </div>
       <div class="rh-scope">
@@ -486,26 +508,43 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
         </div>
       </div>
     </section>
-    <ol class="how" id="how" aria-label="Så funkar det">
-      <li><b>Köparen startar ett budbolag</b><span>Ofta ett lagerbolag med ett anonymt namn, som "Goldcup 39639 AB".</span></li>
-      <li><b>Vi hittar det</b><span>BudRadar skannar Bolagsverkets register två gånger i veckan och bevakar varje nytt skal i 90 dagar, tillsammans med insynsköp, flaggningar och blankning.</span></li>
-      <li><b>Budet kommer</b><span>I våra verifierade fall kom budet efter en median på <strong>20 dagar</strong>, med en typisk premie på <strong>+44 %</strong>.</span></li>
+    <section class="what" id="what" aria-labelledby="whatH">
+<p class="kicker">Vad är BudRadar?</p>
+<h2 class="what-h" id="whatH">En radar för uppköp på Stockholmsbörsen.</h2>
+<p class="what-sub">När ett börsbolag köps upp stiger aktien ofta <strong>30–50 % på en enda dag</strong>. Den som redan äger aktien får hela uppgången. Budet ser ut att komma från ingenstans, men köparen har nästan alltid lämnat spår veckor innan. <strong>BudRadar hittar spåren.</strong></p>
+<div class="what-grid">
+<div><span class="lbl">Problemet</span><b>Uppköp kommer som en blixt.</b><p>Ingen vet i förväg vilket bolag som ska köpas. När budet väl är offentligt har aktien redan gått upp och vinsten är borta.</p></div>
+<div><span class="lbl">Ledtråden</span><b>Köparen måste registrera ett bolag först.</b><p>Den som lägger ett bud gör det nästan alltid genom ett nytt bolag, ett så kallat budbolag. Det syns i Bolagsverkets öppna register, ofta 2–4 veckor innan budet.</p></div>
+<div class="hl"><span class="lbl">BudRadar</span><b>Vi läser registren åt dig.</b><p>Varje måndag och torsdag går vi igenom hela Bolagsverket plus Finansinspektionens data om storägare, insynsköp och blankning. Allt som ser ut som förberedelser för ett bud hamnar här.</p></div>
+</div>
+<div class="what-sees" aria-label="Det här ser du på sidan">
+<a href="#kandidater"><b>Uppköpskandidater</b><span>Börsbolag vars ägarbild liknar den före tidigare bud.</span><i>Se listan</i></a>
+<a href="#shells-sec"><b>Nya skalbolag</b><span>Nyregistrerade bolag som kan vara budbolag.</span><i>Se skalen</i></a>
+<a href="#ranking"><b>Aktivitetsindex</b><span>Var det händer mest just nu, 0–100.</span><i>Se indexet</i></a>
+<a href="#track"><b>Track record</b><span>Allt vi flaggat, med tidsstämpel som bevis.</span><i>Se beviset</i></a>
+</div>
+</section>
+<p class="how-h">Så går ett uppköp till, och var vi kommer in</p>
+<ol class="how" id="how" aria-label="Så funkar det">
+      <li><b>Köparen förbereder budet</b><span>Köparen köper ett färdigt bolag med ett anonymt namn, till exempel "Goldcup 39639 AB", och byter senare namn och adress till sin advokatbyrå.</span></li>
+      <li><b>BudRadar ser det</b><span>BudRadar skannar Bolagsverkets register två gånger i veckan och bevakar varje nytt skal i 90 dagar, tillsammans med insynsköp, flaggningar och blankning.</span></li>
+      <li><b>Budet blir offentligt</b><span>I fallen vi har verifierat kom budet en median på <strong>20 dagar</strong> efter att budbolaget registrerades, med en typisk premie på <strong>+44 %</strong> mot aktiekursen.</span></li>
     </ol>
     <div class="ticker" aria-label="Senaste händelserna"><div class="ticker-in" id="ticker"></div></div>
 
     <div class="tko" id="kandidater">
       <div class="sec-head">
-        <h2>Uppköpskandidater</h2>
-        <p>Bolag vars ägarbild ser ut som den brukar göra före ett bud: en stor ägare på 10–50 %, private equity bland ägarna, ägare som köper på sig och insiders som köper. Uppdateras varje natt från FI:s flaggningar och insynsregister.</p>
+        <h2>Uppköpskandidater: börsbolag som ser köpbara ut</h2>
+<p><span class="see">Vad du ser:</span> börsbolag rankade efter hur mycket deras ägarbild liknar den som brukar finnas före ett bud. En storägare på 10–50 %, private equity bland ägarna, ägare som köper på sig och insiders som köper. Ju högre poäng, desto fler varningstecken. Uppdateras varje natt.</p>
       </div>
       <div class="tko-list" id="tko"><div class="sk" style="height:220px"></div></div>
       <div class="tko-foot"><button class="btn" id="tkoMore" hidden>Visa alla</button><p class="note" id="tkoTest"></p></div>
     </div>
 
-    <div class="shells">
-      <div class="sec-head">
-        <h2>Nya skalbolag hos Bolagsverket</h2>
-        <p>Budgivare köper ofta ett lagerbolag som "Goldcup 39639 AB" några veckor före budet. Vi bevakar varje nytt i 90 dagar och flaggar när det byter namn eller flyttar till en M&amp;A-rådgivare.</p>
+    <div class="shells" id="shells-sec">
+<div class="sec-head">
+<h2>Nya skalbolag: kan vara nästa budbolag</h2>
+<p><span class="see">Vad du ser:</span> anonyma bolag som just registrerats hos Bolagsverket, den typ köpare använder för att lägga bud. De flesta är ofarliga. Vi bevakar varje bolag i 90 dagar och slår larm när det byter namn eller flyttar till en advokatbyrå som jobbar med uppköp. Då blir det en flagga.</p>
       </div>
       <div class="shell-row" id="shells"></div>
       <p class="note"><a href="#bidco">Hela bevakningslistan och historiska mönster</a></p>
@@ -513,8 +552,8 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 
     <div class="rank" id="ranking">
       <div class="sec-head">
-        <h2>Störst rörelse just nu</h2>
-        <p>Index 0–100 vägt av insynsköp, flaggningar, minskad blankning och bolagshändelser senaste 90–120 dagarna. Klicka på ett bolag för att se vad som driver siffran.</p>
+        <h2>Aktivitetsindex: var händer det mest just nu?</h2>
+<p><span class="see">Vad du ser:</span> varje börsbolag får en siffra mellan 0 och 100 som visar hur mycket som har hänt de senaste 3–4 månaderna: insiders som köper, storägare som ökar, blankare som backar och bolagshändelser. Hög siffra betyder mycket aktivitet, inte att ett bud är säkert. Klicka på ett bolag för att se varför.</p>
       </div>
       <div class="tools" role="group" aria-label="Filtrera listan">
         <label class="search"><span class="sr" hidden>Sök bolag</span><input id="q" type="search" placeholder="Sök bolag eller ticker" autocomplete="off" /></label>
@@ -542,11 +581,12 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
   <section class="view" id="v-bidco" hidden>
     <div class="page-glow" aria-hidden="true"></div>
     <div class="page-head">
-      <h1>Skalbolaget kommer först.</h1>
+      <p class="kicker">Skalbolag</p>
+<h1>Skalbolaget kommer först.</h1>
       <p class="lede">Nästan varje uppköp görs genom ett nyregistrerat bolag — ett bidco. Det registreras hos Bolagsverket veckor innan budet offentliggörs, och registret är öppet för alla. Här är tiden mellan registrering och bud i fall vi har verifierat.</p>
     </div>
     <div class="statline" id="bidcoStats"></div>
-    <div class="sec-head"><h2>Spårade skal</h2><p>När ett bevakat skal byter namn, flyttar till en rådgivare eller registreras med ett bidco-namn letar vi efter det troliga målbolaget: namnlikhet, ägaren bakom c/o-adressen och verksamhetsbeskrivningen.</p></div>
+    <div class="sec-head"><h2>Spårade skal: bolag som har avslöjat sig</h2><p><span class="see">Vad du ser:</span> skalbolag som har bytt namn, flyttat till en rådgivare eller registrerats med ett typiskt budbolagsnamn. För varje skal gissar vi vilket börsbolag det kan gälla, utifrån namnet, adressen och verksamhetsbeskrivningen.</p></div>
     <div class="leads" id="leads"><div class="sk" style="height:120px"></div></div>
     <div class="probe">
       <h3>Testa ett skalbolag</h3>
@@ -580,7 +620,8 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
   <section class="view" id="v-register" hidden>
     <div class="page-glow" aria-hidden="true"></div>
     <div class="page-head">
-      <h1>Varje bud, med kedjan bakom.</h1>
+      <p class="kicker">Budregister</p>
+<h1>Varje svenskt bud, med kedjan bakom.</h1>
       <p class="lede">Offentliga uppköpserbjudanden på svenska marknadsplatser med budgivare, bidco-struktur, ägare som band sig och utfall. Verifierat mot pressmeddelanden — fält vi inte kunnat bekräfta lämnas tomma.</p>
     </div>
     <div class="statline" id="regStats"></div>
@@ -602,22 +643,24 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
   <section class="view" id="v-track" hidden>
     <div class="page-glow" aria-hidden="true"></div>
     <div class="page-head">
-      <h1>Allt vi flaggar, med tidsstämpel.</h1>
-      <p class="lede">Varje flagga skrivs in i en hash-kedjad logg när den görs, och kedjans senaste hash publiceras varje dygn i ett öppet GitHub-repo. Ingen flagga kan ändras, tas bort eller backdateras utan att det syns.</p>
+      <p class="kicker">Track record</p>
+<h1>Bevis: vad vi flaggade, och när.</h1>
+<p class="lede">En flagga betyder att vi tror att ett bolag kan vara inblandat i ett kommande uppköp. Varje flagga får en digital tidsstämpel i samma sekund som den skapas. Vi kan inte ändra, radera eller backdatera något i efterhand, så när budet kommer kan vem som helst kontrollera att vi var först.</p>
     </div>
     <div class="statline" id="trStats"></div>
     <div class="chainbox" id="chainBox"><div class="sk" style="height:60px"></div></div>
-    <div class="sec-head" style="margin-top:56px"><h2>Live-flaggor</h2><p>Gjorda innan utfallet var känt. Bara dessa räknas i träffsäkerheten.</p></div>
+    <div class="sec-head" style="margin-top:56px"><h2>Live-flaggor</h2><p><span class="see">Vad du ser:</span> flaggor vi satte innan någon visste om det blev ett bud. Bara dessa räknas när vi mäter träffsäkerhet. Nya flaggor är låsta i 30 dagar.</p></div>
     <div class="list" id="trLive"></div>
     <p class="muted" style="font-size:14px;margin-top:12px"><a href="/track-record" style="color:var(--accent)">Hela flaggloggen med hashbevis →</a></p>
-    <div class="sec-head" style="margin-top:56px"><h2>Historisk verifiering</h2><p>Kända bud där vi i efterhand bekräftat att skalet fanns i registret före budet. Visar att metoden fungerar, men räknas inte som träffar.</p></div>
+    <div class="sec-head" style="margin-top:56px"><h2>Historisk verifiering</h2><p><span class="see">Vad du ser:</span> kända bud där vi i efterhand kontrollerat att budbolaget fanns i registret före budet, och hur många dagar innan. Det visar att metoden fungerar, men räknas inte som träffar.</p></div>
     <div class="list" id="trHist"></div>
   </section>
 
   <!-- ================= METOD ================= -->
   <section class="view" id="v-metod" hidden>
     <div class="prose">
-      <h1>Så räknas indexet.</h1>
+      <p class="kicker">Så funkar det</p>
+<h1>Så räknas indexet.</h1>
       <p class="lede">Inga hemliga modeller. Fyra offentliga källor, vägda ihop till en siffra mellan 0 och 100.</p>
       <div class="weights">
         <div><strong>30 %</strong>Insynsköp</div>
@@ -1191,7 +1234,7 @@ function route() {
     return;
   }
   closeDrawer();
-  if (view === "ranking" || view === "how" || view === "kandidater") { show("radar"); requestAnimationFrame(() => document.getElementById(view).scrollIntoView({ behavior: "smooth", block: view === "how" ? "center" : "start" })); return; }
+  if (view === "ranking" || view === "how" || view === "kandidater" || view === "what" || view === "shells-sec") { show("radar"); requestAnimationFrame(() => document.getElementById(view).scrollIntoView({ behavior: "smooth", block: view === "how" ? "center" : "start" })); return; }
   show(["radar", "bidco", "register", "track", "metod"].includes(view) ? view : "radar");
 }
 function show(v) {
