@@ -82,9 +82,13 @@ textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);b
 .modal{position:fixed;inset:0;background:rgba(8,9,13,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;place-items:center;z-index:50;padding:24px}
 .modal.on{display:grid}
 .modal .box{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-card);padding:28px;max-width:420px;width:100%;text-align:center}
-.modal .box .ic{font-size:30px;margin-bottom:8px}
-.modal .box h3{margin:0 0 6px;font-size:20px;letter-spacing:-.02em}
-.modal .box p{color:var(--slate);margin:0 0 18px;font-size:15px}
+.modal .box{text-align:left}
+.lk{width:12px;height:12px;flex:none}
+.eyebrow{display:flex;align-items:center;gap:8px;color:var(--marker);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.modal h3{margin:0 0 8px;font-size:22px;letter-spacing:-.02em}
+.modal p{color:var(--slate);margin:0 0 20px;font-size:15px}
+.modal .row{display:flex;gap:10px}
+.modal .ghost{background:transparent;color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:13px 18px;font:inherit;cursor:pointer}
 @media (max-width:760px){.tiers{grid-template-columns:1fr}}
 </style>
 </head>
@@ -155,10 +159,10 @@ textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);b
 
 <div class="modal" id="soon" role="dialog" aria-modal="true" aria-labelledby="soonT">
   <div class="box">
-    <div class="ic">🔒</div>
-    <h3 id="soonT">Denna funktionen kommer i framtiden</h3>
-    <p>Ansök om API-nyckel längre ner så hör vi av oss när det öppnar.</p>
-    <button class="go" id="soonClose" type="button">Okej</button>
+    <div class="eyebrow"><svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>BudRadar Pro</div>
+    <h3 id="soonT">Pro lanseras snart</h3>
+    <p>Denna funktionen kommer i framtiden. Ansök om API-nyckel längre ner så hör vi av oss först.</p>
+    <div class="row"><button class="go" id="soonJoin" type="button">Ansök om nyckel</button><button class="ghost" id="soonClose" type="button">Stäng</button></div>
   </div>
 </div>
 
@@ -169,6 +173,7 @@ const soon = document.getElementById("soon");
 document.addEventListener("click", (e) => {
   if (e.target.closest(".unlock")) { e.preventDefault(); soon.classList.add("on"); }
   if (e.target.closest("#soonClose") || e.target === soon) soon.classList.remove("on");
+  if (e.target.closest("#soonJoin")) { soon.classList.remove("on"); document.getElementById("wl").scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => document.querySelector("#wl input[type=email]").focus(), 500); }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") soon.classList.remove("on"); });
 document.getElementById("wl").addEventListener("submit", async (e) => {
