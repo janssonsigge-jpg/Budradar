@@ -11,19 +11,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&display=swap" rel="stylesheet" />
 <style>
 :root {
-  --bg: #08090D;
-  --s1: #101219;
-  --s2: #161923;
-  --s3: #1E2230;
-  --line: rgba(255,255,255,.08);
-  --line2: rgba(255,255,255,.14);
-  --ink: #F3F5FA;
-  --slate: #8B93A7;
-  --dim: #5D6578;
-  --accent: #8C9BFF;
-  --marker: #F5C451;
-  --done: #4FD1A1;
-  --warn: #FF7A6B;
+  --bg: #F7F7F5;
+  --s1: #FFFFFF;
+  --s2: #F2F3F6;
+  --s3: #E7E9EE;
+  --line: rgba(16,24,40,.09);
+  --line2: rgba(16,24,40,.16);
+  --ink: #0B0F19;
+  --slate: #4A5162;
+  --dim: #868C9B;
+  --accent: #4C5BD4;
+  --marker: #B7791F;
+  --done: #0E9F6E;
+  --warn: #D9472F;
   --r-card: 20px;
   --r-ctrl: 999px;
   --max: 1200px;
@@ -46,14 +46,14 @@ button { font: inherit; color: inherit; }
 
 /* ---------- topp ---------- */
 .top { position: sticky; top: 0; z-index: 20; padding: 14px 0; }
-.top .wrap { display: flex; align-items: center; gap: 24px; height: 56px; background: rgba(16,18,25,.72); backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px); border: 1px solid var(--line); border-radius: var(--r-ctrl); padding: 0 10px 0 22px; max-width: calc(var(--max) - 48px); }
+.top .wrap { display: flex; align-items: center; gap: 24px; height: 56px; background: rgba(255,255,255,.72); backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px); border: 1px solid var(--line); border-radius: var(--r-ctrl); padding: 0 10px 0 22px; max-width: calc(var(--max) - 48px); }
 .brand { display: flex; align-items: center; text-decoration: none; }
-.brand img { height: 21px; width: auto; filter: brightness(0) invert(1); display: block; }
+.brand img { height: 21px; width: auto; filter: brightness(0); display: block; }
 .nav { display: flex; gap: 2px; margin-left: 12px; }
 .nav a { text-decoration: none; padding: 8px 14px; border-radius: var(--r-ctrl); font-size: 14px; font-weight: 500; color: var(--slate); transition: color .15s, background .15s; }
 .nav a:hover { color: var(--ink); }
-.nav a[aria-current="page"] { color: var(--ink); background: rgba(255,255,255,.07); }
-.fresh { margin-left: auto; font-size: 13px; color: var(--slate); display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 8px 14px; border-radius: var(--r-ctrl); background: rgba(255,255,255,.04); }
+.nav a[aria-current="page"] { color: var(--ink); background: rgba(16,24,40,.042); }
+.fresh { margin-left: auto; font-size: 13px; color: var(--slate); display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 8px 14px; border-radius: var(--r-ctrl); background: rgba(16,24,40,.024); }
 .fresh i { width: 7px; height: 7px; border-radius: 50%; background: var(--done); display: inline-block; box-shadow: 0 0 0 4px rgba(79,209,161,.15); }
 .fresh.stale i { background: var(--warn); box-shadow: 0 0 0 4px rgba(255,122,107,.15); }
 
@@ -77,16 +77,16 @@ p { margin: 0; }
 .hero h1 { max-width: 15ch; background: linear-gradient(180deg, #FFFFFF 30%, #A9B1C6); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .06em; }
 .hero .lede { margin-left: auto; margin-right: auto; }
 .cta { display: flex; gap: 10px; margin-top: 32px; flex-wrap: wrap; justify-content: center; }
-.btn { display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: var(--r-ctrl); text-decoration: none; font-weight: 500; font-size: 15px; border: 1px solid var(--line2); background: rgba(255,255,255,.04); transition: background .15s; }
-.btn:hover { background: rgba(255,255,255,.08); }
+.btn { display: inline-flex; align-items: center; height: 46px; padding: 0 22px; border-radius: var(--r-ctrl); text-decoration: none; font-weight: 500; font-size: 15px; border: 1px solid var(--line2); background: rgba(16,24,40,.024); transition: background .15s; }
+.btn:hover { background: rgba(16,24,40,.048); }
 .btn.pri { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.btn.pri:hover { background: #fff; }
+.btn.pri:hover { background: #2A3142; }
 .facts { margin: 28px auto 0; font-size: 14px; color: var(--slate); max-width: 64ch; line-height: 1.7; }
 .facts b { color: var(--ink); font-weight: 600; }
 .facts a { text-decoration-color: var(--line2); text-underline-offset: 3px; }
 
 /* produktbild: senaste bud + topplista */
-.showcase { margin-top: 64px; padding: 10px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.02)); border: 1px solid var(--line); box-shadow: 0 40px 120px -40px rgba(140,155,255,.35); }
+.showcase { margin-top: 64px; padding: 10px; border-radius: 28px; background: linear-gradient(180deg, rgba(16,24,40,.054), rgba(16,24,40,.012)); border: 1px solid var(--line); box-shadow: 0 40px 120px -40px rgba(140,155,255,.35); }
 .showcase-in { display: grid; grid-template-columns: 1fr 1.25fr; gap: 10px; }
 .latest { background: radial-gradient(120% 100% at 0% 0%, rgba(140,155,255,.22), transparent 55%), var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 26px 28px; text-align: left; }
 .latest small { color: var(--slate); font-size: 13px; }
@@ -100,7 +100,7 @@ p { margin: 0; }
 .mini { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 8px; text-align: left; }
 .mini-h { display: flex; justify-content: space-between; padding: 12px 14px 8px; font-size: 13px; color: var(--slate); }
 .mini a { display: grid; grid-template-columns: 1fr 120px 44px; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 12px; text-decoration: none; }
-.mini a:hover { background: rgba(255,255,255,.04); }
+.mini a:hover { background: rgba(16,24,40,.024); }
 .mini b { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini span { font-size: 12px; color: var(--slate); }
 .mini .bar { height: 4px; border-radius: 2px; background: var(--s3); overflow: hidden; }
@@ -156,7 +156,7 @@ select.sort { height: 42px; border-radius: var(--r-ctrl); border: 1px solid var(
 .thead { height: 44px; font-size: 12px; color: var(--dim); border-bottom: 1px solid var(--line); }
 .row { min-height: 74px; border-bottom: 1px solid var(--line); cursor: pointer; text-decoration: none; transition: background .12s; }
 .row:last-child { border-bottom: 0; }
-.row:hover { background: rgba(255,255,255,.03); }
+.row:hover { background: rgba(16,24,40,.018); }
 .row .pos { color: var(--dim); font-size: 13px; }
 .row .nm b { display: block; font-weight: 500; font-size: 15px; line-height: 1.3; }
 .row .nm span { font-size: 13px; color: var(--slate); }
@@ -167,7 +167,7 @@ select.sort { height: 42px; border-radius: var(--r-ctrl); border: 1px solid var(
 .sig { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .sig div { font-size: 11px; color: var(--dim); }
 .sig i { display: block; height: 4px; border-radius: 2px; background: var(--s3); margin-bottom: 6px; position: relative; overflow: hidden; }
-.sig i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: linear-gradient(90deg, var(--accent), #B7C1FF); border-radius: 2px; }
+.sig i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: linear-gradient(90deg, var(--accent), #9AA6F5); border-radius: 2px; }
 .sig .on { color: var(--slate); }
 .last { font-size: 14px; line-height: 1.4; }
 .last span { display: block; font-size: 12px; color: var(--slate); margin-top: 3px; }
@@ -218,13 +218,13 @@ select.sort { height: 42px; border-radius: var(--r-ctrl); border: 1px solid var(
 .rtable .thead, .rtable .row { grid-template-columns: 88px minmax(170px, 1.2fr) minmax(160px, 1.2fr) minmax(150px, 1.1fr) 84px 84px 112px 20px; }
 .prem { font-weight: 600; color: var(--marker); }
 .prem.neg { color: var(--warn); }
-.badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: var(--r-ctrl); background: rgba(255,255,255,.06); color: var(--slate); }
+.badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: var(--r-ctrl); background: rgba(16,24,40,.036); color: var(--slate); }
 .badge.ok { background: rgba(79,209,161,.12); color: var(--done); }
 .badge.live { background: rgba(245,196,81,.14); color: var(--marker); }
 .panel { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r-card); padding: 22px 24px; }
 .bars { display: grid; gap: 12px; margin-top: 16px; }
 .bars div { display: grid; grid-template-columns: 110px 1fr 56px; gap: 12px; align-items: center; font-size: 14px; color: var(--slate); }
-.bars i { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #B7C1FF); display: block; width: var(--w); }
+.bars i { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #9AA6F5); display: block; width: var(--w); }
 .bars em { font-style: normal; text-align: right; font-weight: 600; color: var(--ink); }
 
 /* metod */
@@ -239,7 +239,7 @@ select.sort { height: 42px; border-radius: var(--r-ctrl); border: 1px solid var(
 .weights strong { display: block; font-size: 30px; color: var(--ink); font-weight: 600; letter-spacing: -.03em; }
 
 /* låda */
-.scrim { position: fixed; inset: 0; background: rgba(4,5,8,.6); backdrop-filter: blur(4px); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim { position: fixed; inset: 0; background: rgba(16,24,40,.32); backdrop-filter: blur(4px); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .scrim.on { opacity: 1; pointer-events: auto; }
 .drawer { position: fixed; top: 10px; right: 10px; bottom: 10px; width: min(560px, calc(100% - 20px)); background: var(--s1); border: 1px solid var(--line2); border-radius: 24px; z-index: 50; transform: translateX(calc(100% + 20px)); visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s .28s; overflow-y: auto; }
 .drawer.on { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1); box-shadow: 0 30px 120px rgba(0,0,0,.6); }
@@ -303,9 +303,9 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
   /* Toppen scrollar bort på mobil; menyn bor i botten. backdrop-filter på .wrap
      skulle annars bli containing block och låsa den fasta menyn i toppen. */
   .top { position: relative; }
-  .top .wrap { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(16,18,25,.92); }
+  .top .wrap { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.92); }
   body { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
-  .nav { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; right: 10px; margin: 0; gap: 0; background: rgba(16,18,25,.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--line); border-radius: var(--r-ctrl); padding: 5px; z-index: 30; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  .nav { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; right: 10px; margin: 0; gap: 0; background: rgba(255,255,255,.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--line); border-radius: var(--r-ctrl); padding: 5px; z-index: 30; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
   .nav a { flex: 1; text-align: center; white-space: nowrap; padding: 11px 2px; font-size: 0; }
   .nav a::after { content: attr(data-s); font-size: 12.5px; }
   .hero { padding-top: 36px; }
@@ -341,12 +341,12 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
 .rh-text .latest a { margin-top: 12px; }
 .scope { position: relative; aspect-ratio: 1; width: 100%; max-width: 680px; margin-left: auto; }
 .scope canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-.tip { position: absolute; pointer-events: none; transform: translate(-50%, calc(-100% - 14px)); background: rgba(16,18,25,.94); border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.4; white-space: nowrap; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.tip { position: absolute; pointer-events: none; transform: translate(-50%, calc(-100% - 14px)); background: rgba(255,255,255,.94); border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.4; white-space: nowrap; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
 .tip b { display: block; font-size: 14px; font-weight: 600; }
 .tip span { color: var(--slate); }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: flex-end; font-size: 12px; color: var(--slate); margin-top: 6px; }
 .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-.legend i.ring { background: transparent; box-shadow: inset 0 0 0 1.5px #fff; }
+.legend i.ring { background: transparent; box-shadow: inset 0 0 0 1.5px #0B0F19; }
 .how { list-style: none; counter-reset: how; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 56px 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--s1); scroll-margin-top: 100px; }
 .how li { counter-increment: how; padding: 24px 26px; position: relative; }
 .how li + li { border-left: 1px solid var(--line); }
@@ -500,9 +500,9 @@ footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wr
           <div class="tip" id="tip" hidden></div>
         </div>
         <div class="legend">
-          <span><i style="background:#F5C451"></i>Flaggning</span>
-          <span><i style="background:#8C9BFF"></i>Insynsköp</span>
-          <span><i style="background:#4FD1A1"></i>Blankning</span>
+          <span><i style="background:#E0A21B"></i>Flaggning</span>
+          <span><i style="background:#4C5BD4"></i>Insynsköp</span>
+          <span><i style="background:#0E9F6E"></i>Blankning</span>
           <span><i class="ring"></i>Nytt skalbolag</span>
           <span class="muted">Närmare mitten = högre index</span>
         </div>
@@ -805,14 +805,14 @@ function renderTicker() {
     if (e && ago(e.date) <= 21) items.push({ date: e.date, c, e });
   }
   items.sort((a, b) => b.date.localeCompare(a.date));
-  const col = { Flaggning: "#F5C451", Insyn: "#8C9BFF", Blankning: "#4FD1A1", Bolagsverket: "#fff" };
-  const html = items.slice(0, 24).map(({ c, e }) => `<a href="#bolag/${encodeURIComponent(c.ticker)}"><i class="k" style="background:${col[e.kind] || "#fff"}"></i><em>${dShort(e.date)}</em><b>${esc(cleanName(c.name))}</b>: ${esc(e.text)}</a>`).join("");
+  const col = { Flaggning: "#E0A21B", Insyn: "#4C5BD4", Blankning: "#0E9F6E", Bolagsverket: "#0B0F19" };
+  const html = items.slice(0, 24).map(({ c, e }) => `<a href="#bolag/${encodeURIComponent(c.ticker)}"><i class="k" style="background:${col[e.kind] || "#0B0F19"}"></i><em>${dShort(e.date)}</em><b>${esc(cleanName(c.name))}</b>: ${esc(e.text)}</a>`).join("");
   if (html) document.getElementById("ticker").innerHTML = html + html;
 }
 
 // ---------- radarn ----------
 const Radar = (() => {
-  const COL = { flags: [245, 196, 81], insider: [140, 155, 255], shortSig: [79, 209, 161], bv: [255, 255, 255] };
+  const COL = { flags: [224, 162, 27], insider: [76, 91, 212], shortSig: [14, 159, 110], bv: [11, 15, 25] };
   let cv, ctx, W = 0, dpr = 1, blips = [], shells = [], hover = null, t0 = performance.now(), raf = null, inited = false;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const SPEED = (Math.PI * 2) / 6000; // ett varv på 6 s
@@ -855,21 +855,21 @@ const Radar = (() => {
     c.fillStyle = g; c.beginPath(); c.arc(cx, cx, R, 0, Math.PI * 2); c.fill();
     // ringar + index
     c.lineWidth = 1; c.font = "11px Geist, system-ui"; c.textAlign = "left";
-    [20, 40, 60, 80].forEach((v) => { const rr = (0.1 + (1 - v / 100) * 0.82) * R; c.strokeStyle = "rgba(255,255,255,.07)"; c.beginPath(); c.arc(cx, cx, rr, 0, Math.PI * 2); c.stroke(); c.fillStyle = "rgba(255,255,255,.28)"; c.fillText(v, cx + 4, cx - rr - 4); });
-    c.strokeStyle = "rgba(255,255,255,.12)"; c.beginPath(); c.arc(cx, cx, R, 0, Math.PI * 2); c.stroke();
-    c.strokeStyle = "rgba(255,255,255,.05)"; c.beginPath(); c.moveTo(cx - R, cx); c.lineTo(cx + R, cx); c.moveTo(cx, cx - R); c.lineTo(cx, cx + R); c.stroke();
+    [20, 40, 60, 80].forEach((v) => { const rr = (0.1 + (1 - v / 100) * 0.82) * R; c.strokeStyle = "rgba(16,24,40,.042)"; c.beginPath(); c.arc(cx, cx, rr, 0, Math.PI * 2); c.stroke(); c.fillStyle = "rgba(16,24,40,.168)"; c.fillText(v, cx + 4, cx - rr - 4); });
+    c.strokeStyle = "rgba(16,24,40,.072)"; c.beginPath(); c.arc(cx, cx, R, 0, Math.PI * 2); c.stroke();
+    c.strokeStyle = "rgba(16,24,40,.03)"; c.beginPath(); c.moveTo(cx - R, cx); c.lineTo(cx + R, cx); c.moveTo(cx, cx - R); c.lineTo(cx, cx + R); c.stroke();
     // svep
     const ang = reduced ? -Math.PI / 4 : ((now - t0) * SPEED) % (Math.PI * 2);
     if (!reduced) {
       const N = 40;
       for (let i = 0; i < N; i++) { const a0 = ang - (i + 1) * 0.02, a1 = ang - i * 0.02; c.fillStyle = `rgba(140,155,255,${0.16 * (1 - i / N)})`; c.beginPath(); c.moveTo(cx, cx); c.arc(cx, cx, R, a0, a1); c.closePath(); c.fill(); }
-      c.strokeStyle = "rgba(190,200,255,.7)"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(cx, cx); c.lineTo(cx + Math.cos(ang) * R, cx + Math.sin(ang) * R); c.stroke();
+      c.strokeStyle = "rgba(76,91,212,.55)"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(cx, cx); c.lineTo(cx + Math.cos(ang) * R, cx + Math.sin(ang) * R); c.stroke();
     }
     // skal (ytterkant)
     shells.forEach((s) => {
       const d = angDiff(ang, s.a); if (d < 0.08) s.lit = 1; else s.lit *= 0.985;
       const blink = reduced ? 0.7 : 0.35 + 0.65 * Math.max(s.lit, 0.5 + 0.5 * Math.sin(now / 400 + s.j * 10));
-      c.strokeStyle = `rgba(255,255,255,${blink})`; c.lineWidth = 1.5; c.beginPath(); c.arc(s.x, s.y, 3.5, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = `rgba(16,24,40,${blink * 0.55})`; c.lineWidth = 1.5; c.beginPath(); c.arc(s.x, s.y, 3.5, 0, Math.PI * 2); c.stroke();
     });
     // bolag
     blips.forEach((b) => {
@@ -878,18 +878,18 @@ const Radar = (() => {
       const glow = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 4); glow.addColorStop(0, `rgba(${r},${g2},${bl},${0.45 * l})`); glow.addColorStop(1, `rgba(${r},${g2},${bl},0)`);
       c.fillStyle = glow; c.beginPath(); c.arc(b.x, b.y, b.r * 4, 0, Math.PI * 2); c.fill();
       c.fillStyle = `rgba(${r},${g2},${bl},${0.5 + 0.5 * l})`; c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2); c.fill();
-      if (b === hover) { c.strokeStyle = "#fff"; c.lineWidth = 1.5; c.beginPath(); c.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2); c.stroke(); }
+      if (b === hover) { c.strokeStyle = "#0B0F19"; c.lineWidth = 1.5; c.beginPath(); c.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2); c.stroke(); }
       if (b.label && W > 360) {
         const txt = b.name.length > 22 ? b.name.slice(0, 21) + "…" : b.name;
         c.font = "500 12px Geist, system-ui";
         const tw = c.measureText(txt).width, right = b.x + b.r + 7 + tw < W - 4;
         c.textAlign = right ? "left" : "right";
-        c.fillStyle = `rgba(243,245,250,${0.55 + 0.45 * l})`;
+        c.fillStyle = `rgba(11,15,25,${0.55 + 0.45 * l})`;
         c.fillText(txt, b.x + (right ? b.r + 7 : -b.r - 7), b.y + 4);
       }
     });
     // mitten
-    c.fillStyle = "#F3F5FA"; c.beginPath(); c.arc(cx, cx, 2.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "#0B0F19"; c.beginPath(); c.arc(cx, cx, 2.5, 0, Math.PI * 2); c.fill();
   }
   function loop(now = performance.now()) { try { draw(now); } catch (e) { console.warn(e); } if (!reduced) raf = requestAnimationFrame(loop); }
   function pick(x, y) {
@@ -901,7 +901,7 @@ const Radar = (() => {
     const tip = document.getElementById("tip");
     if (!hover) { tip.hidden = true; return; }
     tip.hidden = false; tip.style.left = hover.x + "px"; tip.style.top = (hover.y - (hover.r || 4)) + "px";
-    tip.innerHTML = `<b>${esc(hover.name)}${hover.score != null ? ` <span style="color:#F5C451">${hover.score}</span>` : ""}</b><span>${esc(hover.sub)}</span>`;
+    tip.innerHTML = `<b>${esc(hover.name)}${hover.score != null ? ` <span style="color:#E0A21B">${hover.score}</span>` : ""}</b><span>${esc(hover.sub)}</span>`;
   }
   return { update };
 })();
@@ -1192,7 +1192,7 @@ function renderTrack() {
       ? `<div class="ic">✓</div><div><b>Kedjan är intakt</b><p>${v.totalRows} rader, senaste hash <code>${esc((v.head || "").slice(0, 16))}…</code>. Topp-hashen publiceras varje dygn i <a href="${ANCHORS_URL}" target="_blank" rel="noopener">ANCHORS.md</a> — git-historiken är den externa tidsstämpeln.${reseal}</p></div>`
       : `<div class="ic">!</div><div><b>Kedjan är bruten vid rad ${esc(v.brokenAtId)}</b><p>${esc(v.reason || "")}. Vi visar det öppet hellre än att dölja det. Se <a href="${ANCHORS_URL}" target="_blank" rel="noopener">förankringsloggen</a>.${reseal}</p></div>`;
   }
-  const badge = (f) => f.sealed ? `<a class="badge" href="/track-record" style="text-decoration:none;color:#F5C451;background:rgba(245,196,81,.12)">Låst · Se signal</a>` : f.outcome === "hit" ? `<span class="badge ok">Träff</span>` : f.outcome === "miss" || f.outcome === "expired" ? `<span class="badge miss">${f.outcome === "miss" ? "Miss" : "Utgått"}</span>` : `<span class="badge live">Väntar</span>`;
+  const badge = (f) => f.sealed ? `<a class="badge" href="/track-record" style="text-decoration:none;color:#B7791F;background:rgba(245,196,81,.18)">Låst · Se signal</a>` : f.outcome === "hit" ? `<span class="badge ok">Träff</span>` : f.outcome === "miss" || f.outcome === "expired" ? `<span class="badge miss">${f.outcome === "miss" ? "Miss" : "Utgått"}</span>` : `<span class="badge live">Väntar</span>`;
   document.getElementById("trLive").innerHTML = real.map((f) => `<div class="li"><div><b>${esc(f.company_name)}</b><br><span>${esc(REASON(f.flag_reason).replace(/^./, (c) => c.toUpperCase()))}${f.outcome_note ? ". " + esc(f.outcome_note) : ""}</span></div><div class="r">${badge(f)}<br><span>${dLong(f.created_at)}</span></div></div>`).join("")
     + (recl.length ? `<div class="li"><div><b>${recl.length} omklassificerade flaggor</b><br><span>${dLong(recl[recl.length - 1].created_at)}: en bugg flaggade råa lagerbolagsnamn direkt vid registrering. De ligger kvar i loggen, som är append-only, men räknas inte.</span></div><div class="r"><span class="badge">Exkluderade</span></div></div>` : "")
     || `<div class="empty">Inga live-flaggor ännu.</div>`;
