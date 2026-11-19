@@ -33,7 +33,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import {
   DELAY_DAYS, PLANS, ensureTables, createKey, listKeys, revokeKey, authenticate,
-  isSealed, sealTrackRow, addToWaitlist, listWaitlist,
+  isSealed, sealTrackRow, publicReason, addToWaitlist, listWaitlist,
 } from '../lib/access.js';
 
 // Enkel bearer-token-koll för admin-actions. Sätt ADMIN_SECRET i Vercel env vars.
@@ -113,6 +113,9 @@ async function handleTrackRecord(req, res) {
     `;
 
     const liveRows = rows.filter((r) => r.source !== 'historical_verification');
+    const clusterKey = (r) => (r.flag_reason || '') + '|' + new Date(r.created_at).toISOString().slice(0, 10);
+    const clusters = new Map();
+    for (const r of liveRows) clusters.set(clusterKey(r), (clusters.get(clusterKey(r)) || 0) + 1);
     const historicalRows = rows.filter((r) => r.source === 'historical_verification');
 
     const hits = liveRows.filter((r) => r.outcome === 'hit').length;
@@ -135,7 +138,12 @@ async function handleTrackRecord(req, res) {
       },
       // Publik vy: live-flaggor yngre än DELAY_DAYS är förseglade (bara hash + tid).
       // Fullständig data i realtid finns via /v1/flags med API-nyckel.
-      flags: rows.map(sealTrackRow),
+      flags: rows.map((r) => {
+        const o = sealTrackRow(r);
+        // Teaser: hur många bolag som flaggats med samma rådgivarsignal samma dag (en struktur).
+        if (o.sealed && /advokat/.test(r.flag_reason || '')) o.cluster_size = clusters.get(clusterKey(r)) || 1;
+        return o;
+      }),
       githubRepo: process.env.GITHUB_TIMESTAMP_REPO || null,
     });
   } catch (err) {
@@ -761,7 +769,7 @@ async function handleShellFlags(req, res) {
         return {
           id: r.id, name: `Förseglad flagga #${r.id}`, originalName: null, orgNr: null,
           address: null, originalAddress: null, description: null, advisor: null,
-          reason: r.flag_reason, score: r.score != null ? Number(r.score) : null,
+          reason: publicReason(r.flag_reason), score: r.score != null ? Number(r.score) : null,
           outcome: r.outcome, registeredAt: null, flaggedAt: r.created_at,
           sealed: true, revealAt: sealTrackRow({ ...r, source: 'live' }).reveal_at,
         };
