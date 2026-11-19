@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>API — BudRadar</title>
+<meta name="description" content="BudRadar API: bidco-flaggor, watchlist, svenska bud och uppköpskandidater i realtid." />
+<link rel="icon" href="budradar-logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#08090D;--s1:#101219;--s2:#161923;--s3:#1E2230;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--ink:#F3F5FA;--slate:#8B93A7;--dim:#5D6578;--accent:#8C9BFF;--marker:#F5C451;--done:#4FD1A1;--warn:#FF7A6B;--r-card:20px;--r-ctrl:999px;--max:1100px}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "Geist",system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+code,.mono{font-family:"Geist Mono",ui-monospace,monospace;font-size:.86em}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.top{padding:14px 0;position:sticky;top:0;z-index:5}
+.top .wrap{display:flex;align-items:center;gap:20px;height:56px;background:rgba(16,18,25,.75);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:var(--r-ctrl);padding:0 10px 0 22px}
+.brand img{height:21px;filter:brightness(0) invert(1);display:block}
+.nav{display:flex;gap:2px;margin-left:auto}
+.nav a{text-decoration:none;padding:8px 14px;border-radius:var(--r-ctrl);font-size:14px;font-weight:500;color:var(--slate)}
+.nav a:hover{color:var(--ink)}
+.nav a.on{color:var(--ink);background:rgba(255,255,255,.07)}
+h1{font-size:clamp(36px,5.6vw,64px);line-height:1.02;letter-spacing:-.045em;font-weight:600;margin:64px 0 18px;max-width:14ch}
+h2{font-size:24px;letter-spacing:-.03em;font-weight:600;margin:0 0 6px}
+.lede{color:var(--slate);font-size:18px;max-width:60ch;margin:0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:40px 0}
+.stat{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:20px}
+.stat strong{display:block;font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1.1}
+.stat span{color:var(--slate);font-size:14px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:24px;margin:16px 0}
+.chain{display:flex;gap:16px;align-items:flex-start}
+.chain .ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none;background:var(--s3)}
+.chain.ok .ic{background:rgba(79,209,161,.15);color:var(--done)}
+.chain.bad .ic{background:rgba(255,122,107,.15);color:var(--warn)}
+.chain p{margin:4px 0 0;color:var(--slate);font-size:14px}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.how div{background:var(--s2);border-radius:14px;padding:16px;font-size:14px;color:var(--slate)}
+.how b{display:block;color:var(--ink);margin-bottom:4px}
+.filters{display:flex;gap:6px;margin:14px 0}
+.filters button{background:var(--s2);border:1px solid var(--line);color:var(--slate);border-radius:var(--r-ctrl);padding:6px 14px;font:inherit;font-size:13px;cursor:pointer}
+.filters button.on{color:var(--ink);border-color:var(--line2);background:var(--s3)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--dim);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.sealed td.name{color:var(--slate)}
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--r-ctrl);background:var(--s3);color:var(--slate);white-space:nowrap}
+.badge.hit{background:rgba(79,209,161,.14);color:var(--done)}
+.badge.miss{background:rgba(255,122,107,.14);color:var(--warn)}
+.badge.lock{background:rgba(245,196,81,.12);color:var(--marker)}
+.badge.live{background:rgba(140,155,255,.14);color:var(--accent)}
+.hash{color:var(--slate);cursor:pointer;border-bottom:1px dotted var(--dim)}
+.sub{color:var(--dim);font-size:12px}
+.cta{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+form{display:flex;flex-direction:column;gap:10px}
+.opts{display:flex;gap:6px;flex-wrap:wrap}
+.opts label{background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer;flex:1;min-width:140px}
+.opts input{margin-right:6px;accent-color:var(--accent)}
+.opts small{display:block;color:var(--dim);margin-top:2px}
+input[type=email]{background:var(--s2);border:1px solid var(--line2);border-radius:12px;padding:13px 16px;color:var(--ink);font:inherit}
+button.go{background:var(--ink);color:var(--bg);border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:600;cursor:pointer}
+.hp{position:absolute;left:-9999px}
+.ok-msg{color:var(--done);font-size:14px;min-height:20px}
+footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
+.scroll{overflow-x:auto}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.how,.cta{grid-template-columns:1fr}.nav a.hide-m{display:none}th.hide-m,td.hide-m{display:none}h1{margin-top:40px}}
+
+.ep{border-top:1px solid var(--line);padding:18px 0}
+.ep:first-of-type{border-top:0}
+.m{font-family:"Geist Mono",monospace;font-size:13px;background:rgba(79,209,161,.12);color:var(--done);padding:2px 8px;border-radius:6px;margin-right:8px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font:13px/1.6 "Geist Mono",monospace;color:#cfd5e6;margin:10px 0 0}
+.ep p{margin:6px 0 0;color:var(--slate);font-size:14px}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}
+.tier{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:20px}
+.tier b{font-size:18px}.tier .p{font-size:26px;font-weight:600;margin:6px 0}.tier ul{margin:8px 0 0;padding-left:18px;color:var(--slate);font-size:14px}
+textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);border-radius:12px;padding:13px 16px;color:var(--ink);font:inherit;resize:vertical}
+@media (max-width:760px){.tiers{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/" aria-label="BudRadar, startsida"><img src="budradar-logo.png" alt="Budradar" /></a>
+  <nav class="nav">
+    <a href="/" class="hide-m">Radar</a>
+    <a href="/track-record">Track record</a>
+    <a href="/api-docs" class="on">API</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>Signalerna, före alla andra.</h1>
+  <p class="lede">Varje nytt bidco-bolag hos Bolagsverket, varje skal som byter namn eller flyttar till en M&amp;A-rådgivare, och hela det svenska budregistret. JSON, i realtid, med hashbevis på varje rad.</p>
+
+  <section class="tiers">
+    <div class="tier"><b>Gratis</b><div class="p">0 kr</div><ul><li>Flaggor efter 30 dagar</li><li>Topp 10 uppköpskandidater</li><li>Publik track record</li></ul></div>
+    <div class="tier"><b>Pro</b><div class="p">249 kr/mån</div><ul><li>Flaggor samma dag</li><li>Hela watchlisten</li><li>500 API-anrop/dygn</li></ul></div>
+    <div class="tier"><b>Fond / rådgivare</b><div class="p">Offert</div><ul><li>Allt i Pro</li><li>20 000 anrop/dygn</li><li>Historiskt dataset och webhook</li></ul></div>
+  </section>
+
+  <section class="card">
+    <h2>Kom igång</h2>
+    <p class="sub">Skicka nyckeln i <code>Authorization</code>-headern. Bas-URL: <code>https://budradar.vercel.app/v1</code></p>
+    <pre>curl -H "Authorization: Bearer br_live_XXXX" https://budradar.vercel.app/v1/flags?since=2026-11-01</pre>
+    <p class="sub" style="margin-top:10px">Kvot per dygn (UTC). Svaren har <code>X-RateLimit-Limit</code> och <code>X-RateLimit-Remaining</code>. Fel: 401 saknad/ogiltig nyckel, 403 spärrad, 429 kvot slut.</p>
+  </section>
+
+  <section class="card">
+    <h2>Endpoints</h2>
+    <div class="ep"><span class="m">GET</span><code>/v1/flags</code>
+      <p>Bidco-flaggor i realtid, nyast först. Parametrar: <code>since</code> (ISO-datum), <code>limit</code> (max 500), <code>outcome</code> (pending|hit|miss|expired), <code>historical=1</code> för att ta med verifierade historiska bud.</p>
+<pre>{
+  "count": 1,
+  "data": [{
+    "id": 30, "name": "AB AOEG HoldCo", "org_nr": "5595961631",
+    "reason": "bolagsverket_bulk_registrering+bidco_namnmonster", "score": 50,
+    "address": "…", "advisor": null, "registered_at": "2026-08-03",
+    "flagged_at": "2026-08-10T06:10:51.582Z", "outcome": "pending",
+    "proof": { "row_hash": "…", "prev_hash": "…", "github_commit_sha": null }
+  }]
+}</pre></div>
+    <div class="ep"><span class="m">GET</span><code>/v1/flags/{id}</code><p>En enskild flagga med fullständigt hashbevis.</p></div>
+    <div class="ep"><span class="m">GET</span><code>/v1/watchlist</code><p>Nyregistrerade lagerbolag under 90 dagars bevakning. <code>status</code>: pending (standard), flagged, expired.</p></div>
+    <div class="ep"><span class="m">GET</span><code>/v1/bids</code><p>Budregistret: budgivare, premier, bidco-kedja, tidslinje och utfall. Filter: <code>from</code>, <code>to</code>, <code>bidderType</code>, <code>hasBidco=1</code>.</p></div>
+    <div class="ep"><span class="m">GET</span><code>/v1/candidates</code><p>Hela uppköpslistan med poäng, motivering och backtest.</p></div>
+    <div class="ep"><span class="m">GET</span><code>/v1/verify</code><p>Verifierar hela hashkedjan i realtid.</p></div>
+    <div class="ep"><span class="m">GET</span><code>/v1/me</code><p>Din plan, kvot och förbrukning idag.</p></div>
+  </section>
+
+  <section class="card cta">
+    <div>
+      <h2>Ansök om API-nyckel</h2>
+      <p class="lede" style="font-size:16px">Vi tar in ett fåtal designpartners med gratis access mot feedback. Berätta kort vem ni är och vad ni vill använda datan till.</p>
+    </div>
+    <form id="wl">
+      <input type="email" name="email" placeholder="namn@foretag.se" required autocomplete="email" />
+      <input type="text" class="f" name="company" placeholder="Företag" />
+      <textarea name="message" rows="3" placeholder="Användningsfall (valfritt)"></textarea>
+      <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" />
+      <button class="go" type="submit">Ansök</button>
+      <div class="ok-msg" id="wlMsg"></div>
+    </form>
+  </section>
+</main>
+
+<footer class="wrap">Data från offentliga källor: Bolagsverket, Finansinspektionen och pressmeddelanden. Inget här är investeringsrådgivning.</footer>
+
+<script>
+document.getElementById("wl").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target), msg = document.getElementById("wlMsg");
+  msg.style.color = ""; msg.textContent = "Skickar…";
+  try {
+    const r = await fetch("/api/system?action=waitlist", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: f.get("email"), interest: "api", company: f.get("company"), message: f.get("message"), website: f.get("website") }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Något gick fel");
+    msg.textContent = "Tack! Vi återkommer inom några dagar.";
+    e.target.reset();
+  } catch (err) { msg.style.color = "var(--warn)"; msg.textContent = err.message; }
+});
+</script>
+</body>
+</html>
