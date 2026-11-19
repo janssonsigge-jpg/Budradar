@@ -2,10 +2,11 @@ name: Bolagsverket veckoscan
 
 on:
   schedule:
-    # Måndagar och torsdagar 05:00 UTC = 06:00/07:00 svensk tid.
+    # Måndagar och torsdagar 04:23 UTC = 05:23/06:23 svensk tid.
+    # Udda minut: GitHub hoppar ibland över scheman på jämn timme vid hög last (hände 2026-11-19).
     # Två gånger i veckan så att org.nr-cachen används oftare än var 7:e dag —
     # GitHub raderar cache som inte använts på 7 dagar, och då börjar scannen om från noll.
-    - cron: '0 5 * * 1,4'
+    - cron: '23 4 * * 1,4'
   workflow_dispatch: {}   # gör att du kan trigga den manuellt från GitHub-fliken "Actions"
 
 permissions:
