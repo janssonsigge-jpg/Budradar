@@ -66,19 +66,43 @@ button.go{background:var(--ink);color:var(--bg);border:0;border-radius:12px;padd
 .ok-msg{color:var(--done);font-size:14px;min-height:20px}
 footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 .scroll{overflow-x:auto}
-.blur{filter:blur(5px);user-select:none;color:var(--ink)}
-.unlock{background:rgba(245,196,81,.12);color:var(--marker);border:1px solid rgba(245,196,81,.3);border-radius:var(--r-ctrl);padding:3px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;margin-left:8px;white-space:nowrap}
-.unlock:hover{background:rgba(245,196,81,.2)}
-.wall{display:flex;align-items:center;gap:20px;justify-content:space-between;background:linear-gradient(135deg,rgba(245,196,81,.10),rgba(140,155,255,.08));border:1px solid rgba(245,196,81,.25);border-radius:16px;padding:18px 20px;margin:14px 0}
-.wall b{font-size:17px}.wall p{margin:2px 0 0;color:var(--slate);font-size:14px}
-.wall .go{white-space:nowrap}
-.modal{position:fixed;inset:0;background:rgba(8,9,13,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;place-items:center;z-index:50;padding:24px}
+.lk{width:12px;height:12px;flex:none;display:inline-block;vertical-align:-1px}
+.bar{display:inline-block;height:10px;border-radius:4px;background:linear-gradient(90deg,rgba(255,255,255,.10),rgba(255,255,255,.18),rgba(255,255,255,.10));vertical-align:middle}
+.lockcell{display:flex;flex-direction:column;gap:6px}
+.lockcell .top{display:flex;align-items:center;gap:10px}
+.sig{font-size:13px;color:var(--slate)}
+.str{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:6px;margin-right:8px}
+.str.s3{background:rgba(245,196,81,.14);color:var(--marker)}
+.str.s2{background:rgba(140,155,255,.14);color:var(--accent)}
+.str.s1{background:rgba(255,255,255,.06);color:var(--slate)}
+.unlock{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--marker);border:1px solid rgba(245,196,81,.35);border-radius:var(--r-ctrl);padding:3px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.unlock:hover{background:rgba(245,196,81,.1)}
+.badge.lock{display:inline-flex;align-items:center;gap:6px}
+.wall{display:grid;grid-template-columns:1.05fr 1fr;gap:28px;background:linear-gradient(160deg,rgba(245,196,81,.07),rgba(140,155,255,.05) 60%,transparent);border:1px solid rgba(245,196,81,.22);border-radius:18px;padding:26px;margin:18px 0 8px}
+.eyebrow{display:flex;align-items:center;gap:8px;color:var(--marker);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.wall h3{font-size:28px;letter-spacing:-.03em;margin:10px 0 4px;font-weight:600}
+.wall .mix{color:var(--slate);font-size:14px;margin:0 0 16px}
+.incl{list-style:none;padding:0;margin:0 0 20px;display:grid;gap:8px}
+.incl li{display:flex;gap:10px;font-size:14px}
+.incl li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--marker);margin-top:8px;flex:none}
+.wall .cta-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.wall .note{color:var(--dim);font-size:13px}
+.peek{background:var(--bg);border:1px solid var(--line2);border-radius:14px;padding:18px;position:relative;overflow:hidden}
+.peek .ph{display:flex;justify-content:space-between;color:var(--dim);font-size:12px;margin-bottom:12px}
+.peek dl{display:grid;grid-template-columns:110px 1fr;gap:10px 14px;margin:0;font-size:14px}
+.peek dt{color:var(--dim)}
+.peek dd{margin:0}
+.peek .locked dd{display:flex;align-items:center;gap:8px;color:var(--dim)}
+.peek hr{border:0;border-top:1px dashed var(--line2);margin:14px 0;grid-column:1/-1}
+.modal{position:fixed;inset:0;background:rgba(8,9,13,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;place-items:center;z-index:50;padding:24px}
 .modal.on{display:grid}
-.modal .box{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-card);padding:28px;max-width:420px;width:100%;text-align:center}
-.modal .box .ic{font-size:30px;margin-bottom:8px}
-.modal .box h3{margin:0 0 6px;font-size:20px;letter-spacing:-.02em}
-.modal .box p{color:var(--slate);margin:0 0 18px;font-size:15px}
-@media (max-width:760px){.wall{flex-direction:column;align-items:flex-start}}
+.modal .box{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-card);padding:30px;max-width:440px;width:100%}
+.modal .eyebrow{margin-bottom:10px}
+.modal h3{margin:0 0 8px;font-size:22px;letter-spacing:-.02em}
+.modal p{color:var(--slate);margin:0 0 20px;font-size:15px}
+.modal .row{display:flex;gap:10px}
+.modal .ghost{background:transparent;color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:13px 18px;font:inherit;cursor:pointer}
+@media (max-width:860px){.wall{grid-template-columns:1fr}}
 @media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.how,.cta{grid-template-columns:1fr}.nav a.hide-m{display:none}th.hide-m,td.hide-m{display:none}h1{margin-top:40px}}
 </style>
 </head>
@@ -114,10 +138,21 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 
   <section class="card">
     <h2>Flagglogg</h2>
-    <p class="sub">Förseglade rader visas med hash och tid. Prenumeranter och API-kunder ser innehållet direkt.</p>
+    <p class="sub">Låsta rader visar signalens typ och styrka. Bolaget avslöjas efter 30 dagar, eller direkt för Pro.</p>
     <div class="wall" id="wall" hidden>
-      <div><b id="wallTitle">🔒 Låsta flaggor</b><p>Se bolagen, org.nr och rådgivare samma dag som de flaggas. I snitt tre veckor före budet.</p></div>
-      <button class="go unlock-all" type="button">Lås upp med Pro · 249 kr/mån</button>
+      <div>
+        <div class="eyebrow"><svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>BudRadar Pro</div>
+        <h3 id="wallTitle">Signaler som är låsta</h3>
+        <p class="mix" id="wallMix"></p>
+        <ul class="incl">
+          <li>Bolagsnamn och org.nr för varje flaggat bolag</li>
+          <li>Tidigare namn, registreringsdatum och adress</li>
+          <li>Vilken advokatbyrå eller rådgivare som står bakom</li>
+          <li>Notis samma dag som signalen uppstår, inte 30 dagar senare</li>
+        </ul>
+        <div class="cta-row"><button class="go unlock-all" type="button">Lås upp för 249 kr/mån</button><span class="note">Ingen bindningstid</span></div>
+      </div>
+      <div class="peek" id="peek"></div>
     </div>
     <div class="filters" id="filters">
       <button data-f="all" class="on">Alla</button>
@@ -152,10 +187,10 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 
 <div class="modal" id="soon" role="dialog" aria-modal="true" aria-labelledby="soonT">
   <div class="box">
-    <div class="ic">🔒</div>
-    <h3 id="soonT">Denna funktionen kommer i framtiden</h3>
-    <p>Ställ dig i kön längre ner så hör vi av oss när Pro öppnar.</p>
-    <button class="go" id="soonClose" type="button">Okej</button>
+    <div class="eyebrow"><svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>BudRadar Pro</div>
+    <h3 id="soonT">Pro lanseras snart</h3>
+    <p>Denna funktionen kommer i framtiden. Ställ dig i kön så får du veta först när det går att låsa upp signalerna.</p>
+    <div class="row"><button class="go" id="soonJoin" type="button">Ställ mig i kön</button><button class="ghost" id="soonClose" type="button">Stäng</button></div>
   </div>
 </div>
 
@@ -170,12 +205,42 @@ const median = (a) => { if (!a.length) return null; const s = a.slice().sort((x,
 const getJSON = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
 
 let FLAGS = [], FILTER = "all";
-const FAKE = ["Nordvik Holding AB", "Alster Industri AB", "Kvarnby Bidco AB", "Selma Förvaltning AB", "Tallholmen TopCo AB", "Brovik Invest AB", "Ekudden MidCo AB"];
-const fake = (id) => FAKE[Number(id) % FAKE.length];
+const LOCK = '<svg class="lk" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+const bar = (w) => `<span class="bar" style="width:${w}px"></span>`;
+const strength = (sc) => { sc = Number(sc) || 0; return sc >= 60 ? ["Stark", "s3"] : sc >= 50 ? ["Medel", "s2"] : ["Svag", "s1"]; };
+function signal(r) {
+  r = String(r || "");
+  const adv = /advokat/.test(r), name = /namnbyte_fran_goldcup/.test(r), addr = /adressbyte_okand/.test(r), bid = /bidco_namnmonster/.test(r);
+  if (name && adv) return "Lagerbolag bytte namn och flyttade till M&A-advokatbyrå";
+  if (bid && adv) return "Nyregistrerat bidco-bolag på advokatbyråns adress";
+  if (name && addr) return "Lagerbolag bytte namn och adress";
+  if (name) return "Lagerbolag bytte namn";
+  if (bid) return "Nyregistrerat bolag med bidco-namn";
+  if (/holding/.test(r)) return "Ny holdingbeskrivning";
+  return "Strukturförändring hos Bolagsverket";
+}
+function peek(f) {
+  const [lbl, cls] = strength(f.score);
+  return `<div class="ph"><span>Flagga #${esc(f.id)}</span><span>${d(f.created_at)}</span></div>
+    <dl>
+      <dt>Signal</dt><dd>${signal(f.flag_reason)}</dd>
+      <dt>Styrka</dt><dd><span class="str ${cls}">${lbl}</span>${Math.round(Number(f.score))} poäng</dd>
+      ${f.cluster_size > 1 ? `<dt>Struktur</dt><dd>${f.cluster_size} bolag registrerade samtidigt</dd>` : ""}
+      <dt>Avslöjas</dt><dd>${d(f.reveal_at)}</dd>
+      <hr />
+    </dl>
+    <dl class="locked">
+      <dt>Bolag</dt><dd>${LOCK}${bar(150)}</dd>
+      <dt>Org.nr</dt><dd>${LOCK}${bar(90)}</dd>
+      <dt>Tidigare namn</dt><dd>${LOCK}${bar(120)}</dd>
+      <dt>Rådgivare</dt><dd>${LOCK}${bar(130)}</dd>
+      <dt>Adress</dt><dd>${LOCK}${bar(170)}</dd>
+    </dl>`;
+}
 
 function status(f) {
   if (f.source === "historical_verification") return `<span class="badge hit">Bekräftat bud</span>`;
-  if (f.sealed) return `<span class="badge lock">🔒 Öppnas ${d(f.reveal_at)}</span>`;
+  if (f.sealed) return `<span class="badge lock">${LOCK}Låst till ${d(f.reveal_at)}</span>`;
   if (f.outcome === "hit") return `<span class="badge hit">Träff</span>`;
   if (f.outcome === "miss") return `<span class="badge miss">Miss</span>`;
   if (f.outcome === "expired") return `<span class="badge miss">Utgått</span>`;
@@ -192,7 +257,7 @@ function renderRows() {
     <tr class="${f.sealed ? "sealed" : ""}">
       <td class="mono">${esc(f.id)}</td>
       <td>${d(f.created_at)}</td>
-      <td class="name">${f.sealed ? `<span class="blur">${fake(f.id)}</span><button class="unlock" type="button">Lås upp</button>` : `<b>${esc(f.company_name)}</b>${f.org_nr ? `<div class="sub">${esc(f.org_nr)}</div>` : ""}`}</td>
+      <td class="name">${f.sealed ? (() => { const [l, c] = strength(f.score); return `<div class="lockcell"><div class="top">${bar(130)}<button class="unlock" type="button">${LOCK}Lås upp</button></div><div class="sig"><span class="str ${c}">${l}</span>${signal(f.flag_reason)}${f.cluster_size > 1 ? ` · ${f.cluster_size} bolag` : ""}</div></div>`; })() : `<b>${esc(f.company_name)}</b>${f.org_nr ? `<div class="sub">${esc(f.org_nr)}</div>` : ""}`}</td>
       <td class="hide-m">${f.score != null ? Math.round(Number(f.score)) : "—"}</td>
       <td>${status(f)}</td>
       <td class="hide-m"><span class="hash mono" title="Klicka för att kopiera hela hashen" data-h="${esc(f.row_hash)}">${esc((f.row_hash || "").slice(0, 12))}…</span></td>
@@ -243,7 +308,16 @@ async function load() {
     s[3].querySelector("span").textContent = leadLabel;
     renderRows();
     const nSealed = live.filter((f) => f.sealed).length;
-    if (nSealed) { $("#wall").hidden = false; $("#wallTitle").textContent = `🔒 ${nSealed} flaggor är låsta just nu`; }
+    if (nSealed) {
+      const sealed = live.filter((f) => f.sealed);
+      const st = sealed.filter((f) => Number(f.score) >= 60).length, md = sealed.filter((f) => Number(f.score) >= 50 && Number(f.score) < 60).length, wk = sealed.length - st - md;
+      const next = sealed.map((f) => f.reveal_at).sort()[0];
+      $("#wall").hidden = false;
+      $("#wallTitle").textContent = `${nSealed} signaler är låsta`;
+      $("#wallMix").textContent = [st && `${st} starka`, md && `${md} medel`, wk && `${wk} svaga`].filter(Boolean).join(" · ") + `. Nästa lås släpps ${d(next)}.`;
+      const best = sealed.slice().sort((a, b) => Number(b.score) - Number(a.score) || new Date(b.created_at) - new Date(a.created_at))[0];
+      $("#peek").innerHTML = peek(best);
+    }
   } else {
     $("#rows").innerHTML = `<tr><td colspan="6" class="sub">Kunde inte hämta loggen just nu.</td></tr>`;
   }
@@ -277,6 +351,7 @@ $("#wl").addEventListener("submit", async (e) => {
 document.addEventListener("click", (e) => {
   if (e.target.closest(".unlock, .unlock-all")) { e.preventDefault(); $("#soon").classList.add("on"); }
   if (e.target.closest("#soonClose") || e.target.id === "soon") $("#soon").classList.remove("on");
+  if (e.target.closest("#soonJoin")) { $("#soon").classList.remove("on"); $("#join").scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => $("#wl input[type=email]").focus(), 500); }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#soon").classList.remove("on"); });
 
