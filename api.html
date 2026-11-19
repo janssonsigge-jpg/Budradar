@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-:root{--bg:#08090D;--s1:#101219;--s2:#161923;--s3:#1E2230;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--ink:#F3F5FA;--slate:#8B93A7;--dim:#5D6578;--accent:#8C9BFF;--marker:#F5C451;--done:#4FD1A1;--warn:#FF7A6B;--r-card:20px;--r-ctrl:999px;--max:1100px}
+:root{--bg:#F7F7F5;--s1:#FFFFFF;--s2:#F2F3F6;--s3:#E7E9EE;--line:rgba(16,24,40,.09);--line2:rgba(16,24,40,.16);--ink:#0B0F19;--slate:#4A5162;--dim:#868C9B;--accent:#4C5BD4;--marker:#B7791F;--done:#0E9F6E;--warn:#D9472F;--r-card:20px;--r-ctrl:999px;--max:1100px}
 *{box-sizing:border-box}
 html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 "Geist",system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
@@ -18,12 +18,12 @@ a{color:var(--accent)}
 code,.mono{font-family:"Geist Mono",ui-monospace,monospace;font-size:.86em}
 .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
 .top{padding:14px 0;position:sticky;top:0;z-index:5}
-.top .wrap{display:flex;align-items:center;gap:20px;height:56px;background:rgba(16,18,25,.75);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:var(--r-ctrl);padding:0 10px 0 22px}
-.brand img{height:21px;filter:brightness(0) invert(1);display:block}
+.top .wrap{display:flex;align-items:center;gap:20px;height:56px;background:rgba(255,255,255,.75);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:var(--r-ctrl);padding:0 10px 0 22px}
+.brand img{height:21px;filter:brightness(0);display:block}
 .nav{display:flex;gap:2px;margin-left:auto}
 .nav a{text-decoration:none;padding:8px 14px;border-radius:var(--r-ctrl);font-size:14px;font-weight:500;color:var(--slate)}
 .nav a:hover{color:var(--ink)}
-.nav a.on{color:var(--ink);background:rgba(255,255,255,.07)}
+.nav a.on{color:var(--ink);background:rgba(16,24,40,.042)}
 h1{font-size:clamp(36px,5.6vw,64px);line-height:1.02;letter-spacing:-.045em;font-weight:600;margin:64px 0 18px;max-width:14ch}
 h2{font-size:24px;letter-spacing:-.03em;font-weight:600;margin:0 0 6px}
 .lede{color:var(--slate);font-size:18px;max-width:60ch;margin:0}
@@ -71,7 +71,7 @@ footer{color:var(--dim);font-size:13px;padding:48px 0 64px}
 .ep{border-top:1px solid var(--line);padding:18px 0}
 .ep:first-of-type{border-top:0}
 .m{font-family:"Geist Mono",monospace;font-size:13px;background:rgba(79,209,161,.12);color:var(--done);padding:2px 8px;border-radius:6px;margin-right:8px}
-pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font:13px/1.6 "Geist Mono",monospace;color:#cfd5e6;margin:10px 0 0}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font:13px/1.6 "Geist Mono",monospace;color:#1F2533;margin:10px 0 0}
 .ep p{margin:6px 0 0;color:var(--slate);font-size:14px}
 .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}
 .tier{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:20px}
@@ -79,7 +79,7 @@ pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding
 textarea,input[type=text].f{background:var(--s2);border:1px solid var(--line2);border-radius:12px;padding:13px 16px;color:var(--ink);font:inherit;resize:vertical}
 .tier .go{width:100%;margin-top:14px}
 .tier.hl{border-color:rgba(245,196,81,.35)}
-.modal{position:fixed;inset:0;background:rgba(8,9,13,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;place-items:center;z-index:50;padding:24px}
+.modal{position:fixed;inset:0;background:rgba(16,24,40,.32);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;place-items:center;z-index:50;padding:24px}
 .modal.on{display:grid}
 .modal .box{background:var(--s1);border:1px solid var(--line2);border-radius:var(--r-card);padding:28px;max-width:420px;width:100%;text-align:center}
 .modal .box{text-align:left}
