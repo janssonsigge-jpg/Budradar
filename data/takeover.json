@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-19T13:34:41.114Z",
+ "generated": "2026-11-20T13:16:30.201Z",
  "universe": 384,
  "method": "Poäng 0–100 från FI:s flaggningar och insynsregister: en aktiv storägare på 10–50 %, private equity bland ägarna, ägare som ökat över 10 % senaste året, insiders som köpt och många flaggningar senaste halvåret. Bara publicerade data används.",
  "backtest": {
@@ -220,18 +220,18 @@
    "name": "Morrow Bank AB",
    "score": 62,
    "why": [
-    "Kistefos AS har flaggat 20 %",
-    "2 ägare har ökat över 10 % senaste året",
-    "3 flaggningar senaste halvåret",
+    "Christen Sveaas har flaggat 25 %",
+    "4 ägare har ökat över 10 % senaste året",
+    "5 flaggningar senaste halvåret",
     "1 insiders har köpt"
    ],
    "top": {
-    "name": "Kistefos AS",
-    "pct": 20
+    "name": "Christen Sveaas",
+    "pct": 25
    },
    "pe": null,
    "buyers": 1,
-   "accum": 2
+   "accum": 4
   },
   {
    "rank": 4,
@@ -328,7 +328,7 @@
     "Nordic Capital VII Limited har flaggat 20 %",
     "private equity bland ägarna: Nordic Capital VII Limited",
     "1 ägare har ökat över 10 % senaste året",
-    "58 flaggningar senaste halvåret",
+    "57 flaggningar senaste halvåret",
     "5 insiders har köpt",
     "storbolag, köps sällan upp"
    ],
@@ -363,24 +363,6 @@
   },
   {
    "rank": 11,
-   "name": "Asker Healthcare Group AB",
-   "score": 60,
-   "why": [
-    "Interogo Foundation har flaggat 40.2 %",
-    "1 ägare har ökat över 10 % senaste året",
-    "3 flaggningar senaste halvåret",
-    "5 insiders har köpt"
-   ],
-   "top": {
-    "name": "Interogo Foundation",
-    "pct": 40.2
-   },
-   "pe": null,
-   "buyers": 5,
-   "accum": 1
-  },
-  {
-   "rank": 12,
    "name": "KDventures AB",
    "score": 58,
    "why": [
@@ -397,7 +379,7 @@
    "accum": 2
   },
   {
-   "rank": 13,
+   "rank": 12,
    "name": "Coor Service Management Holding AB",
    "score": 58,
    "why": [
@@ -414,7 +396,7 @@
    "accum": 6
   },
   {
-   "rank": 14,
+   "rank": 13,
    "name": "Wise Group AB",
    "score": 58,
    "why": [
@@ -431,24 +413,7 @@
    "accum": 5
   },
   {
-   "rank": 15,
-   "name": "Aktiebolaget Industrivärden",
-   "score": 58,
-   "why": [
-    "Fredrik Lundberg har flaggat 27.8 %",
-    "2 ägare har ökat över 10 % senaste året",
-    "2 insiders har köpt"
-   ],
-   "top": {
-    "name": "Fredrik Lundberg",
-    "pct": 27.8
-   },
-   "pe": null,
-   "buyers": 2,
-   "accum": 2
-  },
-  {
-   "rank": 16,
+   "rank": 14,
    "name": "AcadeMedia AB",
    "score": 57,
    "why": [
@@ -469,7 +434,7 @@
    "accum": 1
   },
   {
-   "rank": 17,
+   "rank": 15,
    "name": "Studsvik AB",
    "score": 56,
    "why": [
@@ -487,7 +452,7 @@
    "accum": 1
   },
   {
-   "rank": 18,
+   "rank": 16,
    "name": "Green Landscaping Group AB",
    "score": 56,
    "why": [
@@ -505,7 +470,7 @@
    "accum": 1
   },
   {
-   "rank": 19,
+   "rank": 17,
    "name": "Modern Times Group MTG AB",
    "score": 54,
    "why": [
@@ -523,7 +488,7 @@
    "accum": 2
   },
   {
-   "rank": 20,
+   "rank": 18,
    "name": "Stenhus Fastigheter i Norden AB",
    "score": 54,
    "why": [
@@ -540,7 +505,7 @@
    "accum": 2
   },
   {
-   "rank": 21,
+   "rank": 19,
    "name": "Hoist Finance AB",
    "score": 54,
    "why": [
@@ -557,7 +522,7 @@
    "accum": 2
   },
   {
-   "rank": 22,
+   "rank": 20,
    "name": "Nordisk Bergteknik AB",
    "score": 52,
    "why": [
@@ -574,24 +539,7 @@
    "accum": 1
   },
   {
-   "rank": 23,
-   "name": "Eniro Group AB",
-   "score": 52,
-   "why": [
-    "Kommstart 4068 AB unä Flavus Invest har flaggat 26.1 %",
-    "3 ägare har ökat över 10 % senaste året",
-    "3 flaggningar senaste halvåret"
-   ],
-   "top": {
-    "name": "Kommstart 4068 AB unä Flavus Invest",
-    "pct": 26.1
-   },
-   "pe": null,
-   "buyers": 0,
-   "accum": 3
-  },
-  {
-   "rank": 24,
+   "rank": 21,
    "name": "Scandi Standard AB",
    "score": 52,
    "why": [
@@ -608,7 +556,7 @@
    "accum": 1
   },
   {
-   "rank": 25,
+   "rank": 22,
    "name": "RVRC Holding AB",
    "score": 52,
    "why": [
@@ -625,7 +573,24 @@
    "accum": 1
   },
   {
-   "rank": 26,
+   "rank": 23,
+   "name": "Asker Healthcare Group AB",
+   "score": 52,
+   "why": [
+    "Interogo Foundation har flaggat 40.2 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "5 insiders har köpt"
+   ],
+   "top": {
+    "name": "Interogo Foundation",
+    "pct": 40.2
+   },
+   "pe": null,
+   "buyers": 5,
+   "accum": 1
+  },
+  {
+   "rank": 24,
    "name": "Midsummer AB",
    "score": 52,
    "why": [
@@ -642,7 +607,7 @@
    "accum": 1
   },
   {
-   "rank": 27,
+   "rank": 25,
    "name": "BHG Group AB",
    "score": 51,
    "why": [
@@ -662,7 +627,7 @@
    "accum": 0
   },
   {
-   "rank": 28,
+   "rank": 26,
    "name": "Alligator Bioscience AB",
    "score": 50,
    "why": [
@@ -680,7 +645,7 @@
    "accum": 2
   },
   {
-   "rank": 29,
+   "rank": 27,
    "name": "Sdiptech AB",
    "score": 50,
    "why": [
@@ -697,7 +662,7 @@
    "accum": 2
   },
   {
-   "rank": 30,
+   "rank": 28,
    "name": "INVISIO AB",
    "score": 50,
    "why": [
@@ -714,7 +679,7 @@
    "accum": 0
   },
   {
-   "rank": 31,
+   "rank": 29,
    "name": "Enea Aktiebolag",
    "score": 50,
    "why": [
@@ -731,7 +696,7 @@
    "accum": 0
   },
   {
-   "rank": 32,
+   "rank": 30,
    "name": "Fasadgruppen Group AB",
    "score": 50,
    "why": [
@@ -748,7 +713,7 @@
    "accum": 2
   },
   {
-   "rank": 33,
+   "rank": 31,
    "name": "Ellos Holding AB",
    "score": 50,
    "why": [
@@ -766,24 +731,24 @@
    "accum": 4
   },
   {
-   "rank": 34,
+   "rank": 32,
    "name": "Balco Group AB",
    "score": 50,
    "why": [
     "Ringvägen Venture AB har flaggat 15.1 %",
     "2 ägare har ökat över 10 % senaste året",
-    "4 insiders har köpt"
+    "5 insiders har köpt"
    ],
    "top": {
     "name": "Ringvägen Venture AB",
     "pct": 15.1
    },
    "pe": null,
-   "buyers": 4,
+   "buyers": 5,
    "accum": 2
   },
   {
-   "rank": 35,
+   "rank": 33,
    "name": "Maha Capital AB",
    "score": 50,
    "why": [
@@ -799,7 +764,7 @@
    "accum": 3
   },
   {
-   "rank": 36,
+   "rank": 34,
    "name": "Netel Holding AB",
    "score": 48,
    "why": [
@@ -816,7 +781,7 @@
    "accum": 4
   },
   {
-   "rank": 37,
+   "rank": 35,
    "name": "CellaVision AB",
    "score": 48,
    "why": [
@@ -833,7 +798,7 @@
    "accum": 1
   },
   {
-   "rank": 38,
+   "rank": 36,
    "name": "Episurf Medical AB",
    "score": 48,
    "why": [
@@ -850,7 +815,7 @@
    "accum": 23
   },
   {
-   "rank": 39,
+   "rank": 37,
    "name": "Vivesto AB",
    "score": 48,
    "why": [
@@ -867,7 +832,7 @@
    "accum": 1
   },
   {
-   "rank": 40,
+   "rank": 38,
    "name": "Gentoo Media Inc.",
    "score": 48,
    "why": [
@@ -881,6 +846,41 @@
    },
    "pe": null,
    "buyers": 2,
+   "accum": 1
+  },
+  {
+   "rank": 39,
+   "name": "BE Group AB",
+   "score": 48,
+   "why": [
+    "Svedulf Förvaltning AB har flaggat 25 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "2 insiders har köpt"
+   ],
+   "top": {
+    "name": "Svedulf Förvaltning AB",
+    "pct": 25
+   },
+   "pe": null,
+   "buyers": 2,
+   "accum": 1
+  },
+  {
+   "rank": 40,
+   "name": "mySafety Group AB",
+   "score": 48,
+   "why": [
+    "Marcus Pettersson Berver har flaggat 17.1 %",
+    "1 ägare har ökat över 10 % senaste året",
+    "3 flaggningar senaste halvåret",
+    "3 insiders har köpt"
+   ],
+   "top": {
+    "name": "Marcus Pettersson Berver",
+    "pct": 17.1
+   },
+   "pe": null,
+   "buyers": 3,
    "accum": 1
   }
  ]
